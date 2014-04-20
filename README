@@ -1,0 +1,24 @@
+Sun Apr 20 13:56:08 IDT 2014
+============================
+
+This Git repo is a simple mirror of the CVS repositories for the PCC
+Revived project (but without the 'CVS' directories).
+
+This project is a revival of the venerable Unix Portable C Compiler. It
+adds C 99 and general GCC compatbility with code generators for i386
+and x86_64 among others. The home page is:
+
+	http://pcc.ludd.ltu.se/
+
+For installing, you have to first build and install the pcc-libs,
+and then build and install pcc. The usual configure && make incantation
+is used.  For instructions using CVS, see:
+
+	http://pcc.ludd.ltu.se/supported-platforms/
+
+I am creating this Git repo so that I can access the code via HTTP(S)
+from behind the corporate firewall at my work. There are no other
+motives.
+
+Arnold Robbins
+arnold@skeeve.com
