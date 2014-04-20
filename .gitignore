@@ -1,0 +1,6 @@
+CVS
+*.o
+*.lo
+Makefile
+config.*
+*.a
