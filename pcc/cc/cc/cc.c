@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.265 2014/03/30 18:06:14 ragge Exp $	*/
+/*	$Id: cc.c,v 1.267 2014/04/21 21:26:02 plunky Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -793,7 +793,9 @@ main(int argc, char *argv[])
 
 		case 'x':
 			t = nxtopt("-x");
-			if (match(t, "c"))
+			if (match(t, "none"))
+				strlist_append(&inputs, ")");
+			else if (match(t, "c"))
 				strlist_append(&inputs, ")c");
 			else if (match(t, "assembler"))
 				strlist_append(&inputs, ")s");
@@ -878,9 +880,8 @@ main(int argc, char *argv[])
 		if (ninput > 1 && !Eflag)
 			printf("%s:\n", ifile);
 
-		if (ifile[0] == ')') {
-			msuffix = &ifile[1]; /* -x source type given */
-			ascpp = match(msuffix, "S");
+		if (ifile[0] == ')') { /* -x source type given */
+			msuffix = ifile[1] ? &ifile[1] : NULL;
 			continue;
 		}
 		if (ifile[0] == '-' && ifile[1] == 0)
@@ -894,8 +895,8 @@ main(int argc, char *argv[])
 		/*
 		 * C preprocessor
 		 */
-		if (match(suffix, "c") || match(suffix, "S") ||
-		    cxxsuf(s->value)) {
+		ascpp = match(suffix, "S");
+		if (ascpp || match(suffix, "c") || cxxsuf(s->value)) {
 			/* find out next output file */
 			if (Mflag || MDflag) {
 				char *Mofile;
@@ -1558,6 +1559,26 @@ static char *gcppflags[] = {
 static char *fpflags[] = {
 #if defined(os_darwin) || defined(os_netbsd)
 	"-D__FLT_RADIX__=2",
+#if defined(mach_vax)
+	"-D__FLT_DIG__=6",
+	"-D__FLT_EPSILON__=1.19209290e-07F",
+	"-D__FLT_MANT_DIG__=24",
+	"-D__FLT_MAX_10_EXP__=38",
+	"-D__FLT_MAX_EXP__=127",
+	"-D__FLT_MAX__=1.70141173e+38F",
+	"-D__FLT_MIN_10_EXP__=(-38)",
+	"-D__FLT_MIN_EXP__=(-127)",
+	"-D__FLT_MIN__=2.93873588e-39F",
+	"-D__DBL_DIG__=16",
+	"-D__DBL_EPSILON__=2.77555756156289135e-17",
+	"-D__DBL_MANT_DIG__=56",
+	"-D__DBL_MAX_10_EXP__=38",
+	"-D__DBL_MAX_EXP__=127",
+	"-D__DBL_MAX__=1.701411834604692294e+38",
+	"-D__DBL_MIN_10_EXP__=(-38)",
+	"-D__DBL_MIN_EXP__=(-127)",
+	"-D__DBL_MIN__=2.938735877055718770e-39",
+#else
 	"-D__FLT_DIG__=6",
 	"-D__FLT_EPSILON__=1.19209290e-07F",
 	"-D__FLT_MANT_DIG__=24",
@@ -1576,6 +1597,7 @@ static char *fpflags[] = {
 	"-D__DBL_MIN_10_EXP__=(-307)",
 	"-D__DBL_MIN_EXP__=(-1021)",
 	"-D__DBL_MIN__=2.2250738585072014e-308",
+#endif
 #if defined(mach_i386) || defined(mach_amd64)
 	"-D__LDBL_DIG__=18",
 	"-D__LDBL_EPSILON__=1.08420217248550443401e-19L",
@@ -1586,6 +1608,16 @@ static char *fpflags[] = {
 	"-D__LDBL_MIN_10_EXP__=(-4931)",
 	"-D__LDBL_MIN_EXP__=(-16381)",
 	"-D__LDBL_MIN__=3.36210314311209350626e-4932L",
+#elif defined(mach_vax)
+	"-D__LDBL_DIG__=16",
+	"-D__LDBL_EPSILON__=2.77555756156289135e-17",
+	"-D__LDBL_MANT_DIG__=56",
+	"-D__LDBL_MAX_10_EXP__=38",
+	"-D__LDBL_MAX_EXP__=127",
+	"-D__LDBL_MAX__=1.701411834604692294e+38",
+	"-D__LDBL_MIN_10_EXP__=(-38)",
+	"-D__LDBL_MIN_EXP__=(-127)",
+	"-D__LDBL_MIN__=2.938735877055718770e-39",
 #else
 	"-D__LDBL_DIG__=15",
 	"-D__LDBL_EPSILON__=2.2204460492503131e-16",
@@ -1599,7 +1631,6 @@ static char *fpflags[] = {
 #endif
 #endif
 };
-
 
 /*
  * Configure the standard cpp flags.
