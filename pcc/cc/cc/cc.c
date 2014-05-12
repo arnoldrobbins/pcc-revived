@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.267 2014/04/21 21:26:02 plunky Exp $	*/
+/*	$Id: cc.c,v 1.272 2014/05/11 12:11:00 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -550,6 +550,11 @@ main(int argc, char *argv[])
 			} else if (match(u, "stack-protector") ||
 			    match(u, "stack-protector-all")) {
 				sspflag = j ? 0 : 1;
+#ifdef os_darwin
+			} else if (match(u, "ramework")) {
+				strlist_append(&middle_linker_flags, argp);
+				strlist_append(&middle_linker_flags, nxtopt(0));
+#endif
 			}
 			/* silently ignore the rest */
 			break;
@@ -874,12 +879,9 @@ main(int argc, char *argv[])
 	msuffix = NULL;
 	STRLIST_FOREACH(s, &inputs) {
 		char *suffix;
-		char *ifile, *ofile;
+		char *ifile, *ofile = NULL;
 
 		ifile = s->value;
-		if (ninput > 1 && !Eflag)
-			printf("%s:\n", ifile);
-
 		if (ifile[0] == ')') { /* -x source type given */
 			msuffix = ifile[1] ? &ifile[1] : NULL;
 			continue;
@@ -896,16 +898,16 @@ main(int argc, char *argv[])
 		 * C preprocessor
 		 */
 		ascpp = match(suffix, "S");
-		if (ascpp || match(suffix, "c") || cxxsuf(s->value)) {
+		if (ascpp || match(suffix, "c") || cxxsuf(suffix)) {
 			/* find out next output file */
 			if (Mflag || MDflag) {
-				char *Mofile;
+				char *Mofile = NULL;
 
 				if (MFfile)
 					Mofile = MFfile;
 				else if (outfile)
 					Mofile = setsuf(outfile, 'd');
-				else
+				else if (MDflag)
 					Mofile = setsuf(ifile, 'd');
 				if (preprocess_input(ifile, Mofile, 1))
 					exandrm(Mofile);
@@ -962,6 +964,10 @@ main(int argc, char *argv[])
 				exandrm(ofile);
 			ifile = ofile;
 		}
+
+		if (ninput > 1 && !Eflag && ifile == ofile && ifile[0] != '-')
+			printf("%s:\n", ifile);
+
 		strlist_append(&middle_linker_flags, ifile);
 	}
 
@@ -1557,6 +1563,9 @@ static char *gcppflags[] = {
 
 /* These should _not_ be defined here */
 static char *fpflags[] = {
+#ifdef TARGET_FLT_EVAL_METHOD
+	"-D__FLT_EVAL_METHOD__=" MKS(TARGET_FLT_EVAL_METHOD),
+#endif
 #if defined(os_darwin) || defined(os_netbsd)
 	"-D__FLT_RADIX__=2",
 #if defined(mach_vax)
@@ -1687,7 +1696,7 @@ struct flgcheck ccomflgcheck[] = {
 	{ &vflag, 1, "-v" },
 #endif
 #ifdef os_darwin
-	{ &Bstatic, 1, "-k" },
+	{ &Bstatic, 0, "-k" },
 #elif defined(os_sunos) && defined(mach_i386)
 	{ &kflag, 1, "-K" },
 	{ &kflag, 1, "pic" },

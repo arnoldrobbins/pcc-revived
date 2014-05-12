@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.363 2014/04/03 15:11:39 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.372 2014/05/10 08:54:42 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -173,7 +173,9 @@ defid2(NODE *q, int class, char *astr)
 		tprint(q->n_type, q->n_qual);
 		printf(", %s, (%p)), level %d\n\t", scnames(class),
 		    q->n_df, blevel);
+#ifdef GCC_COMPAT
 		dump_attr(q->n_ap);
+#endif
 	}
 #endif
 
@@ -245,7 +247,7 @@ defid2(NODE *q, int class, char *astr)
 			++ddef;
 		} else if (ISFTN(temp)) {
 			/* add a late-defined prototype here */
-			if (cftnsp == NULL && dsym->dfun == NULL)
+			if (!oldstyle && dsym->dfun == NULL)
 				dsym->dfun = ddef->dfun;
 			if (!oldstyle && ddef->dfun != NULL &&
 			    chkftn(dsym->dfun, ddef->dfun))
@@ -316,6 +318,8 @@ defid2(NODE *q, int class, char *astr)
 		break;
 
 	case STATIC:
+		if (astr)
+			p->soname = astr;
 		if (scl==USTATIC || (scl==EXTERN && blevel==0)) {
 			p->sclass = STATIC;
 			goto done;
@@ -347,6 +351,7 @@ defid2(NODE *q, int class, char *astr)
 			p->sclass = STATIC;
 			goto done;
 		case SNULL:
+#ifdef GCC_COMPAT
 			/*
 			 * Handle redeclarations of inlined functions.
 			 * This is allowed if the previous declaration is of
@@ -354,6 +359,7 @@ defid2(NODE *q, int class, char *astr)
 			 */
 			if (attr_find(p->sap, GCC_ATYP_GNU_INLINE))
 				goto done;
+#endif
 			break;
 		}
 		break;
@@ -433,6 +439,8 @@ defid2(NODE *q, int class, char *astr)
 	case EXTDEF:
 	case EXTERN:
 		p->soffset = getlab();
+		/* FALLTHROUGH */
+	case USTATIC:
 		if (astr)
 			p->soname = astr;
 		break;
@@ -470,7 +478,9 @@ done:
 	if (ddebug) {
 		printf( "	sdf, offset: %p, %d\n\t",
 		    p->sdf, p->soffset);
+#ifdef GCC_COMPAT
 		dump_attr(p->sap);
+#endif
 	}
 #endif
 }
@@ -492,7 +502,9 @@ ssave(struct symtab *sym)
 void
 ftnend(void)
 {
+#ifdef GCC_COMPAT
 	struct attr *gc, *gd;
+#endif
 	extern int *mkclabs(void);
 	extern NODE *cftnod;
 	extern struct savbc *savbc;
@@ -525,6 +537,7 @@ ftnend(void)
 		if (swpole != NULL)
 			cerror("switch error");
 	}
+#ifdef GCC_COMPAT
 	if (cftnsp) {
 		gc = attr_find(cftnsp->sap, GCC_ATYP_CONSTRUCTOR);
 		gd = attr_find(cftnsp->sap, GCC_ATYP_DESTRUCTOR);
@@ -535,16 +548,17 @@ ftnend(void)
 			p = nametree(&sts);
 			p->n_op = ICON;
 			if (gc) {
-				locctr(CTORS, &sts);
+				locctr(CTORS, NULL);
 				inval(0, SZPOINT(0), p);
 			}
 			if (gd) {
-				locctr(DTORS, &sts);
+				locctr(DTORS, NULL);
 				inval(0, SZPOINT(0), p);
 			}
 			tfree(p);
 		}
 	}
+#endif
 	savbc = NULL;
 	lparam = NULL;
 	cftnsp = NULL;
@@ -643,8 +657,11 @@ done:	autooff = AUTOINIT;
 	plabel(prolab); /* after prolog, used in optimization */
 	retlab = getlab();
 	bfcode(parr, nparams);
-	if (fun_inline &&
-	    (xinline || attr_find(cftnsp->sap, GCC_ATYP_ALW_INL)))
+	if (fun_inline && (xinline
+#ifdef GCC_COMPAT
+ || attr_find(cftnsp->sap, GCC_ATYP_ALW_INL)
+#endif
+		))
 		inline_args(parr, nparams);
 	plabel(getlab()); /* used when spilling */
 	if (parlink)
@@ -661,7 +678,7 @@ done:	autooff = AUTOINIT;
 static struct attr *
 seattr(void)
 {
-	return attr_add(attr_new(GCC_ATYP_ALIGNED, 4), attr_new(ATTR_STRUCT, 2));
+	return attr_add(attr_new(ATTR_ALIGNED, 4), attr_new(ATTR_STRUCT, 2));
 }
 
 /*
@@ -838,13 +855,17 @@ bstruct(char *name, int soru, NODE *gp)
 	struct symtab *sp;
 	struct attr *ap, *gap;
 
+#ifdef GCC_COMPAT
 	gap = gp ? gcc_attr_parse(gp) : NULL;
+#else
+	gap = NULL;
+#endif
 
 	if (name != NULL) {
 		sp = deftag(name, soru);
 		if (sp->sap == NULL)
 			sp->sap = seattr();
-		ap = attr_find(sp->sap, GCC_ATYP_ALIGNED);
+		ap = attr_find(sp->sap, ATTR_ALIGNED);
 		if (ap->iarg(0) != 0) {
 			if (sp->slevel < blevel) {
 				sp = hide(sp);
@@ -884,7 +905,7 @@ dclstruct(struct rstack *r)
 	struct symtab *sp;
 	int al, sa, sz;
 
-	apb = attr_find(r->ap, GCC_ATYP_ALIGNED);
+	apb = attr_find(r->ap, ATTR_ALIGNED);
 	aps = attr_find(r->ap, ATTR_STRUCT);
 	aps->amlist = r->rb;
 
@@ -1111,7 +1132,7 @@ talign(unsigned int ty, struct attr *apl)
 	}
 
 	/* check for alignment attribute */
-	if ((al = attr_find(apl, GCC_ATYP_ALIGNED))) {
+	if ((al = attr_find(apl, ATTR_ALIGNED))) {
 		if ((a = al->iarg(0)) == 0) {
 			uerror("no alignment");
 			a = ALINT;
@@ -1177,7 +1198,7 @@ tsize(TWORD ty, union dimfun *d, struct attr *apl)
 		sz = sztable[ty];
 	else if (ISSOU(ty)) {
 		if ((ap = strattr(apl)) == NULL ||
-		    (ap2 = attr_find(apl, GCC_ATYP_ALIGNED)) == NULL ||
+		    (ap2 = attr_find(apl, ATTR_ALIGNED)) == NULL ||
 		    (ap2->iarg(0) == 0)) {
 			uerror("unknown structure/union/enum");
 			sz = SZINT;
@@ -1542,7 +1563,11 @@ falloc(struct symtab *p, int w, NODE *pty)
 static void
 commchk(struct symtab *sp)
 {
-	if ((sp->sflags & STLS) || attr_find(sp->sap, GCC_ATYP_SECTION)) {
+	if ((sp->sflags & STLS)
+#ifdef GCC_COMPAT
+		|| attr_find(sp->sap, GCC_ATYP_SECTION)
+#endif
+	    ) {
 		/* TLS handled in data segment */
 		if (sp->sclass == EXTERN)
 			sp->sclass = EXTDEF;
@@ -1696,24 +1721,28 @@ typwalk(NODE *p, void *arg)
 #define	cmop(x,y) block(CM, x, y, INT, 0, 0)
 	switch (p->n_op) {
 	case ATTRIB:
+#ifdef GCC_COMPAT
 		if (tc->saved && (tc->saved->n_qual & 1)) {
 			tc->post = attr_add(tc->post,gcc_attr_parse(p->n_left));
 		} else {
 			tc->pre = attr_add(tc->pre, gcc_attr_parse(p->n_left));
 		}
 		p->n_left = bcon(0); /* For tfree() */
+#else
+		uerror("gcc type attribute used");
+#endif
 		break;
 	case CLASS:
+		if (p->n_type == 0)
+			break;	/* inline hack */
 		if (tc->class)
 			tc->err = 1; /* max 1 class */
 		tc->class = p->n_type;
 		break;
 
 	case QUALIFIER:
-#if 0
-		if (p->n_qual == 0)
+		if (p->n_qual == 0 && tc->saved && !ISPTR(tc->saved->n_type))
 			uerror("invalid use of 'restrict'");
-#endif
 		tc->qual |= p->n_qual >> TSHIFT;
 		break;
 
@@ -2139,7 +2168,14 @@ tymerge(NODE *typ, NODE *idp)
 		nfree(p);
 		idp->n_op = NAME;
 	}
-	idp->n_ap = bap;
+	/* carefully not destroy any type attributes */
+	if (idp->n_ap != NULL) {
+		struct attr *ap = idp->n_ap;
+		while (ap->next)
+			ap = ap->next;
+		ap->next = bap;
+	} else
+		idp->n_ap = bap;
 
 	return(idp);
 }
@@ -2707,7 +2743,9 @@ deflabel(char *name, NODE *p)
 {
 	struct symtab *s = lookup(name, SLBLNAME);
 
+#ifdef GCC_COMPAT
 	s->sap = gcc_attr_parse(p);
+#endif
 	if (s->soffset > 0)
 		uerror("label '%s' redefined", name);
 	if (s->soffset == 0) {
@@ -3131,7 +3169,8 @@ cxop(int op, NODE *l, NODE *r)
 
 	mxtyp = maxtyp(l, r);
 	l = mkcmplx(l, mxtyp);
-	r = mkcmplx(r, mxtyp);
+	if (op != UMINUS)
+		r = mkcmplx(r, mxtyp);
 
 
 	/* put a pointer to left and right elements in a TEMP */
@@ -3139,17 +3178,22 @@ cxop(int op, NODE *l, NODE *r)
 	ltemp = tempnode(0, l->n_type, l->n_df, l->n_ap);
 	l = buildtree(ASSIGN, ccopy(ltemp), l);
 
-	r = buildtree(ADDROF, r, NIL);
-	rtemp = tempnode(0, r->n_type, r->n_df, r->n_ap);
-	r = buildtree(ASSIGN, ccopy(rtemp), r);
+	if (op != UMINUS) {
+		r = buildtree(ADDROF, r, NIL);
+		rtemp = tempnode(0, r->n_type, r->n_df, r->n_ap);
+		r = buildtree(ASSIGN, ccopy(rtemp), r);
 
-	p = comop(l, r);
+		p = comop(l, r);
+	} else
+		p = l;
 
 	/* create the four trees needed for calculation */
 	real_l = structref(ccopy(ltemp), STREF, real);
-	real_r = structref(ccopy(rtemp), STREF, real);
 	imag_l = structref(ltemp, STREF, imag);
-	imag_r = structref(rtemp, STREF, imag);
+	if (op != UMINUS) {
+		real_r = structref(ccopy(rtemp), STREF, real);
+		imag_r = structref(rtemp, STREF, imag);
+	}
 
 	/* get storage on stack for the result */
 	q = cxstore(mxtyp);
@@ -3162,6 +3206,13 @@ cxop(int op, NODE *l, NODE *r)
 		q = buildtree(op, imag_l, imag_r);
 		p = buildtree(op == EQ ? ANDAND : OROR, p, q);
 		return p;
+
+	case UMINUS:
+		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, real), 
+		    buildtree(op, real_l, NIL)));
+		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, imag), 
+		    buildtree(op, imag_l, NIL)));
+		break;
 
 	case PLUS:
 	case MINUS:
@@ -3195,7 +3246,7 @@ cxop(int op, NODE *l, NODE *r)
 		      buildtree(PLUS,
 			buildtree(MUL, ccopy(real_r), ccopy(real_r)),
 			buildtree(MUL, ccopy(imag_r), ccopy(imag_r))))));
-		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, real),
+		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, imag),
 		    buildtree(DIV,
 		      buildtree(MINUS,
 			buildtree(MUL, ccopy(imag_l), ccopy(real_r)),

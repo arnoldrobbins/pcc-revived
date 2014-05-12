@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.86 2012/09/08 16:01:54 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.88 2014/05/03 10:36:09 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -333,6 +333,9 @@ int COLORMAP(int c, int *r);
 
 #define TARGET_IPP_MEMBERS			\
 	int ipp_argstacksize;
+
+#define	HAVE_WEAKREF
+#define	TARGET_FLT_EVAL_METHOD	2	/* all as long double */
 
 /*
  * Extended assembler macros.

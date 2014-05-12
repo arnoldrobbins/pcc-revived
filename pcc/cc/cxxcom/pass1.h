@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.8 2014/04/19 15:18:43 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.10 2014/05/03 09:47:51 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -451,12 +451,12 @@ enum {	ATTR_NONE,
 	ATTR_COMPLEX,	/* Internal definition of complex */
 	xxxATTR_BASETYP,	/* Internal; see below */
 	ATTR_QUALTYP,	/* Internal; const/volatile, see below */
+	ATTR_ALIGNED,
 	ATTR_STRUCT,	/* Internal; element list */
 #define	ATTR_MAX ATTR_STRUCT
 
 #ifdef GCC_COMPAT
 	/* type attributes */
-	GCC_ATYP_ALIGNED,
 	GCC_ATYP_PACKED,
 	GCC_ATYP_SECTION,
 	GCC_ATYP_TRANSP_UNION,
@@ -494,6 +494,7 @@ enum {	ATTR_NONE,
 	GCC_ATYP_ALW_INL,
 	GCC_ATYP_TLSMODEL,
 	GCC_ATYP_ALIASWEAK,
+	GCC_ATYP_REGPARM,
 
 	/* other stuff */
 	GCC_ATYP_BOUNDED,	/* OpenBSD extra boundary checks */

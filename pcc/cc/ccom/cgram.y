@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.367 2012/10/20 20:08:36 plunky Exp $	*/
+/*	$Id: cgram.y,v 1.370 2014/05/03 15:11:36 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -171,6 +171,7 @@ static void addcase(NODE *p);
 #ifdef GCC_COMPAT
 static void gcccase(NODE *p, NODE *);
 #endif
+static struct attr *gcc_attr_wrapper(NODE *p);
 static void adddef(void);
 static void savebc(void);
 static void swstart(int, TWORD);
@@ -186,10 +187,8 @@ static char *stradd(char *old, char *new);
 static NODE *biop(int op, NODE *l, NODE *r);
 static void flend(void);
 static char * simname(char *s);
-#ifdef GCC_COMPAT
 static NODE *tyof(NODE *);	/* COMPAT_GCC */
-static NODE *voidcon(void);	/* COMPAT_GCC */
-#endif
+static NODE *voidcon(void);
 static NODE *funargs(NODE *p);
 static void oldargs(NODE *p);
 static void uawarn(NODE *p, char *s);
@@ -307,7 +306,7 @@ type_sq:	   C_TYPE { $$ = $1; }
 
 cf_spec:	   C_CLASS { $$ = $1; }
 		|  C_FUNSPEC { fun_inline = 1;  /* XXX - hack */
-			$$ = block(QUALIFIER, NIL, NIL, 0, 0, 0); }
+			$$ = block(CLASS, NIL, NIL, 0, 0, 0); }
 		;
 
 typeof:		   C_TYPEOF '(' e ')' { $$ = tyof(eve($3)); }
@@ -344,7 +343,7 @@ declarator:	   '*' declarator { $$ = bdty(UMUL, $2); }
 		|  C_NAME { $$ = bdty(NAME, $1); }
 		|  '(' attr_spec_list declarator ')' {
 			$$ = $3;
-			$$->n_ap = attr_add($$->n_ap, gcc_attr_parse($2));
+			$$->n_ap = attr_add($$->n_ap, gcc_attr_wrapper($2));
 		}
 		|  '(' declarator ')' { $$ = $2; }
 		|  declarator '[' e ']' { $$ = biop(LB, $1, $3); }
@@ -374,10 +373,10 @@ type_qualifier_list:
 			nfree($2);
 		}
 		|  attribute_specifier {
-			$$ = block(UMUL, NIL, NIL, 0, 0, gcc_attr_parse($1));
+			$$ = block(UMUL, NIL, NIL, 0, 0, gcc_attr_wrapper($1));
 		}
 		|  type_qualifier_list attribute_specifier {
-			$1->n_ap = attr_add($1->n_ap, gcc_attr_parse($2));
+			$1->n_ap = attr_add($1->n_ap, gcc_attr_wrapper($2));
 		}
 		;
 
@@ -416,7 +415,8 @@ parameter_declaration:
 		   declaration_specifiers declarator attr_var {
 			if ($1->n_lval != SNULL && $1->n_lval != REGISTER)
 				uerror("illegal parameter class");
-			$$ = block(TYMERGE, $1, $2, INT, 0, gcc_attr_parse($3));
+			$$ = block(TYMERGE, $1, $2, INT, 0,
+			    gcc_attr_wrapper($3));
 		}
 		|  declaration_specifiers abstract_declarator { 
 			$1->n_ap = attr_add($1->n_ap, $2->n_ap);
@@ -441,32 +441,32 @@ abstract_declarator:
 		|  '(' abstract_declarator ')' { $$ = $2; }
 		|  '[' ']' attr_var {
 			$$ = block(LB, bdty(NAME, NULL), bcon(NOOFFSET),
-			    INT, 0, gcc_attr_parse($3));
+			    INT, 0, gcc_attr_wrapper($3));
 		}
 		|  '[' e ']' attr_var {
 			$$ = block(LB, bdty(NAME, NULL), $2,
-			    INT, 0, gcc_attr_parse($4));
+			    INT, 0, gcc_attr_wrapper($4));
 		}
 		|  abstract_declarator '[' ']' attr_var {
 			$$ = block(LB, $1, bcon(NOOFFSET),
-			    INT, 0, gcc_attr_parse($4));
+			    INT, 0, gcc_attr_wrapper($4));
 		}
 		|  abstract_declarator '[' e ']' attr_var {
-			$$ = block(LB, $1, $3, INT, 0, gcc_attr_parse($5));
+			$$ = block(LB, $1, $3, INT, 0, gcc_attr_wrapper($5));
 		}
 		|  '(' ')' attr_var {
 			$$ = bdty(UCALL, bdty(NAME, NULL));
-			$$->n_ap = gcc_attr_parse($3);
+			$$->n_ap = gcc_attr_wrapper($3);
 		}
 		|  '(' ib2 parameter_type_list ')' attr_var {
 			$$ = block(CALL, bdty(NAME, NULL), $3, INT, 0,
-			    gcc_attr_parse($5));
+			    gcc_attr_wrapper($5));
 		}
 		|  abstract_declarator '(' ')' attr_var {
-			$$ = block(UCALL, $1, NIL, INT, 0, gcc_attr_parse($4));
+			$$ = block(UCALL, $1, NIL, INT, 0, gcc_attr_wrapper($4));
 		}
 		|  abstract_declarator '(' ib2 parameter_type_list ')' attr_var {
-			$$ = block(CALL, $1, $4, INT, 0, gcc_attr_parse($6));
+			$$ = block(CALL, $1, $4, INT, 0, gcc_attr_wrapper($6));
 		}
 		;
 
@@ -557,7 +557,7 @@ struct_dcl:	   str_head '{' struct_dcl_list '}' {
 			if (pragma_allpacked) {
 				p = bdty(CALL, bdty(NAME, "packed"),
 				    bcon(pragma_allpacked));
-				$$->n_ap = attr_add($$->n_ap,gcc_attr_parse(p)); }
+				$$->n_ap = attr_add($$->n_ap,gcc_attr_wrapper(p)); }
 		}
 		|  C_STRUCT attr_var C_NAME { 
 			$$ = rstruct($3,$1);
@@ -623,7 +623,7 @@ struct_declarator: declarator attr_var {
 			$1 = aryfix($1);
 			p = tymerge($<nodep>0, tymfix($1));
 			if ($2)
-				p->n_ap = attr_add(p->n_ap, gcc_attr_parse($2));
+				p->n_ap = attr_add(p->n_ap, gcc_attr_wrapper($2));
 			soumemb(p, (char *)$1->n_sp, 0);
 			tfree(p);
 		}
@@ -654,7 +654,7 @@ struct_declarator: declarator attr_var {
 				tymerge($<nodep>0, tymfix($1));
 				if ($4)
 					$1->n_ap = attr_add($1->n_ap,
-					    gcc_attr_parse($4));
+					    gcc_attr_wrapper($4));
 				soumemb($1, (char *)$1->n_sp, FIELD | ie);
 				nfree($1);
 			} else
@@ -1455,7 +1455,7 @@ init_declarator(NODE *tn, NODE *p, int assign, NODE *a, char *as)
 	p = aryfix(p);
 	p = tymerge(tn, p);
 	if (a) {
-		struct attr *ap = gcc_attr_parse(a);
+		struct attr *ap = gcc_attr_wrapper(a);
 		p->n_ap = attr_add(p->n_ap, ap);
 	}
 
@@ -1729,7 +1729,7 @@ olddecl(NODE *p, NODE *a)
 	} else if (s->stype == FLOAT)
 		s->stype = DOUBLE;
 	if (a)
-		attr_add(s->sap, gcc_attr_parse(a));
+		attr_add(s->sap, gcc_attr_wrapper(a));
 	nfree(p);
 }
 
@@ -1971,6 +1971,17 @@ mkxasm(char *str, NODE *p)
 	ecomp(optloop(q));
 }
 
+static struct attr *
+gcc_attr_wrapper(NODE *p)
+{
+#ifdef GCC_COMPAT
+	return gcc_attr_parse(p);
+#else
+	uerror("gcc attribute used");
+	return NULL;
+#endif
+}
+
 #ifdef GCC_COMPAT
 static NODE *
 tyof(NODE *p)
@@ -1981,6 +1992,14 @@ tyof(NODE *p)
 	q->n_sp = &spp; /* for typenode */
 	tfree(p);
 	return q;
+}
+
+#else
+static NODE *
+tyof(NODE *p)
+{
+	uerror("typeof gcc extension");
+	return bcon(0);
 }
 #endif
 
@@ -2071,6 +2090,14 @@ eve(NODE *p)
 		break;
 #endif
 	case UMINUS:
+#ifndef NO_COMPLEX
+		p1 = eve(p1);
+		if (ANYCX(p1))
+			r = cxop(UMINUS, p1, p1);
+		else
+			r = buildtree(UMINUS, p1, NIL);
+		break;
+#endif
 	case NOT:
 	case UMUL:
 		p1 = eve(p1);

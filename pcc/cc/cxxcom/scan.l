@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.3 2012/07/31 07:33:22 ragge Exp $	*/
+/*	$Id: scan.l,v 1.4 2014/05/03 09:47:51 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -243,8 +243,10 @@ namechk(void)
 	}
 	unput(i);
 
+#ifdef GCC_COMPAT
 	if ((i = gcc_keyword(yylval.strp, &yylval.nodep)) > 0)
 		return i;
+#endif
 
 	if (notype)
 		return(C_NAME);
@@ -678,13 +680,21 @@ pragmas_weak(char *str)
 		return 1;
 	if ((s2 = pragtok(NULL)) == NULL) {
 		sp = lookup(addname(s1), SNORMAL);
+#ifdef GCC_COMPAT
 		sp->sap = attr_add(sp->sap, gcc_attr_parse(bdty(NAME, "weak")));
+#else
+		sp->sap = 0;
+#endif
 	} else if (*s2 == '=') {
 		if ((s2 = pragtok(NULL)) == NULL)
 			return 1;
 		sp = lookup(addname(s2), SNORMAL);
+#ifdef GCC_COMPAT
 		sp->sap = attr_add(sp->sap, gcc_attr_parse(bdty(CALL,
 		    bdty(NAME, "aliasweak"), bdty(STRING, s1, 0))));
+#else
+		sp->sap = NULL;
+#endif
 	} else
 		return 1;
 	return 0;

@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.169 2012/09/26 19:00:20 plunky Exp $	*/
+/*	$Id: local2.c,v 1.171 2014/05/01 10:17:38 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -335,9 +335,10 @@ fcomp(NODE *p)
 static void
 ulltofp(NODE *p)
 {
+	int jmplab;
+
 #if defined(ELFABI) || defined(PECOFFABI)
 	static int loadlab;
-	int jmplab;
 
 	if (loadlab == 0) {
 		loadlab = getlab2();
@@ -345,18 +346,27 @@ ulltofp(NODE *p)
 		printf(LABFMT ":	.long 0,0x80000000,0x403f\n", loadlab);
 		expand(p, 0, "	.text\n");
 	}
+#endif
+
 	jmplab = getlab2();
 	expand(p, 0, "	pushl UL\n	pushl AL\n");
 	expand(p, 0, "	fildq (%esp)\n");
 	expand(p, 0, "	addl $8,%esp\n");
 	expand(p, 0, "	cmpl $0,UL\n");
 	printf("	jge " LABFMT "\n", jmplab);
+
+#if defined(ELFABI)
 	printf("	fldt " LABFMT "%s\n", loadlab, kflag ? "@GOTOFF" : "");
-	printf("	faddp %%st,%%st(1)\n");
-	printf(LABFMT ":\n", jmplab);
+#elif defined(MACHOABI)
+	printf("\tpushl 0x5f800000\n");
+	printf("\tfadds (%%esp)\n");
+	printf("\taddl $4,%%esp\n");
 #else
 #error incomplete implementation
 #endif
+
+	printf("	faddp %%st,%%st(1)\n");
+	printf(LABFMT ":\n", jmplab);
 }
 
 static int
@@ -1192,13 +1202,12 @@ lastcall(NODE *p)
 	p->n_qual = 0;
 	if (p->n_op != CALL && p->n_op != FORTCALL && p->n_op != STCALL)
 		return;
-	for (p = p->n_right; p->n_op == CM; p = p->n_left)
-		size += argsiz(p->n_right);
-	size += argsiz(p);
-#if defined(ELFABI)
-	if (kflag)
-		size -= 4;
-#endif
+	for (p = p->n_right; p->n_op == CM; p = p->n_left) {
+		if (p->n_right->n_op != ASSIGN)
+			size += argsiz(p->n_right);
+	}
+	if (p->n_op != ASSIGN)
+		size += argsiz(p);
 	
 #if defined(MACHOABI)
 	int newsize = (size + 15) & ~15;	/* stack alignment */

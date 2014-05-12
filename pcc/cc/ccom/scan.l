@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.117 2014/04/19 15:14:14 ragge Exp $	*/
+/*	$Id: scan.l,v 1.120 2014/05/03 15:11:36 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -114,7 +114,7 @@ extern void yyset_lineno (int);
 "int"			{ 	return resw(INT, C_TYPE); }
 "long"			{ 	return resw(LONG, C_TYPE); }
 "register"		{ 	return resw(REGISTER, C_CLASS); }
-"restrict"		{ ; /* just ignore */ }
+"restrict"		{ return resw(0, C_QUALIFIER); }
 "return"		{ return(C_RETURN); }
 "short"			{ 	return resw(SHORT, C_TYPE); }
 "signed"		{ 	return resw(SIGNED, C_TYPE); }
@@ -348,6 +348,30 @@ h2n(int ch)
 	
 }
 
+/*
+ * Get exponent.  Max size is 16 bits.
+ */
+static int
+fdecl(char *c, char **ep)
+{
+	int minus = 0;
+	int val = 0;
+
+	if (*c == '-')
+		minus = 1, c++;
+
+	while (isdigit((int)*c)) {
+		val *= 10;
+		val += *c++;
+		if (val > 32769)
+			val = 32769;
+	}
+	if (minus)
+		val = -val;
+	*ep = c;
+	return val;
+}
+
 NODE *
 fhexcon(char *c)
 {
@@ -378,7 +402,7 @@ fhexcon(char *c)
 	if (*c != 'P' && *c != 'p')
 		cerror("fhexcon2");
 	c++;
-	ed += strtol(c, &ep, 10);
+	ed += fdecl(c, &ep);
 
 	/* avoid looping in vain. Idea from Fred J. Tydeman */
 	if (ed > 32769) ed = 32769;
@@ -679,13 +703,21 @@ pragmas_weak(char *str)
 		return 1;
 	if ((s2 = pragtok(NULL)) == NULL) {
 		sp = lookup(addname(s1), SNORMAL);
+#ifdef GCC_COMPAT
 		sp->sap = attr_add(sp->sap, gcc_attr_parse(bdty(NAME, "weak")));
+#else
+		sp->sap = NULL;
+#endif
 	} else if (*s2 == '=') {
 		if ((s2 = pragtok(NULL)) == NULL)
 			return 1;
 		sp = lookup(addname(s2), SNORMAL);
+#ifdef GCC_COMPAT
 		sp->sap = attr_add(sp->sap, gcc_attr_parse(bdty(CALL,
 		    bdty(NAME, "aliasweak"), bdty(STRING, s1, 0))));
+#else
+		sp->sap = NULL;
+#endif
 	} else
 		return 1;
 	return 0;

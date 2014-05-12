@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.24 2011/07/16 20:34:50 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.25 2014/05/03 09:47:51 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -368,16 +368,20 @@ hide(struct symtab *sym)
 void
 locctr(int seg, struct symtab *sp)
 {
+#ifdef GCC_COMPAT
 	struct attr *ga;
+#endif
 
 	if (seg == NOSEG) {
 		;
 	} else if (sp == NULL) {
 		if (lastloc != seg)
 			setseg(seg, NULL);
+#ifdef GCC_COMPAT
 	} else if ((ga = attr_find(sp->sap, GCC_ATYP_SECTION)) != NULL) {
 		setseg(NMSEG, ga->sarg(0));
 		seg = NOSEG;
+#endif
 	} else {
 		if (seg == DATA) {
 			if (ISCON(cqual(sp->stype, sp->squal)))
@@ -436,6 +440,7 @@ defalign(int al)
 void
 symdirec(struct symtab *sp)
 {
+#ifdef GCC_COMPAT
 	struct attr *ga;
 	char *name;
 
@@ -450,5 +455,6 @@ symdirec(struct symtab *sp)
 		printf("\t.weak %s\n", ga->sarg(0));
 		printf("\t.set %s,%s\n", ga->sarg(0), name);
 	}
+#endif
 }
 #endif

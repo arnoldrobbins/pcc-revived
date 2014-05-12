@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.16 2012/09/25 15:07:07 ragge Exp $	*/
+/*	$Id: order.c,v 1.17 2014/04/29 18:16:09 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -96,6 +96,7 @@ offstar(NODE *p, int shape)
 
 	if ((p->n_op == PLUS || p->n_op == MINUS) &&
 	    p->n_left->n_op == ICON &&
+	    p->n_left->n_name[0] == '\0' &&
 	    notoff(0, 0,  p->n_left->n_lval, 0) == 0) {
 		l = p->n_right;
 		if (isreg(l))

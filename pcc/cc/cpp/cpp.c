@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.188 2013/02/26 19:27:38 plunky Exp $	*/
+/*	$Id: cpp.c,v 1.189 2014/05/02 10:44:34 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -437,6 +437,54 @@ okret:	prtline();
 bad:	error("bad #line");
 }
 
+#ifdef MACHOABI
+
+/*
+ * Search for framework header file.
+ * Return 1 on success.
+ */
+
+static int
+fsrch_macos_framework(const usch *fn, const usch *dir)
+{
+	static usch *current_path = NULL;
+	usch *saved_path = current_path;
+
+	usch *saved_stringbuf = stringbuf;
+	usch *s = (usch *)strchr((const char*)fn, '/');
+
+	if (s != NULL) {
+		usch *nm;
+		int len  = s - fn;
+
+		current_path = savstr(dir);
+		stringbuf = savstr(fn) + len;
+		savstr((const usch*)".framework/Frameworks/");
+		savch(0);
+
+		nm = savstr(dir);
+		stringbuf = savstr(fn) + len;
+		savstr((const usch*)".framework/Headers");
+		savstr(s); savch(0);
+		if (pushfile(nm, fn, SYSINC, NULL) == 0)
+			return 1;
+
+		current_path = NULL;
+
+		if (saved_path != NULL) {
+			if (fsrch_macos_framework(fn, saved_path))
+				return 1;
+		}
+	}
+
+	stringbuf = saved_stringbuf;
+	current_path = saved_path;
+
+	return 0;
+}
+
+#endif
+
 /*
  * Search for and include next file.
  * Return 1 on success.
@@ -459,6 +507,18 @@ fsrch(const usch *fn, int idx, struct incs *w)
 			stringbuf = nm;
 		}
 	}
+
+#ifdef MACHOABI
+	/*
+	 * On MacOS, we may have to do some clever stuff
+	 * to resolve framework headers.
+	 */ 
+	if (fsrch_macos_framework(fn, (const usch *)"/Library/Frameworks/") == 1)
+		return 1;
+	if (fsrch_macos_framework(fn, (const usch *)"/System/Library/Frameworks/") == 1)
+		return 1;
+#endif
+
 	return 0;
 }
 

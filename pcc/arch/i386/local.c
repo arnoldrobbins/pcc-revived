@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.169 2014/04/19 14:14:15 ragge Exp $	*/
+/*	$Id: local.c,v 1.178 2014/05/11 09:57:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -142,13 +142,22 @@ picext(NODE *p)
 	struct symtab *sp;
 	char *name;
 
-	if ((ga = attr_find(p->n_sp->sap, GCC_ATYP_VISIBILITY)) &&
-	    strcmp(ga->sarg(0), "hidden") == 0)
-		return p; /* no GOT reference */
-
 	q = tempnode(gotnr, PTR|VOID, 0, 0);
 	if ((name = p->n_sp->soname) == NULL)
 		name = p->n_sp->sname;
+
+	if ((ga = attr_find(p->n_sp->sap, GCC_ATYP_VISIBILITY)) &&
+	    strcmp(ga->sarg(0), "hidden") == 0) {
+		/* For hidden vars use GOTOFF */
+		sp = picsymtab("", name, "@GOTOFF");
+		r = xbcon(0, sp, INT);
+		q = buildtree(PLUS, q, r);
+		q = block(UMUL, q, 0, p->n_type, p->n_df, p->n_ap);
+		q->n_sp = p->n_sp; /* for init */
+		nfree(p);
+		return q;
+	}
+
 	sp = picsymtab("", name, "@GOT");
 #ifdef GCC_COMPAT
 	if (attr_find(p->n_sp->sap, GCC_ATYP_STDCALL) != NULL)
@@ -372,6 +381,7 @@ NODE *
 clocal(NODE *p)
 {
 
+	struct attr *ap;
 	register struct symtab *q;
 	register NODE *r, *l;
 #if defined(os_openbsd)
@@ -417,6 +427,10 @@ clocal(NODE *p)
 			if (kflag == 0) {
 				if (q->slevel == 0)
 					break;
+			} else if (kflag && !statinit && blevel > 0 &&
+			    attr_find(q->sap, GCC_ATYP_WEAKREF)) {
+				/* extern call */
+				p = picext(p);
 			} else if (blevel > 0 && !statinit)
 				p = picstatic(p);
 			break;
@@ -440,6 +454,12 @@ clocal(NODE *p)
 			if (q->sflags & SDLLINDIRECT)
 				p = import(p);
 #endif
+			if ((ap = attr_find(q->sap,
+			    GCC_ATYP_VISIBILITY)) != NULL &&
+			    strcmp(ap->sarg(0), "hidden") == 0) {
+				char *sn = q->soname ? q->soname : q->sname; 
+				printf("\t.hidden %s\n", sn);
+			}
 			if (kflag == 0)
 				break;
 			if (blevel > 0 && !statinit)
@@ -449,7 +469,7 @@ clocal(NODE *p)
 		break;
 
 	case ADDROF:
-		if (kflag == 0 || blevel == 0)
+		if (kflag == 0 || blevel == 0 || statinit)
 			break;
 		/* char arrays may end up here */
 		l = p->n_left;
@@ -786,6 +806,7 @@ fixnames(NODE *p, void *arg)
 			return; /* function pointer */
 
 		if (isu) {
+			*c = 0;
 			addstub(&stublist, sp->soname+1);
 			memcpy(c, "$stub", sizeof("$stub"));
 		} else 
@@ -1043,6 +1064,8 @@ defzero(struct symtab *sp)
 			printf("\t.comm  " LABFMT ",0%o,%d\n", sp->soffset, off, al);
 	}
 #else
+	if (attr_find(sp->sap, GCC_ATYP_WEAKREF) != NULL)
+		return;
 	if (sp->sclass == STATIC) {
 		if (sp->slevel == 0) {
 			printf("\t.local %s\n", name);
@@ -1127,14 +1150,35 @@ mypragma(char *str)
 void
 fixdef(struct symtab *sp)
 {
+#ifdef GCC_COMPAT
 	struct attr *ap;
+#endif
 #ifdef TLS
 	/* may have sanity checks here */
 	if (gottls)
 		sp->sflags |= STLS;
 	gottls = 0;
 #endif
-	if ((ap = attr_find(sp->sap, GCC_ATYP_ALIAS)) != NULL) {
+#ifdef GCC_COMPAT
+#ifdef HAVE_WEAKREF
+	/* not many as'es have this directive */
+	if ((ap = attr_find(sp->sap, GCC_ATYP_WEAKREF)) != NULL) {
+		char *wr = ap->sarg(0);
+		char *sn = sp->soname ? sp->soname : sp->sname;
+		if (sp->sclass != STATIC && sp->sclass != USTATIC)
+			uerror("weakref %s must be static", sp->sname);
+		if (wr == NULL) {
+			if ((ap = attr_find(sp->sap, GCC_ATYP_ALIAS))) {
+				wr = ap->sarg(0);
+			}
+		}
+		if (wr == NULL)
+			printf("\t.weak %s\n", sn);
+		else
+			printf("\t.weakref %s,%s\n", sn, wr);
+	} else
+#endif
+	    if ((ap = attr_find(sp->sap, GCC_ATYP_ALIAS)) != NULL) {
 		char *an = ap->sarg(0);	 
 		char *sn = sp->soname ? sp->soname : sp->sname; 
 		char *v;
@@ -1143,7 +1187,7 @@ fixdef(struct symtab *sp)
 		printf("\t.%s %s\n", v, sn);
 		printf("\t.set %s,%s\n", sn, an);
 	}	
-
+#endif
 	if (alias != NULL && (sp->sclass != PARAM)) {
 		char *name;
 		if ((name = sp->soname) == NULL)

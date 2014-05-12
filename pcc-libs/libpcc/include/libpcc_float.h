@@ -14,7 +14,11 @@
  *	1	evaluate to range and precision of double type
  *	2	evaluate to range and precision of long double type
  */
+#ifdef __FLT_EVAL_METHOD__
+#define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
+#else
 #define FLT_EVAL_METHOD 0
+#endif
 
 #define FLT_RADIX 2
 

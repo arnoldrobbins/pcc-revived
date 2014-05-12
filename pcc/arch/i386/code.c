@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.70 2014/04/19 07:47:51 ragge Exp $	*/
+/*	$Id: code.c,v 1.74 2014/05/11 09:06:31 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -172,10 +172,13 @@ void
 bfcode(struct symtab **sp, int cnt)
 {
 	extern int argstacksize;
+#ifdef GCC_COMPAT
+	struct attr *ap;
+#endif
 	struct symtab *sp2;
 	extern int gotnr;
 	NODE *n, *p;
-	int i;
+	int i, regparmarg;
 
 	if (cftnsp->stype == STRTY+FTN || cftnsp->stype == UNIONTY+FTN) {
 		/* Function returns struct, adjust arg offset */
@@ -257,8 +260,35 @@ bfcode(struct symtab **sp, int cnt)
 		p->n_right->n_type = STRTY;
 		ecomp(p);
 	}
-	if (xtemps == 0)
+#ifdef GCC_COMPAT
+	if ((ap = attr_find(cftnsp->sap, GCC_ATYP_REGPARM)))
+		regparmarg = ap->iarg(0);
+	else
+#endif
+		regparmarg = 0;
+	if (regparmarg > cnt)	/* not more than number of args */
+		regparmarg = cnt;
+	if (cftnsp->sflags & SSTDCALL)	/* do not pop reg args */
+		argstacksize -= regparmarg * 4;
+	for (i = 0; i < cnt; i++) /* adjust for args in reg */
+		sp[i]->soffset -= (regparmarg * SZINT);
+	if (xtemps == 0) {
+		/* put regparms in temps, ends up on stack later */
+		for (i = 0; i < regparmarg; i++) {
+			TWORD tt = sp[i]->stype;
+			if (tt < INT)
+				tt = INT;
+			p = block(REG, 0, 0, tt, 0, 0);
+			regno(p) = i == 0 ? EAX : i == 1 ? EDX : ECX;
+			p = ccast(p, sp[i]->stype, sp[i]->squal,
+			    sp[i]->sdf, sp[i]->sap);
+			n = tempnode(0, sp[i]->stype, sp[i]->sdf, sp[i]->sap);
+			sp[i]->soffset = regno(n);
+			sp[i]->sflags |= STNODE;
+			ecomp(buildtree(ASSIGN, n, p));
+		}
 		return;
+	}
 
 	/* put arguments in temporaries */
 	for (i = 0; i < cnt; i++) {
@@ -269,7 +299,17 @@ bfcode(struct symtab **sp, int cnt)
 			continue;
 		sp2 = sp[i];
 		n = tempnode(0, sp[i]->stype, sp[i]->sdf, sp[i]->sap);
-		n = buildtree(ASSIGN, n, nametree(sp2));
+		if (i < regparmarg) {
+			TWORD tt = sp[i]->stype;
+			if (tt < INT)
+				tt = INT;
+			p = block(REG, 0, 0, tt, 0, 0);
+			regno(p) = i == 0 ? EAX : i == 1 ? EDX : ECX;
+			p = ccast(p, sp[i]->stype, sp[i]->squal,
+			    sp[i]->sdf, sp[i]->sap);
+		} else
+			p = nametree(sp2);
+		n = buildtree(ASSIGN, n, p);
 		sp[i]->soffset = regno(n->n_left);
 		sp[i]->sflags |= STNODE;
 		ecomp(n);
@@ -329,6 +369,28 @@ bjobcode(void)
 }
 
 /*
+ * Convert FUNARG to assign in case of regparm.
+ */
+static int regcvt, rparg;
+static void
+addreg(NODE *p)
+{
+	if (p->n_op != FUNARG)
+		return;
+	if (regcvt >= rparg)
+		return;
+	if (p->n_type < INT) {
+		p->n_left = ccast(p->n_left, INT, 0, 0, 0);
+		p->n_type = INT;
+	}
+	p->n_op = ASSIGN;
+	p->n_right = p->n_left;
+	p->n_left = block(REG, 0, 0, p->n_type, 0, 0);
+	regno(p->n_left) = regcvt == 0 ? EAX : regcvt == 1 ? EDX : ECX;
+	regcvt++;
+}
+
+/*
  * Called with a function call with arguments as argument.
  * This is done early in buildtree() and only done once.
  * Returns p.
@@ -337,22 +399,42 @@ NODE *
 funcode(NODE *p)
 {
 	extern int gotnr;
+#ifdef GCC_COMPAT
+	struct attr *ap;
+#endif
 	NODE *r, *l;
+	int narg = 0;
 
 	/* Fix function call arguments. On x86, just add funarg */
 	for (r = p->n_right; r->n_op == CM; r = r->n_left) {
+		narg++;
 		if (r->n_right->n_op != STARG)
 			r->n_right = block(FUNARG, r->n_right, NIL,
 			    r->n_right->n_type, r->n_right->n_df,
 			    r->n_right->n_ap);
 	}
 	if (r->n_op != STARG) {
+		narg++;
 		l = talloc();
 		*l = *r;
 		r->n_op = FUNARG;
 		r->n_left = l;
 		r->n_type = l->n_type;
 	}
+
+#ifdef GCC_COMPAT
+	if ((ap = attr_find(p->n_left->n_ap, GCC_ATYP_REGPARM)))
+		rparg = ap->iarg(0);
+	else
+#endif
+		rparg = 0;
+	if (rparg > narg)
+		rparg = narg;
+
+	regcvt = 0;
+	if (rparg)
+		listf(p->n_right, addreg);
+
 	if (kflag == 0)
 		return p;
 #if defined(ELFABI)

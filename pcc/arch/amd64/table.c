@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.51 2013/02/16 17:00:14 ragge Exp $	*/
+/*	$Id: table.c,v 1.52 2014/04/29 18:16:09 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2008 Anders Magnusson (ragge@ludd.ltu.se).
@@ -1398,6 +1398,12 @@ struct optab table[] = {
 	SMIXOR,	TANY,
 		NAREG,	RESC1,
 		"	xorq A1,A1\n", },
+
+{ OPLTYPE,	INAREG,
+	SANY,	TANY,
+	SCON,	TLL|TPOINT,
+		NAREG,	RESC1,
+		"	movabsq AL,A1\n", },
 
 { OPLTYPE,	INAREG,
 	SANY,	TANY,

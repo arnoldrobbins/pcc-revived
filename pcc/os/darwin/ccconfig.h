@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.18 2012/10/26 11:04:39 plunky Exp $	*/
+/*	$Id: ccconfig.h,v 1.19 2014/05/02 10:44:34 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -30,7 +30,7 @@
  */
 
 /* common cpp predefines */
-#define	CPPADD		{ "-D__Darwin__", "-D__APPLE__", NULL }
+#define	CPPADD		{ "-D__Darwin__", "-D__APPLE__", "-D__MACH__", "-D__APPLE_CPP__", NULL }
 #define	CRT0		"crt1.o"
 #define GCRT0		"gcrt1.o"
 #define CRTBEGIN_T	0
@@ -59,6 +59,8 @@ ld -arch ppc -weak_reference_mismatches non-weak -o a.out -lcrt1.o -lcrt2.o -L/u
 #define	CPPMDADD { "-D__ppc__", "-D__BIG_ENDIAN__", NULL }
 #elif defined(mach_amd64)
 #define	CPPMDADD { "-D__x86_64__", "-D__LITTLE_ENDIAN__", NULL }
+#elif define(mach_m68k)
+#define	CPPMDADD { "-D__m68k__", "-D__BIG_ENDIAN__", NULL }
 #else
 #error defines for arch missing
 #endif

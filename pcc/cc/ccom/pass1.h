@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.255 2014/03/31 20:02:34 plunky Exp $	*/
+/*	$Id: pass1.h,v 1.257 2014/05/03 09:47:51 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -448,12 +448,12 @@ enum {	ATTR_NONE,
 	ATTR_COMPLEX,	/* Internal definition of complex */
 	xxxATTR_BASETYP,	/* Internal; see below */
 	ATTR_QUALTYP,	/* Internal; const/volatile, see below */
+	ATTR_ALIGNED,	/* Internal; also used as gcc type attribute */
 	ATTR_STRUCT,	/* Internal; element list */
 #define	ATTR_MAX ATTR_STRUCT
 
 #ifdef GCC_COMPAT
 	/* type attributes */
-	GCC_ATYP_ALIGNED,
 	GCC_ATYP_PACKED,
 	GCC_ATYP_SECTION,
 	GCC_ATYP_TRANSP_UNION,
@@ -494,6 +494,7 @@ enum {	ATTR_NONE,
 	GCC_ATYP_RETURNS_TWICE,
 	GCC_ATYP_WARNING,
 	GCC_ATYP_NOCLONE,
+	GCC_ATYP_REGPARM,
 
 	/* other stuff */
 	GCC_ATYP_BOUNDED,	/* OpenBSD extra boundary checks */

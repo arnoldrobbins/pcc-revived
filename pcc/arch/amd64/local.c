@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.77 2014/03/20 18:45:36 ragge Exp $	*/
+/*	$Id: local.c,v 1.78 2014/04/30 16:37:20 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -736,6 +736,19 @@ defzero(struct symtab *sp)
 	off /= SZCHAR;
 	al = talign(sp->stype, sp->sap)/SZCHAR;
 
+#ifdef MACHOABI
+	if (sp->sclass == STATIC) {
+		al = ispow2(al);
+		printf("\t.zerofill __DATA,__bss,");
+		if (sp->slevel == 0) {
+			printf("%s", name);
+		} else
+			printf(LABFMT, sp->soffset);
+		printf(",%d,%d\n", off, al);
+	} else {
+		printf("\t.comm %s,0%o,%d\n", name, off, al);
+	}
+#else
 	if (sp->sclass == STATIC) {
 		if (sp->slevel == 0) {
 			printf("\t.local %s\n", name);
@@ -746,6 +759,7 @@ defzero(struct symtab *sp)
 		printf("\t.comm %s,0%o,%d\n", name, off, al);
 	} else
 		printf("\t.comm " LABFMT ",0%o,%d\n", sp->soffset, off, al);
+#endif
 }
 
 static char *

@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.121 2014/04/09 10:01:24 plunky Exp $	*/
+/*	$Id: main.c,v 1.122 2014/05/07 16:46:31 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -130,6 +130,7 @@ main(int argc, char *argv[])
 {
 	int ch;
 
+//kflag = 1;
 #ifdef TIMING
 	struct timeval t1, t2;
 

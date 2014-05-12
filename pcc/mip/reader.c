@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.286 2012/12/28 16:04:03 ragge Exp $	*/
+/*	$Id: reader.c,v 1.287 2014/05/03 09:57:57 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -428,10 +428,12 @@ emit(struct interpass *ip)
 
 		nodepole = p;
 		canon(p); /* may convert stuff after genregs */
+#ifdef PCC_DEBUG
 		if (c2debug > 1) {
 			printf("emit IP_NODE:\n");
 			fwalk(p, e2print, 0);
 		}
+#endif
 		switch (p->n_op) {
 		case CBRANCH:
 			/* Only emit branch insn if RESCC */
