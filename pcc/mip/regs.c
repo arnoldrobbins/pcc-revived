@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.234 2014/05/03 09:57:57 ragge Exp $	*/
+/*	$Id: regs.c,v 1.235 2014/05/29 19:20:03 plunky Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2595,7 +2595,7 @@ temparg(struct interpass *ipole, REGW *w)
 		/* Cannot DLIST_REMOVE here, would break basic blocks */
 		/* Make it a nothing instead */
 		ip->type = IP_ASM;
-		ip->ip_asm="";
+		ip->ip_asm = "";
 		return reg;
 	}
 	return 0;

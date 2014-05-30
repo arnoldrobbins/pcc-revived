@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.24 2012/04/22 21:07:40 plunky Exp $	*/
+/*	$Id: code.c,v 1.25 2014/05/29 19:20:02 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -42,7 +42,7 @@ defalign(int n)
 	if (lastloc == PROG || n == 1)
 		return;
 	s = (isinlining ? permalloc(40) : tmpalloc(40));
-	sprintf(s, ".align %d", n);
+	sprintf(s, "\t.align %d\n", n);
 	send_passt(IP_ASM, s);
 #endif
 }

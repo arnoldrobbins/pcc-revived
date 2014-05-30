@@ -1,4 +1,4 @@
-/*	$Id: inline.c,v 1.4 2014/05/03 09:47:51 ragge Exp $	*/
+/*	$Id: inline.c,v 1.5 2014/05/29 19:20:03 plunky Exp $	*/
 /*
  * Copyright (c) 2003, 2008 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -346,7 +346,7 @@ printip(struct interpass *pole)
 			break;
 		case IP_DEFLAB: printf(LABFMT "\n", ip->ip_lbl); break;
 		case IP_DEFNAM: printf("\n"); break;
-		case IP_ASM: printf("%s\n", ip->ip_asm); break;
+		case IP_ASM: printf("%s", ip->ip_asm); break;
 		default:
 			break;
 		}

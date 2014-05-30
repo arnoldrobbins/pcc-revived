@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.30 2014/04/19 07:47:51 ragge Exp $	*/
+/*	$Id: code.c,v 1.31 2014/05/29 19:20:03 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -762,7 +762,7 @@ genswitch_table(int num, struct swents **p, int n)
 			lab = p[j]->slab;
 			j++;
 		}
-		snprintf(entry, 20, ".long " LABFMT "-" LABFMT, lab, tbllabel);
+		snprintf(entry, 20, "\t.long " LABFMT "-" LABFMT "\n", lab, tbllabel);
 		send_passt(IP_ASM, entry);
 	}
 
@@ -936,7 +936,7 @@ mrst_put_entry_and_recurse(int num, struct swents **p, int n, int *state,
 
 	/* generate the table entry */
 	char *entry = tmpalloc(20);
-	snprintf(entry, 20, ".long " LABFMT "-" LABFMT, lab, tbllabel);
+	snprintf(entry, 20, "\t.long " LABFMT "-" LABFMT "\n", lab, tbllabel);
 	send_passt(IP_ASM, entry);
 
 	DPRINTF(("mrst_put_entry: table=%d, pos=%lu/%lu, label=%d\n",

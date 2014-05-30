@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.137 2011/08/06 15:11:48 ragge Exp $	*/
+/*	$Id: table.c,v 1.138 2014/05/24 15:19:53 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -569,42 +569,23 @@ struct optab table[] = {
 		NDREG|NDSL,	RESC1,	/* should be 0 */
 		"	call *AL\nZC", },
 
-/* struct return */
-{ USTCALL,	FOREFF,
-	SCON,	TANY,
-	SANY,	TANY,
-		NAREG|NASL,	0,
-		"ZP	call CL\nZC", },
-
-{ USTCALL,	INAREG,
-	SCON,	TANY,
-	SANY,	TANY,
-		NAREG|NASL,	RESC1,	/* should be 0 */
-		"ZP	call CL\nZC", },
-
-{ USTCALL,	INAREG,
-	SNAME|SAREG,	TANY,
-	SANY,	TANY,
-		NAREG|NASL,	RESC1,	/* should be 0 */
-		"ZP	call *AL\nZC", },
-
 { STCALL,	FOREFF,
 	SCON,	TANY,
 	SANY,	TANY,
 		NAREG|NASL,	0,
-		"ZP	call CL\nZC", },
+		"	call CL\nZC", },
 
 { STCALL,	INAREG,
 	SCON,	TANY,
 	SANY,	TANY,
 		NAREG|NASL,	RESC1,	/* should be 0 */
-		"ZP	call CL\nZC", },
+		"	call CL\nZC", },
 
 { STCALL,	INAREG,
 	SNAME|SAREG,	TANY,
 	SANY,	TANY,
 		NAREG|NASL,	RESC1,	/* should be 0 */
-		"ZP	call *AL\nZC", },
+		"	call *AL\nZC", },
 
 /*
  * The next rules handle all binop-style operators.

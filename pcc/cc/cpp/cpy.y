@@ -1,4 +1,4 @@
-/*	$Id: cpy.y,v 1.20 2012/10/02 09:34:27 plunky Exp $	*/
+/*	$Id: cpy.y,v 1.21 2014/05/28 08:52:42 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -41,7 +41,7 @@
  * documentation and/or other materials provided with the distribution.
  * All advertising materials mentioning features or use of this software
  * must display the following acknowledgement:
- * 	This product includes software developed or owned by Caldera
+ *	This product includes software developed or owned by Caldera
  *	International, Inc.
  * Neither the name of Caldera International, Inc. nor the names of other
  * contributors may be used to endorse or promote products derived from

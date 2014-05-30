@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.110 2014/05/09 18:00:02 plunky Exp $	*/
+/*	$Id: token.c,v 1.115 2014/05/28 22:09:32 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -31,7 +31,7 @@
  *		characters that may require actions.
  *	- sloscan() tokenize the input stream and returns tokens.
  *		It may recurse into itself during expansion.
- *	- yylex() returns something from the input stream that 
+ *	- yylex() returns something from the input stream that
  *		is suitable for yacc.
  *
  *	Other functions of common use:
@@ -53,7 +53,8 @@
 #include "cpp.h"
 #include "cpy.h"
 
-static void cvtdig(int rad);
+static void cvtdig(int);
+static int dig2num(int);
 static int charcon(usch *);
 static void elsestmt(void);
 static void ifdefstmt(void);
@@ -97,12 +98,33 @@ usch spechr[256] = {
 	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IXE,	C_IX,	C_I,
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
 	C_IP,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	0,	0,	0,	0,	C_I,
+	C_I,	C_I,	C_I,	0,	C_SPEC,	0,	0,	C_I,
 
 	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IXE,	C_IX,	C_I,
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
 	C_IP,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
 	C_I,	C_I,	C_I,	0,	C_2,	0,	0,	0,
+
+/* utf-8 */
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
 };
 
 /*
@@ -149,7 +171,7 @@ unch(int c)
 {
 	if (c == -1)
 		return;
-		
+
 	ifiles->curptr--;
 	if (ifiles->curptr < ifiles->bbuf)
 		error("pushback buffer full");
@@ -228,6 +250,56 @@ inch(void)
 			return ch;
 		ifiles->escln++;
 	}
+}
+
+/*
+ * check for universal-character-name on input, and
+ * unput to the pushback buffer encoded as UTF-8.
+ */
+static int
+chkucn(void)
+{
+	unsigned long cp, m;
+	int ch, n;
+
+	if ((ch = inch()) == -1)
+		return 0;
+	if (ch == 'u')
+		n = 4;
+	else if (ch == 'U')
+		n = 8;
+	else {
+		unch(ch);
+		return 0;
+	}
+
+	cp = 0;
+	while (n-- > 0) {
+		if ((ch = inch()) == -1 || (spechr[ch] & C_HEX) == 0) {
+			warning("invalid universal character name");
+			// XXX should actually unput the chars and return 0
+			unch(ch); // XXX eof
+			break;
+		}
+		cp = cp * 16 + dig2num(ch);
+	}
+
+	if ((cp < 0xa0 && cp != 0x24 && cp != 0x40 && cp != 0x60)
+	    || (cp >= 0xd800 && cp <= 0xdfff))	/* 6.4.3.2 */
+		error("universal character name cannot be used");
+
+	if (cp > 0x7fffffff)
+		error("universal character name out of range");
+
+	n = 0;
+	m = 0x7f;
+	while (cp > m) {
+		unch(0x80 | (cp & 0x3f));
+		cp >>= 6;
+		m >>= (n++ ? 1 : 2);
+	}
+	unch(((m << 1) ^ 0xfe) | cp);
+	return 1;
 }
 
 static int
@@ -362,6 +434,8 @@ run:			for(;;) {
 str:			PUTCH(ch);
 			while ((ch = inch()) != '\"') {
 				if (ch == '\\') {
+					if (chkucn())
+						continue;
 					PUTCH('\\');
 					ch = inch();
 				}
@@ -390,7 +464,7 @@ nxp:				PUTCH(ch);
 				ch = inch();
 				if (ch == -1)
 					goto eof;
-				if (spechr[ch] & C_EP) {
+				if ((spechr[ch] & C_EP)) {
 					PUTCH(ch);
 					ch = inch();
 					if (ch == '-' || ch == '+')
@@ -407,6 +481,8 @@ con:			PUTCH(ch);
 				break; /* character constants ignored */
 			while ((ch = inch()) != '\'') {
 				if (ch == '\\') {
+					if (chkucn())
+						continue;
 					PUTCH('\\');
 					ch = inch();
 				}
@@ -440,14 +516,25 @@ con:			PUTCH(ch);
 			if ((spechr[ch] & C_ID) == 0)
 				error("fastscan");
 #endif
+		ident:
 			i = 0;
-			do {
+			yytext[i++] = (usch)ch;
+			for (;;) {
+				if ((ch = inch()) == -1)
+					break;
+				if (ch == '\\') {
+					if (chkucn())
+						continue;
+					unch(ch);
+					break;
+				}
+				if ((spechr[ch] & C_ID) == 0) {
+					unch(ch);
+					break;
+				}
 				yytext[i++] = (usch)ch;
-				ch = inch();
-			} while (ch != -1 && (spechr[ch] & C_ID));
-
+			}
 			yytext[i] = 0;
-			unch(ch);
 
 			if (flslvl == 0) {
 				cp = stringbuf;
@@ -460,6 +547,15 @@ con:			PUTCH(ch);
 			if (ch == -1)
 				goto eof;
 
+			break;
+
+		case '\\':
+			if (chkucn()) {
+				ch = inch();
+				goto ident;
+			}
+
+			PUTCH('\\');
 			break;
 		}
 	}
@@ -476,7 +572,7 @@ sloscan(void)
 
 zagain:
 	yyp = 0;
- 	ch = inch();
+	ch = inch();
 	yytext[yyp++] = (usch)ch;
 	switch (ch) {
 	case -1: /* EOF */
@@ -490,14 +586,14 @@ zagain:
 	case '\r': /* Ignore CR */
 		goto zagain;
 
-	case '0': case '1': case '2': case '3': case '4': case '5': 
+	case '0': case '1': case '2': case '3': case '4': case '5':
 	case '6': case '7': case '8': case '9':
 		/* reading a "pp-number" */
 ppnum:		for (;;) {
 			ch = inch();
 			if (ch == -1)
 				break;
-			if (spechr[ch] & C_EP) {
+			if ((spechr[ch] & C_EP)) {
 				yytext[yyp++] = (usch)ch;
 				ch = inch();
 				if (ch == '-' || ch == '+') {
@@ -509,7 +605,7 @@ ppnum:		for (;;) {
 			if ((spechr[ch] & C_ID) || ch == '.') {
 				yytext[yyp++] = (usch)ch;
 				continue;
-			} 
+			}
 			break;
 		}
 		unch(ch);
@@ -517,9 +613,11 @@ ppnum:		for (;;) {
 		return NUMBER;
 
 	case '\'':
-chlit:		
+chlit:
 		for (;;) {
 			if ((ch = inch()) == '\\') {
+				if (chkucn())
+					continue;
 				yytext[yyp++] = (usch)ch;
 				ch = inch();
 			} else if (ch == '\'')
@@ -566,7 +664,7 @@ chlit:
 			wrn = 0;
 		more:	while ((c = inch()) != '*') {
 				if (c == -1)
-					return 0;	
+					return 0;
 				if (c == '\n')
 					putch(c), ifiles->lineno++;
 				else if (c == EBLOCK) {
@@ -606,6 +704,8 @@ chlit:
 	strng:
 		for (;;) {
 			if ((ch = inch()) == '\\') {
+				if (chkucn())
+					continue;
 				yytext[yyp++] = (usch)ch;
 				ch = inch();
 			} else if (ch == '\"') {
@@ -622,6 +722,13 @@ chlit:
 		yytext[yyp] = 0;
 		return STRING;
 
+	case '\\':
+		if (chkucn()) {
+			--yyp;
+			goto ident;
+		}
+		goto any;
+
 	case 'L':
 		if ((ch = inch()) == '\"' && !tflag) {
 			yytext[yyp++] = (usch)ch;
@@ -634,34 +741,41 @@ chlit:
 		/* FALLTHROUGH */
 
 	/* Yetch, all identifiers */
-	case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': 
-	case 'g': case 'h': case 'i': case 'j': case 'k': case 'l': 
-	case 'm': case 'n': case 'o': case 'p': case 'q': case 'r': 
-	case 's': case 't': case 'u': case 'v': case 'w': case 'x': 
+	case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+	case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+	case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+	case 's': case 't': case 'u': case 'v': case 'w': case 'x':
 	case 'y': case 'z':
-	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': 
+	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
 	case 'G': case 'H': case 'I': case 'J': case 'K':
-	case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R': 
-	case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': 
+	case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+	case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
 	case 'Y': case 'Z':
 	case '_': /* {L}({L}|{D})* */
 
-		/* Special hacks */
+	ident:
 		for (;;) { /* get chars */
 			if ((ch = inch()) == -1)
 				break;
-			if ((spechr[ch] & C_ID)) {
-				yytext[yyp++] = (usch)ch;
-			} else {
+			if (ch == '\\') {
+				if (chkucn())
+					continue;
+				unch('\\');
+				break;
+			}
+			if ((spechr[ch] & C_ID) == 0) {
 				unch(ch);
 				break;
 			}
+			yytext[yyp++] = (usch)ch;
 		}
 		yytext[yyp] = 0; /* need already string */
-		/* end special hacks */
 		return IDENT;
 
 	default:
+		if ((ch & 0x80))
+			goto ident;
+
 	any:
 		yytext[yyp] = 0;
 		return yytext[0];
@@ -1055,8 +1169,8 @@ elsestmt(void)
 }
 
 static void
-ifdefstmt(void)		 
-{ 
+ifdefstmt(void)
+{
 	int t;
 
 	if (flslvl) {
@@ -1077,8 +1191,8 @@ ifdefstmt(void)
 }
 
 static void
-ifndefstmt(void)	  
-{ 
+ifndefstmt(void)
+{
 	int t;
 
 	if (flslvl) {
@@ -1099,7 +1213,7 @@ ifndefstmt(void)
 }
 
 static void
-endifstmt(void)		 
+endifstmt(void)
 {
 	if (flslvl)
 		flslvl--;

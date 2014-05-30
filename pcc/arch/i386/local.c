@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.178 2014/05/11 09:57:02 ragge Exp $	*/
+/*	$Id: local.c,v 1.179 2014/05/24 15:19:53 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -487,17 +487,34 @@ clocal(NODE *p)
 		break;
 
 	case UCALL:
-	case USTCALL:
 		if (kflag == 0)
 			break;
-#if defined(ELFABI)
-		/* Change to CALL node with ebx as argument */
 		l = block(REG, NIL, NIL, INT, 0, 0);
 		l->n_rval = EBX;
-		p->n_right = buildtree(ASSIGN, l,
-		    tempnode(gotnr, INT, 0, 0));
+		p->n_right = buildtree(ASSIGN, l, tempnode(gotnr, INT, 0, 0));
 		p->n_op -= (UCALL-CALL);
-#endif
+		break;
+
+	case USTCALL:
+		/* Add hidden arg0 */
+		r = block(REG, NIL, NIL, INCREF(VOID), 0, 0);
+		regno(r) = EBP;
+		if ((ap = attr_find(p->n_ap, GCC_ATYP_REGPARM)) != NULL &&
+		    ap->iarg(0) > 0) {
+			l = block(REG, NIL, NIL, INCREF(VOID), 0, 0);
+			regno(l) = EAX;
+			p->n_right = buildtree(ASSIGN, l, r);
+		} else
+			p->n_right = block(FUNARG, r, NIL, INCREF(VOID), 0, 0);
+		p->n_op -= (UCALL-CALL);
+
+		if (kflag == 0)
+			break;
+		l = block(REG, NIL, NIL, INT, 0, 0);
+		regno(l) = EBX;
+		r = buildtree(ASSIGN, l, tempnode(gotnr, INT, 0, 0));
+		p->n_right = block(CM, r, p->n_right, INT, 0, 0);
+		break;
 	
 	/* FALLTHROUGH */
 #if defined(MACHOABI)

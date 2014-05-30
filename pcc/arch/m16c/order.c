@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.20 2008/09/27 07:35:23 ragge Exp $	*/
+/*	$Id: order.c,v 1.21 2014/05/29 19:20:03 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -587,7 +587,7 @@ mktailopt(struct interpass *ip1, struct interpass *ip2)
 		if (strcmp(fn, cftname)) {
 			/* Not us, must generate fake prologue */
 			ip1->type = IP_ASM;
-			ip1->ip_asm = "mov.w FB,SP\n\tpop.w FB";
+			ip1->ip_asm = "\tmov.w FB,SP\n\tpop.w FB\n";
 			pass2_compile(ip1);
 			p->n_lval = p->n_rval = 0;
 			p->n_name = fn;

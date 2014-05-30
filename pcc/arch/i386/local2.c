@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.171 2014/05/01 10:17:38 ragge Exp $	*/
+/*	$Id: local2.c,v 1.175 2014/05/28 16:28:11 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -57,13 +57,17 @@ prtprolog(struct interpass_prolog *ipp, int addto)
 {
 	int i;
 
-	printf("	pushl %%ebp\n");
-	printf("	movl %%esp,%%ebp\n");
+#if 1
 #if defined(MACHOABI)
-	printf("	subl $8,%%esp\n");	/* 16-byte stack alignment */
+	addto += 8;
 #endif
-	if (addto)
-		printf("	subl $%d,%%esp\n", addto);
+	if (addto == 0 || addto > 65535) {
+		printf("	pushl %%ebp\n\tmovl %%esp,%%ebp\n");
+		if (addto)
+			printf("	subl $%d,%%esp\n", addto);
+	} else
+		printf("	enter $%d,$0\n", addto);
+#endif
 	for (i = 0; i < MAXREGS; i++)
 		if (TESTBIT(ipp->ipp_regs, i))
 			printf("	movl %s,-%d(%s)\n",
@@ -446,13 +450,11 @@ zzzcode(NODE *p, int c)
 		break;
 
 	case 'C':  /* remove from stack after subroutine call */
-#ifdef notyet
+#ifdef notdef
 		if (p->n_left->n_flags & FSTDCALL)
 			break;
 #endif
 		pr = p->n_qual;
-		if (p->n_op == STCALL || p->n_op == USTCALL)
-			pr += 4;
 		if (p->n_flags & FFPPOP)
 			printf("	fstp	%%st(0)\n");
 		if (p->n_op == UCALL)
@@ -538,62 +540,26 @@ zzzcode(NODE *p, int c)
 #endif
                 break;
 
-	case 'P': /* push hidden argument on stack */
-		printf("\tleal -%d(%%ebp),", stkpos);
-		adrput(stdout, getlr(p, '1'));
-		printf("\n\tpushl ");
-		adrput(stdout, getlr(p, '1'));
-		putchar('\n');
-		break;
-
 	case 'Q': /* emit struct assign */
 		/*
-		 * With <= 16 bytes, put out mov's, otherwise use movsb/w/l.
+		 * Put out some combination of movs{b,w,l}
 		 * esi/edi/ecx are available.
-		 * XXX should not need esi/edi if not rep movsX.
-		 * XXX can save one insn if src ptr in reg.
 		 */
-		switch (p->n_stsize) {
-		case 1:
-			expand(p, INAREG, "	movb (%esi),%cl\n");
-			expand(p, INAREG, "	movb %cl,AL\n");
-			break;
-		case 2:
-			expand(p, INAREG, "	movw (%esi),%cx\n");
-			expand(p, INAREG, "	movw %cx,AL\n");
-			break;
-		case 4:
-			expand(p, INAREG, "	movl (%esi),%ecx\n");
-			expand(p, INAREG, "	movl %ecx,AL\n");
-			break;
-		default:
-			expand(p, INAREG, "	leal AL,%edi\n");
-			if (p->n_stsize <= 16 && (p->n_stsize & 3) == 0) {
-				printf("	movl (%%esi),%%ecx\n");
-				printf("	movl %%ecx,(%%edi)\n");
-				printf("	movl 4(%%esi),%%ecx\n");
-				printf("	movl %%ecx,4(%%edi)\n");
-				if (p->n_stsize > 8) {
-					printf("	movl 8(%%esi),%%ecx\n");
-					printf("	movl %%ecx,8(%%edi)\n");
-				}
-				if (p->n_stsize == 16) {
-					printf("\tmovl 12(%%esi),%%ecx\n");
-					printf("\tmovl %%ecx,12(%%edi)\n");
-				}
-			} else {
-				if (p->n_stsize > 4) {
-					printf("\tmovl $%d,%%ecx\n",
-					    p->n_stsize >> 2);
-					printf("	rep movsl\n");
-				}
-				if (p->n_stsize & 2)
-					printf("	movsw\n");
-				if (p->n_stsize & 1)
-					printf("	movsb\n");
+		expand(p, INAREG, "	leal AL,%edi\n");
+		if (p->n_stsize < 32) {
+			int i = p->n_stsize >> 2;
+			while (i) {
+				expand(p, INAREG, "	movsl\n");
+				i--;
 			}
-			break;
+		} else {
+			printf("\tmovl $%d,%%ecx\n", p->n_stsize >> 2);
+			printf("	rep movsl\n");
 		}
+		if (p->n_stsize & 2)
+			printf("	movsw\n");
+		if (p->n_stsize & 1)
+			printf("	movsb\n");
 		break;
 
 	case 'S': /* emit eventual move after cast from longlong */
@@ -1012,6 +978,50 @@ fixxfloat(struct interpass *ip, NODE *p)
 	outfargs(ip, ary, nn, cwp, 'u');
 }
 
+static NODE *
+lptr(NODE *p)
+{
+	if (p->n_op == ASSIGN && p->n_right->n_op == REG &&
+	    regno(p->n_right) == EBP)
+		return p->n_right;
+	if (p->n_op == FUNARG && p->n_left->n_op == REG &&
+	    regno(p->n_left) == EBP)
+		return p->n_left;
+	return NIL;
+}
+
+/*
+ * Find arg reg that should be struct reference instead.
+ */
+static void
+updatereg(NODE *p, void *arg)
+{
+	NODE *q;
+
+	if (p->n_op != STCALL)
+		return;
+	if (p->n_right->n_op != CM)
+		p = p->n_right;
+	else for (p = p->n_right;
+	    p->n_op == CM && p->n_left->n_op == CM; p = p->n_left)
+		;
+	if (p->n_op == CM) {
+		if ((q = lptr(p->n_left)))
+			;
+		else
+			q = lptr(p->n_right);
+	} else
+		q = lptr(p);
+	if (q == NIL)
+		comperr("bad STCALL hidden reg");
+
+	/* q is now the hidden arg */
+	q->n_op = MINUS;
+	q->n_type = INCREF(CHAR);
+	q->n_left = mklnode(REG, 0, EBP, INCREF(CHAR));
+	q->n_right = mklnode(ICON, stkpos, 0, INT);
+}
+
 void
 myreader(struct interpass *ipole)
 {
@@ -1025,6 +1035,13 @@ myreader(struct interpass *ipole)
 		storefloat(ip, ip->ip_node);
 		if (ip->ip_node->n_op == XASM)
 			fixxfloat(ip, ip->ip_node);
+	}
+	if (stkpos != p2autooff) {
+		DLIST_FOREACH(ip, ipole, qelem) {
+			if (ip->type != IP_NODE)
+				continue;
+			walkf(ip->ip_node, updatereg, 0);
+		}
 	}
 	if (stkpos > p2autooff)
 		p2autooff = stkpos;
@@ -1202,13 +1219,13 @@ lastcall(NODE *p)
 	p->n_qual = 0;
 	if (p->n_op != CALL && p->n_op != FORTCALL && p->n_op != STCALL)
 		return;
-	for (p = p->n_right; p->n_op == CM; p = p->n_left) {
+	for (p = p->n_right; p->n_op == CM; p = p->n_left) { 
 		if (p->n_right->n_op != ASSIGN)
 			size += argsiz(p->n_right);
 	}
 	if (p->n_op != ASSIGN)
 		size += argsiz(p);
-	
+
 #if defined(MACHOABI)
 	int newsize = (size + 15) & ~15;	/* stack alignment */
 	int align = newsize-size;

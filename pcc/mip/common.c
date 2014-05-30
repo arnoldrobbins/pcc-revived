@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.108 2012/09/26 19:56:12 plunky Exp $	*/
+/*	$Id: common.c,v 1.109 2014/05/16 13:02:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -65,6 +65,7 @@
 #include <string.h>
 
 #include "pass2.h"
+#include "unicode.h"
 
 # ifndef EXIT
 # define EXIT exit
@@ -133,10 +134,26 @@ cerror(char *s, ...)
  * warning
  */
 void
+u8error(const char *s, ...)
+{
+	va_list ap;
+	va_start(ap, s);
+	WHERE('w');
+	fprintf(stderr, "warning: ");
+	vfprintf(stderr, s, ap);
+	fprintf(stderr, "\n");
+	va_end(ap);
+	if (warniserr)
+		incerr();
+}
+
+/*
+ * warning
+ */
+void
 werror(char *s, ...)
 {
 	va_list ap;
-
 	va_start(ap, s);
 	WHERE('w');
 	fprintf(stderr, "warning: ");
