@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.51 2014/05/09 08:27:03 plunky Exp $	*/
+/*	$Id: builtins.c,v 1.52 2014/06/06 07:04:42 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -454,11 +454,16 @@ static NODE *
 binhelp(NODE *a, TWORD rt, char *n)
 {
 	NODE *f = block(NAME, NIL, NIL, INT, 0, 0);
+	int oblvl = blevel;
 
+	blevel = 0;
 	f->n_sp = lookup(addname(n), SNORMAL);
+	blevel = oblvl;
 	if (f->n_sp->sclass == SNULL) {
 		f->n_sp->sclass = EXTERN;
 		f->n_sp->stype = INCREF(rt)+(FTN-PTR);
+		f->n_sp->sdf = permalloc(sizeof(union dimfun));
+		f->n_sp->sdf->dfun = NULL;
 	}
 	f->n_type = f->n_sp->stype;
 	f = clocal(f);

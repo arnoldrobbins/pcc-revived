@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.78 2014/04/30 16:37:20 ragge Exp $	*/
+/*	$Id: local.c,v 1.80 2014/07/03 14:25:51 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -389,6 +389,9 @@ clocal(NODE *p)
 		if (o == ICON) {
 			CONSZ val = l->n_lval;
 
+			if (ISPTR(l->n_type) && !nncon(l))
+				break; /* cannot convert named pointers */
+
 			if (!ISPTR(m)) /* Pointers don't need to be conv'd */
 			    switch (m) {
 			case BOOL:
@@ -505,6 +508,12 @@ myp2tree(NODE *p)
 {
 	struct symtab *sp, sps;
 	static int dblxor, fltxor;
+	int codeatyp(NODE *);
+
+	if (p->n_op == STCALL || p->n_op == USTCALL) {
+		/* save struct encoding */
+		p->n_su = codeatyp(p);
+	}
 
 	if (p->n_op == UMINUS && (p->n_type == FLOAT || p->n_type == DOUBLE)) {
 		/* Store xor code for sign change */
@@ -873,7 +882,25 @@ fixdef(struct symtab *sp)
 	}
 }
 
+/*
+ * find struct return functions and set correct return regs if needed.
+ * this is saved in the su field earlier.
+ * uses the stalign field which is otherwise unused.
+ */
+static void
+fixstcall(NODE *p, void *arg)
+{
+
+        if (p->n_op != STCALL && p->n_op != USTCALL)
+                return;
+	p->n_stalign = p->n_su;
+}
+
 void
 pass1_lastchance(struct interpass *ip)
 {
+        if (ip->type != IP_NODE)
+                return;
+        walkf(ip->ip_node, fixstcall, 0);
 }
+

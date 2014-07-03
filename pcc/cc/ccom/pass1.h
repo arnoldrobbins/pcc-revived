@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.258 2014/05/16 13:02:02 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.261 2014/06/07 07:04:09 plunky Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -650,6 +650,7 @@ void stabs_struct(struct symtab *, struct attr *);
 #define TYMERGE		(MAXOP+33)
 #define LABEL		(MAXOP+34)
 #define BIQUEST		(MAXOP+35)
+#define UPLUS		(MAXOP+36)
 
 
 /*

@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.60 2011/04/25 18:20:17 ragge Exp $	*/
+/*	$Id: order.c,v 1.61 2014/06/04 06:43:49 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -171,14 +171,8 @@ nspecial(struct optab *q)
 	case STARG:
 		{
 			static struct rspecial s[] = {
-#if defined(MACHOABI)
-				{ NEVER, EAX }, { NEVER, EDX },
-				{ NEVER, ECX }, { 0 } };
-
-#else
 				{ NEVER, EDI }, { NEVER, ECX },
 				{ NLEFT, ESI }, { 0 } };
-#endif
 			return s;
 		}
 

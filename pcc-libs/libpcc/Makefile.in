@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.20 2012/07/30 15:38:44 ragge Exp $
+#	$Id: Makefile.in,v 1.21 2014/07/01 13:01:48 ragge Exp $
 #
 # Makefile.in for libpcc.a
 #
@@ -19,7 +19,8 @@ VERSION = @version@
 PCCLIBDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/lib
 PCCINCDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/include
 
-CPPFLAGS += @CPPFLAGS@ -I$(srcdir) @ENDIAN_FLAG@ -Dos_$(TARGOS)
+CPPFLAGS += @CPPFLAGS@ -I$(srcdir) @ENDIAN_FLAG@ -Dos_$(TARGOS) \
+	-Dmach_$(TARGMACH)
 CPPFLAGS += -isystem $(top_srcdir)/libpcc/include
 
 LIBS = @LIBS@
@@ -35,7 +36,7 @@ HEADERS +=	float.h limits.h stdarg.h stdbool.h stddef.h \
 OBJS +=		cmpdi2.o divdi3.o fixdfdi.o fixsfdi.o fixunsdfdi.o \
 		fixunssfdi.o floatdidf.o floatdisf.o floatunsdidf.o \
 		moddi3.o muldi3.o negdi2.o qdivrem.o \
-		ucmpdi2.o udivdi3.o umoddi3.o 
+		ucmpdi2.o udivdi3.o umoddi3.o cxmuldiv.o
 
 OBJS +=		ashldi3.o ashrdi3.o lshrdi3.o
 

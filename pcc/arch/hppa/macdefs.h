@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.19 2014/05/05 13:49:23 mickey Exp $	*/
+/*	$Id: macdefs.h,v 1.20 2014/06/01 11:35:02 ragge Exp $	*/
 
 /*
  * Copyright (c) 2007 Michael Shalayeff
@@ -105,7 +105,6 @@ typedef long long OFFSZ;
 
 #define	BYTEOFF(x)	((x)&03)
 #define	wdal(k)		(BYTEOFF(k)==0)
-#define	BITOOR(x)	(x)	/* bit offset to oreg offset XXX die! */
 
 #define	STOARG(p)
 #define	STOFARG(p)

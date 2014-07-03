@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.26 2012/09/26 20:22:41 plunky Exp $	*/
+/*	$Id: local2.c,v 1.27 2014/06/01 11:35:03 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1213,7 +1213,7 @@ storefloat(struct interpass *ip, NODE *p)
 			NODE *ll;
 			int off;
 
-                	off = BITOOR(freetemp(szty(t)));
+                	off = (freetemp(szty(t)));
                 	ll = mklnode(OREG, off, SPREG, t);
 			nip = ipnode(mkbinode(ASSIGN, ll, p->n_left, t));
 			p->n_left = mklnode(OREG, off, SPREG, t);

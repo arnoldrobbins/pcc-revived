@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.175 2014/05/28 16:28:11 ragge Exp $	*/
+/*	$Id: local2.c,v 1.177 2014/06/04 06:43:49 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -285,21 +285,6 @@ fldexpand(NODE *p, int cookie, char **cp)
 static void
 starg(NODE *p)
 {
-#if defined(MACHOABI)
-	printf("	subl $%d,%%esp\n", p->n_stsize);
-	printf("	subl $4,%%esp\n");
-	printf("	pushl $%d\n", p->n_stsize);
-	expand(p, 0, "	pushl AL\n");
-	expand(p, 0, "	leal 12(%esp),A1\n");
-	expand(p, 0, "	pushl A1\n");
-	if (kflag) {
-		printf("	call L%s$stub\n", EXPREFIX "memcpy");
-		addstub(&stublist, EXPREFIX "memcpy");
-	} else {
-		printf("	call %s\n", EXPREFIX "memcpy");
-	}
-	printf("	addl $16,%%esp\n");
-#else
 	NODE *q = p->n_left;
 
 	printf("	subl $%d,%%esp\n", (p->n_stsize + 3) & ~3);
@@ -307,7 +292,6 @@ starg(NODE *p)
 	zzzcode(p, 'Q');
 	tfree(p->n_left);
 	p->n_left = q;
-#endif
 }
 
 /*
@@ -581,7 +565,7 @@ zzzcode(NODE *p, int c)
 			expand(p, INBREG, "\tmovb A2,A1\n");
 #ifdef notdef
 			/* cannot use freetemp() in instruction emission */
-			s = BITOOR(freetemp(1));
+			s = freetemp(1);
 			printf("\tmovl %%e%ci,%d(%%ebp)\n", rnames[lr][1], s);
 			printf("\tmovb %d(%%ebp),%s\n", s, rnames[pr]);
 #endif
@@ -876,7 +860,7 @@ storefloat(struct interpass *ip, NODE *p)
 			NODE *ll;
 			int off;
 
-                	off = BITOOR(freetemp(szty(t)));
+                	off = freetemp(szty(t));
                 	ll = mklnode(OREG, off, FPREG, t);
 			nip = ipnode(mkbinode(ASSIGN, ll, p->n_left, t));
 			p->n_left = mklnode(OREG, off, FPREG, t);

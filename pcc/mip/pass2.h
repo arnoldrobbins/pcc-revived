@@ -1,4 +1,4 @@
-/*	$Id: pass2.h,v 1.136 2012/10/20 20:15:44 plunky Exp $	*/
+/*	$Id: pass2.h,v 1.137 2014/06/01 11:33:52 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -285,6 +285,8 @@ char *prcook(int);
 int myxasm(struct interpass *ip, NODE *p);
 int xasmcode(char *s);
 int freetemp(int k);
+NODE *storenode(TWORD t, int k);
+void storemod(NODE *, int k);
 int rewfld(NODE *p);
 void canon(NODE *);
 void mycanon(NODE *);

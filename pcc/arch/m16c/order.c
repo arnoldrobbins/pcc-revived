@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.21 2014/05/29 19:20:03 plunky Exp $	*/
+/*	$Id: order.c,v 1.22 2014/06/01 11:35:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -303,7 +303,7 @@ gencall(NODE *p, NODE *prev)
 		/* Check if left can be evaluated directly */
 		if (p->n_left->n_op == UMUL) {
 			TWORD t = p->n_left->n_type;
-			int k = BITOOR(freetemp(szty(t)));
+			int k = (freetemp(szty(t)));
 			NODE *n = mklnode(OREG, k, FB, t);
 			NODE *q = tcopy(n);
 			pass2_compile(ipnode(mkbinode(ASSIGN, n, p->n_left,t)));
@@ -537,7 +537,7 @@ storearg(NODE *p)
 		if (canaddr(narry[i]))
 			continue;
 		t = narry[i]->n_type;
-		k = BITOOR(freetemp(szty(t)));
+		k = (freetemp(szty(t)));
 		n = mklnode(OREG, k, FB, t);
 		q = tcopy(n);
 		pass2_compile(ipnode(mkbinode(ASSIGN, n, narry[i], t)));

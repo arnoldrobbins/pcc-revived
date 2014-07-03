@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.41 2012/09/26 20:22:41 plunky Exp $	*/
+/*	$Id: local2.c,v 1.42 2014/06/01 11:35:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -548,7 +548,7 @@ myreader(NODE *p)
 			break;
 		/* Must convert right into OREG */
 		right = p->n_right;
-		q = mklnode(OREG, BITOOR(freetemp(szty(right->n_type))),
+		q = mklnode(OREG, (freetemp(szty(right->n_type))),
 		    FPREG, right->n_type);
 		s = mkbinode(ASSIGN, q, right, right->n_type);
 		r = talloc(); 

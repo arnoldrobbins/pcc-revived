@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.18 2014/05/03 10:36:09 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.19 2014/06/01 11:35:03 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -165,7 +165,6 @@ extern int maxargs;
 
 # define BYTEOFF(x) ((x)&03)
 # define wdal(k) (BYTEOFF(k)==0)
-# define BITOOR(x) ((x))  /* bit offset to oreg offset XXX wrong */
 
 # define REGSZ 16
 

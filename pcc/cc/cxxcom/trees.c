@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.12 2014/05/29 19:20:03 plunky Exp $	*/
+/*	$Id: trees.c,v 1.13 2014/06/20 07:04:49 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -989,7 +989,7 @@ valcast(CONSZ v, TWORD t)
 }
 
 /*
- * Checks p for the existance of a pun.  This is called when the op of p
+ * Checks p for the existence of a pun.  This is called when the op of p
  * is ASSIGN, RETURN, CAST, COLON, or relational.
  * One case is when enumerations are used: this applies only to lint.
  * In the other case, one operand is a pointer, the other integer type

@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.102 2012/09/26 19:56:12 plunky Exp $	*/
+/*	$Id: manifest.h,v 1.104 2014/06/07 07:04:10 plunky Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -366,10 +366,12 @@ extern	int warniserr;		/* treat warnings as errors */
 #define	Wsign_compare			7
 #define	Wunknown_pragmas		8
 #define	Wunreachable_code		9
-#define	NUMW				10
+#define	Wdeprecated_declarations	10
+#define	Wattributes			11
 
 void warner(int type, ...);
-void Wflags(char *str);
+int Wset(char *, int, int);
+void Wflags(char *);
 TWORD deunsign(TWORD t);
 TWORD enunsign(TWORD t);
 #endif

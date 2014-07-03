@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.372 2014/05/29 19:20:03 plunky Exp $	*/
+/*	$Id: cgram.y,v 1.376 2014/07/02 15:31:41 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -198,6 +198,7 @@ static NODE *tymfix(NODE *p);
 static NODE *namekill(NODE *p, int clr);
 static NODE *aryfix(NODE *p);
 static void savlab(int);
+static void xcbranch(NODE *, int);
 extern int *mkclabs(void);
 
 #define	TYMFIX(inp) { \
@@ -231,7 +232,7 @@ struct savbc {
 %type <intval> ifelprefix ifprefix whprefix forprefix doprefix switchpart
 		xbegin
 %type <nodep> e .e term enum_dcl struct_dcl cast_type declarator
-		elist type_sq cf_spec merge_attribs
+		elist type_sq cf_spec merge_attribs e2
 		parameter_declaration abstract_declarator initializer
 		parameter_type_list parameter_list
 		declaration_specifiers designation
@@ -949,7 +950,7 @@ doprefix:	C_DO {
 		}
 		;
 ifprefix:	C_IF '(' e ')' {
-			cbranch(buildtree(NOT, eve($3), NIL), bcon($$ = getlab()));
+			xcbranch(eve($3), $$ = getlab());
 			reached = 1;
 		}
 		;
@@ -974,7 +975,7 @@ whprefix:	  C_WHILE  '('  e  ')' {
 			if (flostat == FLOOP)
 				tfree($3);
 			else
-				cbranch(buildtree(NOT, $3, NIL), bcon(brklab));
+				xcbranch($3, brklab);
 		}
 		;
 forprefix:	  C_FOR  '('  .e  ';' .e  ';' {
@@ -987,7 +988,7 @@ forprefix:	  C_FOR  '('  .e  ';' .e  ';' {
 			plabel( $$ = getlab());
 			reached = 1;
 			if ($5)
-				cbranch(buildtree(NOT, $5, NIL), bcon(brklab));
+				xcbranch($5, brklab);
 			else
 				flostat |= FLOOP;
 		}
@@ -998,7 +999,7 @@ forprefix:	  C_FOR  '('  .e  ';' .e  ';' {
 			plabel( $$ = getlab());
 			reached = 1;
 			if ($5)
-				cbranch(buildtree(NOT, $5, NIL), bcon(brklab));
+				xcbranch($5, brklab);
 			else
 				flostat |= FLOOP;
 		}
@@ -1034,9 +1035,12 @@ switchpart:	   C_SWITCH  '('  e ')' {
 		;
 
 elist:		   { $$ = NIL; }
-		|  e %prec ','
-		|  elist  ','  e { $$ = biop(CM, $1, $3); }
-		|  elist  ','  cast_type { /* hack for stdarg */
+		|  e2 { $$ = $1; }
+		;
+
+e2:		   e %prec ','
+		|  e2  ','  e { $$ = biop(CM, $1, $3); }
+		|  e2  ','  cast_type { /* hack for stdarg */
 			TYMFIX($3);
 			$3->n_op = TYPE;
 			$$ = biop(CM, $1, $3);
@@ -1075,7 +1079,7 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 		|  '*' term { $$ = biop(UMUL, $2, NIL); }
 		|  '&' term { $$ = biop(ADDROF, $2, NIL); }
 		|  '-' term { $$ = biop(UMINUS, $2, NIL ); }
-		|  '+' term { $$ = biop(PLUS, $2, bcon(0)); }
+		|  '+' term { $$ = biop(UPLUS, $2, NIL ); }
 		|  C_UNOP term { $$ = biop($1, $2, NIL); }
 		|  C_INCOP term {
 			$$ = biop($1 == INCR ? PLUSEQ : MINUSEQ, $2, bcon(1));
@@ -1437,7 +1441,7 @@ genswitch(int num, TWORD type, struct swents **p, int n)
 		r = tempnode(num, type, 0, 0);
 		q = xbcon(p[i]->sval, NULL, type);
 		r = buildtree(NE, r, clocal(q));
-		cbranch(buildtree(NOT, r, NIL), bcon(p[i]->slab));
+		xcbranch(r, p[i]->slab);
 	}
 	if (p[0]->slab > 0)
 		branch(p[0]->slab);
@@ -1966,7 +1970,7 @@ eve(NODE *p)
 			r = buildtree(UMUL, r, NIL);
 #ifdef GCC_COMPAT
 		if (attr_find(sp->sap, GCC_ATYP_DEPRECATED))
-			werror("`%s' is deprecated", sp->sname);
+			warner(Wdeprecated_declarations, sp->sname);
 #endif
 		break;
 
@@ -2029,6 +2033,12 @@ eve(NODE *p)
 			r = buildtree(COMPL, p1, NIL);
 		break;
 #endif
+	case UPLUS:
+		r = eve(p1);
+		if (r->n_op == FLD || r->n_type < INT)
+			r = buildtree(PLUS, r, bcon(0));
+		break;
+
 	case UMINUS:
 #ifndef NO_COMPLEX
 		p1 = eve(p1);
@@ -2080,7 +2090,7 @@ eve(NODE *p)
 			nfree(p1);
 #ifdef GCC_COMPAT
 			if (attr_find(sp->sap, GCC_ATYP_DEPRECATED))
-				werror("`%s' is deprecated", sp->sname);
+				warner(Wdeprecated_declarations, sp->sname);
 #endif
 			if (p->n_op == CALL)
 				p2 = eve(p2);
@@ -2107,6 +2117,8 @@ eve(NODE *p)
 	case ASSIGN:
 	case EQ:
 	case NE:
+	case OROR:
+	case ANDAND:
 #ifndef NO_COMPLEX
 		p1 = eve(p1);
 		p2 = eve(p2);
@@ -2135,8 +2147,6 @@ eve(NODE *p)
 	case AND:
 	case OR:
 	case ER:
-	case OROR:
-	case ANDAND:
 	case EREQ:
 	case OREQ:
 	case ANDEQ:
@@ -2348,4 +2358,14 @@ mkclabs(void)
 	rv[i] = 0;
 	labp = 0;
 	return rv;
+}
+
+void
+xcbranch(NODE *p, int lab)
+{
+#ifndef NO_COMPLEX
+	if (ANYCX(p))
+		p = cxop(NE, p, bcon(0));
+#endif
+	cbranch(buildtree(NOT, p, NIL), bcon(lab));
 }

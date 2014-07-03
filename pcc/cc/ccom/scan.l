@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.121 2014/05/16 13:02:02 ragge Exp $	*/
+/*	$Id: scan.l,v 1.122 2014/07/03 17:30:31 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -358,7 +358,9 @@ fdecl(char *c, char **ep)
 	int minus = 0;
 	int val = 0;
 
-	if (*c == '-')
+	if (*c == '+')
+		c++;
+	else if (*c == '-')
 		minus = 1, c++;
 
 	while (isdigit((int)*c)) {

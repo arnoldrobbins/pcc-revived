@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.373 2014/05/16 13:02:02 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.379 2014/07/02 15:31:41 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1141,6 +1141,10 @@ talign(unsigned int ty, struct attr *apl)
 		return a;
 	}
 
+#ifndef NO_COMPLEX
+	if (ISITY(ty))
+		ty -= (FIMAG-FLOAT);
+#endif
 	ty = BTYPE(ty);
 	if (ty >= CHAR && ty <= ULONGLONG && ISUNSIGNED(ty))
 		ty = DEUNSIGN(ty);
@@ -1193,6 +1197,11 @@ tsize(TWORD ty, union dimfun *d, struct attr *apl)
 		}
 	}
 
+#ifndef NO_COMPLEX
+	if (ISITY(ty))
+		ty -= (FIMAG-FLOAT);
+#endif
+
 	if (ty == VOID)
 		ty = CHAR;
 	if (ty <= LDOUBLE)
@@ -1228,7 +1237,7 @@ strend(int wide, char *str)
 		sp = getsymtab(str, SSTRING|STEMP);
 	} else {
 		str = addstring(str);	/* enter string in string table */
-		sp = lookup(str, SSTRING);	/* check for existance */
+		sp = lookup(str, SSTRING);	/* check for existence */
 	}
 
 	if (sp->soffset == 0) { /* No string */
@@ -1250,13 +1259,14 @@ strend(int wide, char *str)
 			}
 		}
 		if (wide) {
-			for (wr = sp->sname, i = 1; *wr; i++) u82cp(&wr);
-		sp->sdf->ddim = i;
+			for (wr = sp->sname, i = 1; *wr; i++)
+				u82cp(&wr);
+			sp->sdf->ddim = i;
 			inwstring(sp);
 		} else {
 			sp->sdf->ddim = strlen(sp->sname)+1;
 			instring(sp);
-	}
+		}
 	}
 
 	p = block(NAME, NIL, NIL, sp->stype, sp->sdf, sp->sap);
@@ -3026,7 +3036,9 @@ strmemb(struct attr *ap)
 #ifndef NO_COMPLEX
 
 static char *real, *imag;
-static struct symtab *cxsp[3];
+static struct symtab *cxsp[3], *cxmul[3], *cxdiv[3];
+static char *cxnmul[] = { "__mulsc3", "__muldc3", "__mulxc3" };
+static char *cxndiv[] = { "__divsc3", "__divdc3", "__divxc3" };
 /*
  * As complex numbers internally are handled as structs, create
  * these by hand-crafting them.
@@ -3056,6 +3068,25 @@ complinit(void)
 		ap = attr_new(ATTR_COMPLEX, 0);
 		q->n_sp->sap = attr_add(q->n_sp->sap, ap);
 		nfree(q);
+	}
+	/* create function declarations for external ops */
+	for (i = 0; i < 3; i++) {
+		cxnmul[i] = addname(cxnmul[i]);
+		p->n_sp = cxmul[i] = lookup(cxnmul[i], 0);
+		p->n_type = FTN|STRTY;
+		p->n_ap = cxsp[i]->sap;
+		p->n_df = cxsp[i]->sdf;
+		defid2(p, EXTERN, 0);
+		cxmul[i]->sdf = permalloc(sizeof(union dimfun));
+		cxmul[i]->sdf->dfun = NULL;
+		cxndiv[i] = addname(cxndiv[i]);
+		p->n_sp = cxdiv[i] = lookup(cxndiv[i], 0);
+		p->n_type = FTN|STRTY;
+		p->n_ap = cxsp[i]->sap;
+		p->n_df = cxsp[i]->sdf;
+		defid2(p, EXTERN, 0);
+		cxdiv[i]->sdf = permalloc(sizeof(union dimfun));
+		cxdiv[i]->sdf->dfun = NULL;
 	}
 	nfree(p);
 	ddebug = d_debug;
@@ -3213,6 +3244,19 @@ cxop(int op, NODE *l, NODE *r)
 		p = buildtree(op == EQ ? ANDAND : OROR, p, q);
 		return p;
 
+	case ANDAND:
+	case OROR: /* go via EQ to get INT of it */
+		tfree(q);
+		p = buildtree(NE, comop(p, real_l), bcon(0)); /* gets INT */
+		q = buildtree(NE, imag_l, bcon(0));
+		p = buildtree(OR, p, q);
+
+		q = buildtree(NE, real_r, bcon(0));
+		q = buildtree(OR, q, buildtree(NE, imag_r, bcon(0)));
+
+		p = buildtree(op, p, q);
+		return p;
+
 	case UMINUS:
 		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, real), 
 		    buildtree(op, real_l, NIL)));
@@ -3229,41 +3273,19 @@ cxop(int op, NODE *l, NODE *r)
 		break;
 
 	case MUL:
+	case DIV:
 		/* Complex mul is "complex" */
 		/* (u+iv)*(x+iy)=((u*x)-(v*y))+i(v*x+y*u) */
-		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, real),
-		    buildtree(MINUS,
-		    buildtree(MUL, ccopy(real_r), ccopy(real_l)),
-		    buildtree(MUL, ccopy(imag_r), ccopy(imag_l)))));
-		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, imag),
-		    buildtree(PLUS,
-		    buildtree(MUL, real_r, imag_l),
-		    buildtree(MUL, imag_r, real_l))));
-		break;
-
-	case DIV:
 		/* Complex div is even more "complex" */
 		/* (u+iv)/(x+iy)=(u*x+v*y)/(x*x+y*y)+i((v*x-u*y)/(x*x+y*y)) */
-		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, real),
-		    buildtree(DIV,
-		      buildtree(PLUS,
-			buildtree(MUL, ccopy(real_r), ccopy(real_l)),
-			buildtree(MUL, ccopy(imag_r), ccopy(imag_l))),
-		      buildtree(PLUS,
-			buildtree(MUL, ccopy(real_r), ccopy(real_r)),
-			buildtree(MUL, ccopy(imag_r), ccopy(imag_r))))));
-		p = comop(p, buildtree(ASSIGN, structref(ccopy(q), DOT, imag),
-		    buildtree(DIV,
-		      buildtree(MINUS,
-			buildtree(MUL, ccopy(imag_l), ccopy(real_r)),
-			buildtree(MUL, ccopy(real_l), ccopy(imag_r))),
-		      buildtree(PLUS,
-			buildtree(MUL, ccopy(real_r), ccopy(real_r)),
-			buildtree(MUL, ccopy(imag_r), ccopy(imag_r))))));
-		tfree(real_r);
-		tfree(real_l);
-		tfree(imag_r);
-		tfree(imag_l);
+		/* but we need to do it via a subroutine */
+		tfree(q);
+		p = buildtree(CM, comop(p, real_l), imag_l);
+		p = buildtree(CM, p, real_r);
+		p = buildtree(CM, p, imag_r);
+		q = nametree(op == DIV ?
+		    cxdiv[mxtyp-FLOAT] : cxmul[mxtyp-FLOAT]);
+		return buildtree(CALL, q, p);
 		break;
 	default:
 		uerror("illegal operator %s", copst(op));
@@ -3354,6 +3376,21 @@ imop(int op, NODE *l, NODE *r)
 		if (li ^ ri)
 			p->n_type += (FIMAG-FLOAT);
 		break;
+
+	case EQ:
+	case NE:
+	case LT:
+	case LE:
+	case GT:
+	case GE:
+		if (li ^ ri) { /* always 0 */
+			tfree(l);
+			tfree(r);
+			p = bcon(0);
+		} else
+			p = buildtree(op, l, r);
+		break;
+
 	default:
 		cerror("imop");
 		p = NULL;

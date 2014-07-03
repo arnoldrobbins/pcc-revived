@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.272 2014/05/11 12:11:00 ragge Exp $	*/
+/*	$Id: cc.c,v 1.278 2014/07/01 16:09:00 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -240,14 +240,12 @@ int cxxsuf(char *);
 int getsuf(char *);
 char *getsufp(char *s);
 int main(int, char *[]);
-void error(char *, ...);
 void errorx(int, char *, ...);
 int cunlink(char *);
 void exandrm(char *);
 void dexit(int);
 void idexit(int);
 char *gettmp(void);
-void aerror(char *);
 void oerror(char *);
 char *argnxt(char *, char *);
 char *nxtopt(char *o);
@@ -312,6 +310,8 @@ struct Wflags {
 	{ "sign-compare", 0 },
 	{ "unknown-pragmas", INWALL },
 	{ "unreachable-code", 0 },
+	{ "deprecated-declarations", 0 },
+	{ "attributes", 0 },
 	{ NULL, 0 },
 };
 
@@ -526,8 +526,13 @@ main(int argc, char *argv[])
 			cflag++;
 			break;
 
-		case 'd':
-			oerror(argp);
+		case 'd': /* debug options */
+			for (t = &argp[2]; *t; t++) {
+				if (*t == 'M')
+					strlist_append(&preprocessor_flags, "-dM");
+
+				/* ignore others */
+			}
 			break;
 
 		case 'E':
@@ -550,11 +555,6 @@ main(int argc, char *argv[])
 			} else if (match(u, "stack-protector") ||
 			    match(u, "stack-protector-all")) {
 				sspflag = j ? 0 : 1;
-#ifdef os_darwin
-			} else if (match(u, "ramework")) {
-				strlist_append(&middle_linker_flags, argp);
-				strlist_append(&middle_linker_flags, nxtopt(0));
-#endif
 			}
 			/* silently ignore the rest */
 			break;
@@ -1039,29 +1039,8 @@ exandrm(char *s)
 	dexit(1);
 }
 
-static void
-ccerror(char *s, va_list ap)
-{
-	vfprintf(Eflag ? stderr : stdout, s, ap);
-	putc('\n', Eflag? stderr : stdout);
-}
-
 /*
- * complain a bit.
- */
-void
-error(char *s, ...)
-{
-	va_list ap;
-
-	va_start(ap, s);
-	ccerror(s, ap);
-	va_end(ap);
-	dexit(1);
-}
-
-/*
- * complain a bit and then exit.
+ * complain and exit.
  */
 void
 errorx(int eval, char *s, ...)
@@ -1069,7 +1048,9 @@ errorx(int eval, char *s, ...)
 	va_list ap;
 
 	va_start(ap, s);
-	ccerror(s, ap);
+	fputs("error: ", stderr);
+	vfprintf(stderr, s, ap);
+	putc('\n', stderr);
 	va_end(ap);
 	dexit(eval);
 }
@@ -1293,10 +1274,8 @@ strlist_exec(struct strlist *l)
 		&si,
 		&pi);
 
-	if (!ok) {
-		fprintf(stderr, "Can't find %s\n", STRLIST_FIRST(l)->value);
-		return 100;
-	}
+	if (!ok)
+		errorx(100, "Can't find %s\n", STRLIST_FIRST(l)->value);
 
 	WaitForSingleObject(pi.hProcess, INFINITE);
 	GetExitCodeProcess(pi.hProcess, &exitCode);
@@ -1333,13 +1312,13 @@ strlist_exec(struct strlist *l)
 		(void)result;
 		_exit(127);
 	case -1:
-		error("fork failed");
+		errorx(1, "fork failed");
 	default:
 		while (waitpid(child, &result, 0) == -1 && errno == EINTR)
 			/* nothing */(void)0;
 		result = WEXITSTATUS(result);
 		if (result)
-			error("%s terminated with status %d", argv[0], result);
+			errorx(1, "%s terminated with status %d", argv[0], result);
 		while (argc-- > 0)
 			free(argv[argc]);
 		free(argv);
@@ -1400,10 +1379,8 @@ gettmp(void)
 	char *sfn = xstrdup("/tmp/ctm.XXXXXX");
 	int fd = -1;
 
-	if ((fd = mkstemp(sfn)) == -1) {
-		fprintf(stderr, "%s: %s\n", sfn, strerror(errno));
-		dexit(8);
-	}
+	if ((fd = mkstemp(sfn)) == -1)
+		errorx(8, "%s: %s\n", sfn, strerror(errno));
 	close(fd);
 	return sfn;
 }
@@ -1439,19 +1416,10 @@ expand_sysroot(void)
 	}
 }
 
-
 void
 oerror(char *s)
 {
-	fprintf(stderr, "error: unknown option '%s'\n", s);
-	dexit(8);
-}
-
-void
-aerror(char *s)
-{
-	fprintf(stderr, "error: missing argument to '%s'\n", s);
-	dexit(8);
+	errorx(8, "unknown option '%s'", s);
 }
 
 /*
@@ -1480,7 +1448,7 @@ nxtopt(char *o)
 			return &lav[0][l];
 	}
 	if (lac == 0)
-		aerror(o);
+		errorx(8, "missing argument to '%s'", o);
 	lav++;
 	lac--;
 	return lav[0];
@@ -1518,6 +1486,13 @@ cksetflags(struct flgcheck *fs, struct strlist *sl, int which)
 	}
 }
 
+#ifndef TARGET_LE
+#define TARGET_LE       1
+#define TARGET_BE       2
+#define TARGET_PDP      3
+#define TARGET_ANY      4
+#endif
+
 static char *defflags[] = {
 	"-D__PCC__=" MKS(PCC_MAJOR),
 	"-D__PCC_MINOR__=" MKS(PCC_MINOR),
@@ -1537,6 +1512,24 @@ static char *defflags[] = {
 	"-D__SIZE_TYPE__=" PCC_SIZE_TYPE,
 	"-D__PTRDIFF_TYPE__=" PCC_PTRDIFF_TYPE,
 	"-D__SIZEOF_WINT_T__=4",
+	"-D__ORDER_LITTLE_ENDIAN__=1234",
+	"-D__ORDER_BIG_ENDIAN__=4321",
+	"-D__ORDER_PDP_ENDIAN__=3412",
+/*
+ * These should probably be changeable during runtime...
+ */
+#if TARGET_ENDIAN == TARGET_BE
+	"-D__FLOAT_WORD_ORDER__=__ORDER_BIG_ENDIAN__",
+	"-D__BYTE_ORDER__=__ORDER_BIG_ENDIAN__",
+#elif TARGET_ENDIAN == TARGET_PDP
+	"-D__FLOAT_WORD_ORDER__=__ORDER_PDP_ENDIAN__",
+	"-D__BYTE_ORDER__=__ORDER_PDP_ENDIAN__",
+#elif TARGET_ENDIAN == TARGET_LE
+	"-D__FLOAT_WORD_ORDER__=__ORDER_LITTLE_ENDIAN__",
+	"-D__BYTE_ORDER__=__ORDER_LITTLE_ENDIAN__",
+#else
+#error Unknown endian...
+#endif
 };
 
 static char *gcppflags[] = {

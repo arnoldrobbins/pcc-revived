@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.79 2014/05/29 18:11:25 plunky Exp $	*/
+/*	$Id: code.c,v 1.80 2014/06/04 07:18:02 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -59,8 +59,13 @@ setseg(int seg, char *name)
 #endif
 	case TLSDATA: name = ".section .tdata,\"awT\",@progbits"; break;
 	case TLSUDATA: name = ".section .tbss,\"awT\",@nobits"; break;
+#ifdef MACHOABI
+	case CTORS: name = ".mod_init_func\n\t.align 2"; break;
+	case DTORS: name = ".mod_term_func\n\t.align 2"; break;
+#else
 	case CTORS: name = ".section\t.ctors,\"aw\",@progbits"; break;
 	case DTORS: name = ".section\t.dtors,\"aw\",@progbits"; break;
+#endif
 	case NMSEG: 
 		printf("\t.section %s,\"a%c\",@progbits\n", name,
 		    cftnsp ? 'x' : 'w');

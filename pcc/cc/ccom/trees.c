@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.325 2014/05/29 19:20:03 plunky Exp $	*/
+/*	$Id: trees.c,v 1.329 2014/06/20 07:04:48 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -358,7 +358,8 @@ buildtree(int o, NODE *l, NODE *r)
 		 * Modify the trees so that the compound op is rewritten.
 		 */
 		/* avoid casting of LHS */
-		if ((cdope(o) & SIMPFLG) && ISINTEGER(l->n_type)) 
+		if ((cdope(o) & SIMPFLG) && ISINTEGER(l->n_type) && 
+		    l->n_type != BOOL) 
 			r = ccast(r, l->n_type, l->n_qual, l->n_df, l->n_ap);
 
 		r = buildtree(UNASG o, ccopy(l), r);
@@ -973,6 +974,7 @@ conval(NODE *p, int o, NODE *q)
 		break;
 	case NOT:
 		p->n_lval = !p->n_lval;
+		p->n_type = INT;
 		break;
 	case LT:
 		p->n_lval = p->n_lval < val;
@@ -1048,7 +1050,7 @@ valcast(CONSZ v, TWORD t)
 }
 
 /*
- * Checks p for the existance of a pun.  This is called when the op of p
+ * Checks p for the existence of a pun.  This is called when the op of p
  * is ASSIGN, RETURN, CAST, COLON, or relational.
  * One case is when enumerations are used: this applies only to lint.
  * In the other case, one operand is a pointer, the other integer type
@@ -3151,6 +3153,7 @@ copst(int op)
 	SNAM(ATTRIB,ATTRIBUTE)
 	SNAM(TYMERGE,TYMERGE)
 	SNAM(LABEL,LABEL)
+	SNAM(UPLUS,U+)
 #ifdef GCC_COMPAT
 	SNAM(XREAL,__real__)
 	SNAM(XIMAG,__imag__)
@@ -3188,6 +3191,7 @@ cdope(int op)
 	case XREAL:
 	case ATTRIB:
 	case LABEL:
+	case UPLUS:
 		return UTYPE;
 	case ANDAND:
 	case OROR:

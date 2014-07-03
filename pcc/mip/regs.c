@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.235 2014/05/29 19:20:03 plunky Exp $	*/
+/*	$Id: regs.c,v 1.239 2014/07/03 15:58:28 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -232,9 +232,10 @@ nsucomp(NODE *p)
 
 		p->n_regw = NULL;
 		if (o == LTYPE ) {
-			if (p->n_op == TEMP)
+			if (p->n_op == TEMP) {
 				p->n_regw = newblock(p);
-			else if (p->n_op == REG)
+				a = 1;
+			} else if (p->n_op == REG)
 				p->n_regw = &ablock[regno(p)];
 		} else
 			a = nsucomp(p->n_left);
@@ -298,9 +299,12 @@ nsucomp(NODE *p)
 			if (right > left) {
 				p->n_su |= DORIGHT;
 			} else if (right == left) {
+#if 0
+	/* XXX - need something more clever when large left trees */
 				/* A favor to 2-operand architectures */
 				if ((q->rewrite & RRIGHT) == 0)
 					p->n_su |= DORIGHT;
+#endif
 			}
 		}
 	} else if (o != LTYPE) {
@@ -1800,7 +1804,8 @@ DecrementDegree(REGW *w, int c)
 #endif
 
 	wast = trivially_colorable(w);
-	NCLASS(w, c)--;
+	if (NCLASS(w, c) > 0)
+		NCLASS(w, c)--;
 	if (wast == trivially_colorable(w))
 		return;
 
@@ -2213,6 +2218,7 @@ SelectSpill(void)
 			break;
 	}
 
+	RRDEBUG(("SelectSpill: trying longrange\n"));
 	if (w == &spillWorklist) {
 		/* try to find another long-range variable */
 		DLIST_FOREACH(w, &spillWorklist, link) {
@@ -2224,6 +2230,7 @@ SelectSpill(void)
 	}
 
 	if (w == &spillWorklist) {
+		RRDEBUG(("SelectSpill: trying not leaf\n"));
 		/* no heuristics, just fetch first element */
 		/* but not if leaf */
 		DLIST_FOREACH(w, &spillWorklist, link) {
@@ -2236,6 +2243,7 @@ SelectSpill(void)
 		/* Eh, only leaves :-/ Try anyway */
 		/* May not be useable */
 		w = DLIST_NEXT(&spillWorklist, link);
+		RRDEBUG(("SelectSpill: need leaf\n"));
 	}
  
         DLIST_REMOVE(w, link);
@@ -2432,7 +2440,6 @@ static REGW *spole;
 static void
 longtemp(NODE *p, void *arg)
 {
-	NODE *l, *r;
 	REGW *w;
 
 	if (p->n_op != TEMP)
@@ -2442,19 +2449,58 @@ longtemp(NODE *p, void *arg)
 		if (w != &nblock[regno(p)])
 			continue;
 		if (w->r_class == 0) {
-			w->r_color = BITOOR(freetemp(szty(p->n_type)));
-			w->r_class = FPREG;
+			w->r_color = freetemp(szty(p->n_type));
+			w->r_class = FPREG; /* just something */
 		}
-		l = mklnode(REG, 0, w->r_class, INCREF(p->n_type));
-		r = mklnode(ICON, w->r_color, 0, INT);
-		p->n_left = mkbinode(PLUS, l, r, INCREF(p->n_type));
-		p->n_op = UMUL;
-		p->n_regw = NULL;
+		storemod(p, w->r_color);
 		break;
 	}
 }
 
+/*
+ * Check if this node is just something directly addressable.
+ * XXX - should use target canaddr() when we knows that it is OK
+ * for all targets. Can currently be a little too optimistic.
+ */
+static int
+regcanaddr(NODE *p)
+{
+	int o = p->n_op;
+
+	if (o==NAME || o==ICON || o==OREG )
+		return 1;
+	if (o == UMUL) {
+		if (p->n_left->n_op == REG)
+			return 1;
+		if ((p->n_left->n_op == PLUS || p->n_left->n_op == MINUS) &&
+		    p->n_left->n_left->n_op == REG &&
+		    p->n_left->n_right->n_op == ICON)
+			return 1;
+	}
+	return 0;
+}
+
 static struct interpass *cip;
+
+static NODE *
+findparent(NODE *pp, NODE *p)
+{
+	NODE *q;
+
+	if (optype(pp->n_op) == BITYPE) {
+		if (pp->n_left == p || pp->n_right == p)
+			return pp;
+		if ((q = findparent(pp->n_left, p)) != NULL)
+			return q;
+		return findparent(pp->n_right, p);
+	} else if (optype(pp->n_op) == UTYPE) {
+		if (pp->n_left == p)
+			return pp;
+		return findparent(pp->n_left, p);
+	} else
+		return NULL;
+}
+
 /*
  * Rewrite a tree by storing a variable in memory.
  * XXX - must check if basic block structure is destroyed!
@@ -2472,45 +2518,58 @@ shorttemp(NODE *p, void *arg)
 	DLIST_FOREACH(w, spole, link) {
 		if (w != p->n_regw)
 			continue;
-		/* XXX - use canaddr() */
-		if (p->n_op == OREG || p->n_op == NAME) {
+		if (regcanaddr(p)) {
 			DLIST_REMOVE(w, link);
 #ifdef PCC_DEBUG
 			RDEBUG(("Node %d already in memory\n", ASGNUM(w)));
 #endif
+			/*
+			 * If we end up here it's our parent that needs
+			 * to be stored, because this node is already in
+			 * memory and we must be in regs for the instruction.
+			 */
+			if ((p = findparent(cip->ip_node, p)) == NULL)
+				comperr("shorttemp: parent missing");
+			off = freetemp(szty(p->n_type));
+			l = storenode(p->n_type, off);
+			r = talloc();
+			*r = *p;
+			nip = ipnode(mkbinode(ASSIGN, l, r, p->n_type));
+			storemod(p, off);
+			DLIST_INSERT_BEFORE(cip, nip, qelem);
 			break;
 		}
 #ifdef PCC_DEBUG
 		RDEBUG(("rewriting node %d\n", ASGNUM(w)));
 #endif
 
-		off = BITOOR(freetemp(szty(p->n_type)));
-		l = mklnode(OREG, off, FPREG, p->n_type);
-		r = talloc();
+		off = freetemp(szty(p->n_type));
+		l = storenode(p->n_type, off);
 		/*
 		 * If this is a binode which reclaim a leg, and it had
 		 * to walk down the other leg first, then it must be
 		 * split below this node instead.
+		 * Be careful not to store a node that do not involve 
+		 * any evaluation (meaningless).
 		 */
 		q = &table[TBLIDX(p->n_su)];
 		if (optype(p->n_op) == BITYPE &&
 		    (q->rewrite & RLEFT && (p->n_su & DORIGHT) == 0) &&
-		    (TBLIDX(p->n_right->n_su) != 0)) {
-			*r = *l;
-			nip = ipnode(mkbinode(ASSIGN, l,
+		    regcanaddr(p->n_left) == 0) {
+			nip = ipnode(mkbinode(ASSIGN, storenode(p->n_type, off),
 			    p->n_left, p->n_type));
-			p->n_left = r;
+			p->n_left = l;
 		} else if (optype(p->n_op) == BITYPE &&
 		    (q->rewrite & RRIGHT && (p->n_su & DORIGHT) != 0) &&
-		    (TBLIDX(p->n_left->n_su) != 0)) {
-			*r = *l;
-			nip = ipnode(mkbinode(ASSIGN, l,
+		    regcanaddr(p->n_right) == 0) {
+			nip = ipnode(mkbinode(ASSIGN, storenode(p->n_type, off),
 			    p->n_right, p->n_type));
-			p->n_right = r;
+			p->n_right = l;
 		} else {
+			r = talloc();
 			*r = *p;
 			nip = ipnode(mkbinode(ASSIGN, l, r, p->n_type));
-			*p = *l;
+			storemod(p, off);
 		}
 		DLIST_INSERT_BEFORE(cip, nip, qelem);
 		DLIST_REMOVE(w, link);
@@ -2814,6 +2873,11 @@ recalc:
 onlyperm: /* XXX - should not have to redo all */
 	memset(edgehash, 0, sizeof(edgehash));
 
+	/* clear adjacent node list */
+	for (i = 0; i < MAXREGS; i++)
+		for (j = 0; j < NUMCLASS+1; j++)
+			NCLASS(&ablock[i], j) = 0;
+
 	if (tbits) {
 		memset(nblock+tempmin, 0, tbits * sizeof(REGW));
 #ifdef PCC_DEBUG
@@ -2948,7 +3012,7 @@ onlyperm: /* XXX - should not have to redo all */
 		ip = ipnode(p);
 		DLIST_INSERT_BEFORE(ipole->qelem.q_back, ip, qelem);
 	}
-	stktemp = BITOOR(freetemp(ntsz));
+	stktemp = freetemp(ntsz);
 	memcpy(p2e->epp->ipp_regs, p2e->ipp->ipp_regs, sizeof(p2e->epp->ipp_regs));
 	/* Done! */
 }

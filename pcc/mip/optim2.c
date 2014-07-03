@@ -1,4 +1,4 @@
-/*	$Id: optim2.c,v 1.88 2014/05/29 19:20:03 plunky Exp $	*/
+/*	$Id: optim2.c,v 1.89 2014/06/01 11:33:52 ragge Exp $	*/
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -61,7 +61,6 @@ void optdump(struct interpass *ip);
 void printip(struct interpass *pole);
 
 static struct varinfo defsites;
-struct interpass *storesave;
 
 void bblocks_build(struct p2env *);
 void cfg_build(struct p2env *);

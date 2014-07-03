@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.192 2014/05/28 20:20:54 plunky Exp $	*/
+/*	$Id: cpp.c,v 1.194 2014/06/04 06:43:49 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -447,38 +447,50 @@ bad:	error("bad #line");
 static int
 fsrch_macos_framework(const usch *fn, const usch *dir)
 {
-	static usch *current_path = NULL;
-	usch *saved_path = current_path;
-
 	usch *saved_stringbuf = stringbuf;
 	usch *s = (usch *)strchr((const char*)fn, '/');
+	usch *nm;
+	usch *p;
+	int len  = s - fn;
 
-	if (s != NULL) {
-		usch *nm;
-		int len  = s - fn;
+	if (s == NULL)
+		return 0;
 
-		current_path = savstr(dir);
-		stringbuf = savstr(fn) + len;
-		savstr((const usch*)".framework/Frameworks/");
+//	fprintf(stderr, "searching for %s in %s\n", (const char *)fn, (const char *)dir);
+
+	nm = savstr(dir);
+	savch(0);
+	p = savstr(fn);
+	stringbuf = p + len;
+	savch(0);
+//	fprintf(stderr, "comparing \"%s\" against \"%.*s\"\n", nm, len, fn);
+	p = (usch *)strstr((const char *)nm, (const char *)p);
+//	fprintf(stderr, "p = %s\n", (const char *)p);
+	if (p != NULL) {
+		stringbuf = p;
 		savch(0);
-
-		nm = savstr(dir);
-		stringbuf = savstr(fn) + len;
-		savstr((const usch*)".framework/Headers");
-		savstr(s); savch(0);
-		if (pushfile(nm, fn, SYSINC, NULL) == 0)
-			return 1;
-
-		current_path = NULL;
-
-		if (saved_path != NULL) {
-			if (fsrch_macos_framework(fn, saved_path))
-				return 1;
-		}
+		return fsrch_macos_framework(fn, nm);
 	}
 
+	p = nm + strlen((char *)nm) - 1;
+	while (*p == '/')
+		p--;
+	while (*p != '/')
+		p--;
+	stringbuf = ++p;
+	savstr((const usch *)"Frameworks/");
+	stringbuf = savstr(fn) + len;
+	savstr((const usch*)".framework/Headers");
+	savstr(s);
+	savch(0);
+
+//	fprintf(stderr, "nm: %s\n", nm);
+
+	if (pushfile(nm, fn, SYSINC, NULL) == 0)
+		return 1;
+//	fprintf(stderr, "not found %s, continuing...\n", nm);
+
 	stringbuf = saved_stringbuf;
-	current_path = saved_path;
 
 	return 0;
 }
@@ -513,10 +525,24 @@ fsrch(const usch *fn, int idx, struct incs *w)
 	 * On MacOS, we may have to do some clever stuff
 	 * to resolve framework headers.
 	 */
-	if (fsrch_macos_framework(fn, (const usch *)"/Library/Frameworks/") == 1)
-		return 1;
-	if (fsrch_macos_framework(fn, (const usch *)"/System/Library/Frameworks/") == 1)
-		return 1;
+	{
+		usch *dir = stringbuf;
+		savstr(ifiles->orgfn);
+		stringbuf = (usch *)strrchr((char *)dir, '/');
+		if (stringbuf != NULL) {
+			stringbuf++;
+			savch(0);
+			if (fsrch_macos_framework(fn, dir) == 1)
+				return 1;
+		}
+		stringbuf = dir;
+
+		if (fsrch_macos_framework(fn, (const usch *)"/Library/Frameworks/") == 1)
+			return 1;
+
+		if (fsrch_macos_framework(fn, (const usch *)"/System/Library/Frameworks/") == 1)
+			return 1;
+	}
 #endif
 
 	return 0;
@@ -528,6 +554,35 @@ prem(void)
 	error("premature EOF");
 }
 
+static usch *
+incfn(int e)
+{
+	usch *sb = stringbuf;
+	int c;
+
+	while ((c = cinput()) != e) {
+		if (c == -1)
+			prem();
+		if (c == '\n') {
+			stringbuf = sb;
+			return NULL;
+		}
+		savch(c);
+	}
+	savch(0);
+
+	while ((c = sloscan()) == WSPACE)
+		;
+	if (c == 0)
+		prem();
+	if (c != '\n') {
+		stringbuf = sb;
+		return NULL;
+	}
+
+	return sb;
+}
+
 /*
  * Include a file. Include order:
  * - For <...> files, first search -I directories, then system directories.
@@ -537,79 +592,66 @@ void
 include(void)
 {
 	struct symtab *nl;
-	usch *osp;
-	usch *fn, *safefn;
+	usch *fn, *nm;
 	int c;
 
 	if (flslvl)
 		return;
-	osp = stringbuf;
 
-	while ((c = sloscan()) == WSPACE)
+	while ((c = cinput()) == ' ' || c == '\t')
 		;
-	if (c == IDENT) {
-		/* sloscan() will not expand idents */
+
+	if (c != -1 && (spechr[c] & C_ID0)) {
+		usch *sb;
+
+		/* use sloscan() to read the identifier, then expand it */
+		cunput(c);
+		c = sloscan();
 		if ((nl = lookup(yytext, FIND)) == NULL)
 			goto bad;
+
+		sb = stringbuf;
 		if (kfind(nl))
 			unpstr(stringbuf);
 		else
 			unpstr(nl->namep);
-		stringbuf = osp;
-		c = yylex();
+		stringbuf = sb;
+
+		c = cinput();
 	}
 
 	if (c == '<') {
-		fn = stringbuf;
-		while ((c = sloscan()) != '>') {
-			if (c == 0)
-				prem();
-			if (c == '\n')
-				goto bad;
-			savstr(yytext);
-		}
-		savch('\0');
-		while ((c = sloscan()) == WSPACE)
-			;
-		if (c == 0)
-			prem();
-		if (c != '\n')
+		if ((fn = incfn('>')) == NULL)
 			goto bad;
-		safefn = fn;
-	} else if (c == STRING) {
-		usch *nm = stringbuf;
+	} else if (c == '\"') {
+		if ((fn = incfn('\"')) == NULL)
+			goto bad;
 
-		fn = yytext;
-		if (*fn++ == 'L')
-			fn++;
-		fn[strlen((char *)fn) - 1] = 0;
 		/* first try to open file relative to previous file */
 		/* but only if it is not an absolute path */
+		nm = stringbuf;
 		if (*fn != '/') {
 			savstr(ifiles->orgfn);
-			if ((stringbuf =
-			    (usch *)strrchr((char *)nm, '/')) == NULL)
+			stringbuf = (usch *)strrchr((char *)nm, '/');
+			if (stringbuf == NULL)
 				stringbuf = nm;
 			else
 				stringbuf++;
 		}
-		safefn = stringbuf;
-		savstr(fn); savch(0);
-		c = yylex();
-		if (c == 0)
-			prem();
-		if (c != '\n')
-			goto bad;
-		if (pushfile(nm, safefn, 0, NULL) == 0)
+		savstr(fn);
+		savch(0);
+
+		if (pushfile(nm, fn, 0, NULL) == 0)
 			goto okret;
+
 		/* XXX may lose stringbuf space */
 	} else
 		goto bad;
 
-	if (fsrch(safefn, 0, incdir[0]))
+	if (fsrch(fn, 0, incdir[0]))
 		goto okret;
 
-	error("cannot find '%s'", safefn);
+	error("cannot find '%s'", fn);
 	/* error() do not return */
 
 bad:	error("bad #include");
@@ -622,48 +664,46 @@ void
 include_next(void)
 {
 	struct symtab *nl;
-	usch *osp;
 	usch *fn;
 	int c;
 
 	if (flslvl)
 		return;
-	osp = stringbuf;
-	while ((c = sloscan()) == WSPACE)
+
+	while ((c = cinput()) == ' ' || c == '\t')
 		;
-	if (c == IDENT) {
-		/* sloscan() will not expand idents */
+
+	if (c != -1 && (spechr[c] & C_ID0)) {
+		usch *sb;
+
+		/* use sloscan() to read the identifier, then expand it */
+		cunput(c);
+		c = sloscan();
 		if ((nl = lookup(yytext, FIND)) == NULL)
 			goto bad;
+
+		sb = stringbuf;
 		if (kfind(nl))
 			unpstr(stringbuf);
 		else
 			unpstr(nl->namep);
-		stringbuf = osp;
-		c = yylex();
-	}
-	if (c != STRING && c != '<')
-		goto bad;
+		stringbuf = sb;
 
-	fn = stringbuf;
-	if (c == STRING) {
-		savstr(&yytext[1]);
-		stringbuf[-1] = 0;
-	} else { /* < > */
-		while ((c = sloscan()) != '>') {
-			if (c == '\n')
-				goto bad;
-			savstr(yytext);
-		}
-		savch('\0');
+		c = cinput();
 	}
-	while ((c = sloscan()) == WSPACE)
-		;
-	if (c != '\n')
+
+	if (c == '\"') {
+		if ((fn = incfn('\"')) == NULL)
+			goto bad;
+	} else if (c == '<') {
+		if ((fn = incfn('>')) == NULL)
+			goto bad;
+	} else
 		goto bad;
 
 	if (fsrch(fn, ifiles->idx, ifiles->incs) == 0)
 		error("cannot find '%s'", fn);
+
 	prtline();
 	return;
 

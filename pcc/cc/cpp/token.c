@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.115 2014/05/28 22:09:32 plunky Exp $	*/
+/*	$Id: token.c,v 1.116 2014/06/06 15:32:53 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -30,7 +30,6 @@
  *	- fastscan() loops over the input stream searching for magic
  *		characters that may require actions.
  *	- sloscan() tokenize the input stream and returns tokens.
- *		It may recurse into itself during expansion.
  *	- yylex() returns something from the input stream that
  *		is suitable for yacc.
  *

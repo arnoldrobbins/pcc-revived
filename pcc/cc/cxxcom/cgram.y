@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.6 2014/05/03 09:47:51 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.7 2014/06/06 13:19:03 plunky Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -2193,7 +2193,7 @@ eve(NODE *p)
 			r = buildtree(UMUL, r, NIL);
 #ifdef GCC_COMPAT
 		if (attr_find(sp->sap, GCC_ATYP_DEPRECATED))
-			werror("`%s' is deprecated", sp->sname);
+			warner(Wdeprecated_declarations, sp->sname);
 #endif
 		break;
 
@@ -2272,7 +2272,7 @@ eve(NODE *p)
 			nfree(p1);
 #ifdef GCC_COMPAT
 			if (attr_find(sp->sap, GCC_ATYP_DEPRECATED))
-				werror("`%s' is deprecated", sp->sname);
+				warner(Wdeprecated_declarations, sp->sname);
 #endif
 			p2 = p->n_op == CALL ? eve(p2) : NIL;
 			r = doacall(sp, nametree(sp), p2, 0);

@@ -1,4 +1,4 @@
-.\"	$Id: ccom.1,v 1.30 2012/03/29 12:47:50 plunky Exp $
+.\"	$Id: ccom.1,v 1.31 2014/06/06 14:59:46 plunky Exp $
 .\"
 .\" Copyright (c) 2007 Jeremy C. Reed <reed@reedmedia.net>
 .\"
@@ -148,6 +148,11 @@ Enable
 .Ar warning ,
 and treat it as an error condition.
 If a specific warning is not given, producing any warning will cause an error.
+.It Sy deprecated-declarations
+Report whenever a symbol marked with the
+.Sq deprecated
+attribute is used.
+This warning is enabled by default.
 .It Sy implicit-function-declaration
 (TODO) Require explicit prototypes for all called functions.
 .It Sy implicit-int
