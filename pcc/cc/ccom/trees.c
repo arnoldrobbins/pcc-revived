@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.329 2014/06/20 07:04:48 plunky Exp $	*/
+/*	$Id: trees.c,v 1.330 2014/07/05 09:05:52 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1016,6 +1016,8 @@ conval(NODE *p, int o, NODE *q)
 		return(0);
 		}
 	/* Do the best in making everything type correct after calc */
+	if (clogop(o))
+		p->n_type = INT;
 	if (p->n_sp == NULL && q->n_sp == NULL)
 		p->n_lval = valcast(p->n_lval, p->n_type);
 	return(1);
