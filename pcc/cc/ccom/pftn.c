@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.379 2014/07/02 15:31:41 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.380 2014/07/28 19:03:09 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1001,6 +1001,8 @@ soumemb(NODE *n, char *name, int class)
 
 	if (class & FIELD) {
 		sp->sclass = (char)class;
+		if (rpole->rsou == UNAME)
+			rpole->rstr = 0;
 		falloc(sp, class&FLDSIZ, NIL);
 	} else if (rpole->rsou == STNAME || rpole->rsou == UNAME) {
 		sp->sclass = rpole->rsou == STNAME ? MOS : MOU;

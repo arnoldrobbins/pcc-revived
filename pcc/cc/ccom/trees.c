@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.330 2014/07/05 09:05:52 ragge Exp $	*/
+/*	$Id: trees.c,v 1.334 2014/08/06 16:47:52 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -341,6 +341,8 @@ buildtree(int o, NODE *l, NODE *r)
 			return bcon(n);
 		}
 	} else if ((cdope(o)&ASGOPFLG) && o != RETURN && o != CAST) {
+		if (l->n_op == SCONV && l->n_left->n_op == FLD)
+			l = nfree(l);
 		/*
 		 * Handle side effects by storing address in temporary q.
 		 * Side effect nodes always have an UMUL.
@@ -348,7 +350,7 @@ buildtree(int o, NODE *l, NODE *r)
 		if (has_se(l)) {
 			ll = l->n_left;
 
-			q = cstknode(ll->n_type, ll->n_df, ll->n_ap);
+			q = tempnode(0, ll->n_type, ll->n_df, ll->n_ap);
 			l->n_left = ccopy(q);
 			q = buildtree(ASSIGN, q, ll);
 		} else 
@@ -367,13 +369,15 @@ buildtree(int o, NODE *l, NODE *r)
 		l = q;
 		o = COMOP;
 	} else if (o == INCR || o == DECR) {
+		if (l->n_op == SCONV && l->n_left->n_op == FLD)
+			l = nfree(l);
 		/*
 		 * Rewrite to (t=d,d=d+1,t)
 		 */
 		if (has_se(l)) {
 			ll = l->n_left;
 
-			q = cstknode(ll->n_type, ll->n_df, ll->n_ap);
+			q = tempnode(0, ll->n_type, ll->n_df, ll->n_ap);
 			l->n_left = ccopy(q);
 			q = buildtree(ASSIGN, q, ll);
 		} else 
@@ -386,6 +390,8 @@ buildtree(int o, NODE *l, NODE *r)
 			r = rewincop(l, r, o == INCR ? PLUSEQ : MINUSEQ);
 		l = q;
 		o = COMOP;
+	} else if (o == ASSIGN && l->n_op == SCONV && l->n_left->n_op == FLD) {
+		l = nfree(l);
 	}
 
 
@@ -654,7 +660,7 @@ rewincop(NODE *p1, NODE *p2, int op)
 {
 	NODE *t, *r;
 		
-	t = cstknode(p1->n_type, p1->n_df, p1->n_ap);
+	t = tempnode(0, p1->n_type, p1->n_df, p1->n_ap);
 	r = buildtree(ASSIGN, ccopy(t), ccopy(p1));
 	r = buildtree(COMOP, r, buildtree(op, p1, eve(p2)));
 	return buildtree(COMOP, r, t);
@@ -1174,7 +1180,7 @@ stref(NODE *p)
 	struct attr *ap, *xap, *yap;
 	union dimfun *d;
 	TWORD t, q;
-	int dsc;
+	int dsc, fsz;
 	OFFSZ off;
 	struct symtab *s;
 
@@ -1221,11 +1227,21 @@ stref(NODE *p)
 	if (dsc & FIELD) {
 		TWORD ftyp = s->stype;
 		int fal = talign(ftyp, ap);
+		fsz = dsc&FLDSIZ;
 		off = (off/fal)*fal;
 		p = offplus(p, off, t, q, d, ap);
 		p = block(FLD, p, NIL, ftyp, 0, ap);
 		p->n_qual = q;
-		p->n_rval = PKFIELD(dsc&FLDSIZ, s->soffset%fal);
+		p->n_rval = PKFIELD(fsz, s->soffset%fal);
+		/* make type int or some other signed type */
+		if (fsz < SZINT)
+			ftyp = INT;
+		else if (fsz > SZINT && fsz < SZLONG)
+			ftyp = LONG;
+		else if (fsz > SZLONG && fsz < SZLONGLONG)
+			ftyp = LONGLONG;
+		if (ftyp != p->n_type)
+			p = makety(p, ftyp, 0, 0, 0);
 	} else {
 		p = offplus(p, off, t, q, d, ap);
 #ifndef CAN_UNALIGN
@@ -2177,26 +2193,6 @@ calc:		if (true < 0) {
 }
 
 /*
- * Create a node for either TEMP or on-stack storage.
- */
-NODE *
-cstknode(TWORD t, union dimfun *df, struct attr *ap)
-{
-	struct symtab *sp;
-
-	/* create a symtab entry suitable for this type */
-	sp = getsymtab("0hej", STEMP);
-	sp->stype = t;
-	sp->sdf = df;
-	sp->sap = ap;
-	sp->sclass = AUTO;
-	sp->soffset = NOOFFSET;
-	oalloc(sp, &autooff);
-	return nametree(sp);
-
-}
-
-/*
  * Massage the output trees to remove C-specific nodes:
  *	COMOPs are split into separate statements.
  *	QUEST/COLON are rewritten to branches.
@@ -2239,7 +2235,7 @@ rmcops(NODE *p)
 		q = p->n_right->n_left;
 		comops(q);
 		if (type != VOID) {
-			tval = cstknode(q->n_type, q->n_df, q->n_ap);
+			tval = tempnode(0, q->n_type, q->n_df, q->n_ap);
 			q = buildtree(ASSIGN, ccopy(tval), q);
 		}
 		rmcops(q);
@@ -2288,7 +2284,7 @@ rmcops(NODE *p)
 		*r = *p;
 		andorbr(r, -1, lbl = getlab());
 
-		tval = cstknode(p->n_type, p->n_df, p->n_ap);
+		tval = tempnode(0, p->n_type, p->n_df, p->n_ap);
 
 		ecode(buildtree(ASSIGN, ccopy(tval), bcon(1)));
 		branch(lbl2 = getlab());
@@ -2550,7 +2546,6 @@ rmfldops(NODE *p)
 		/* t2 is what we have to write (RHS of ASSIGN) */
 		/* bt is (eventually) something that must be written */
 
-
 		if (q->n_left->n_op == UMUL) {
 			/* LHS of assignment may have side effects */
 			q = q->n_left;
@@ -2604,6 +2599,23 @@ rmfldops(NODE *p)
 			p->n_left = q;
 			p->n_right = t3;
 			p->n_op = COMOP;
+		}
+		if (!ISUNSIGNED(p->n_type)) {
+			/* Correct value in case of signed bitfield.  */
+			t = p->n_type;
+			if (p->n_type == LONGLONG)
+				fsz = SZLONGLONG - fsz;
+			else if (p->n_type == LONG)
+				fsz = SZLONG - fsz;
+			else
+				fsz = SZINT - fsz;
+			p = buildtree(LS, p, bcon(fsz));
+#ifdef RS_DIVIDES
+			p = buildtree(RS, p, bcon(fsz));
+#else
+			fsz = (1 << fsz);
+			p = buildtree(DIV, p, bcon(fsz));
+#endif
 		}
 	}
 	if (coptype(p->n_op) != LTYPE)
@@ -2835,7 +2847,7 @@ deldcall(NODE *p, int split)
 
 	if (cdope(o) & CALLFLG) {
 		if (split) {
-			q = cstknode(p->n_type, p->n_df, p->n_ap);
+			q = tempnode(0, p->n_type, p->n_df, p->n_ap);
 			r = ccopy(q);
 			q = block(ASSIGN, q, p, p->n_type, p->n_df, p->n_ap);
 			ecode(q);
@@ -3271,6 +3283,9 @@ plabel(int label)
 NODE *
 intprom(NODE *n)
 {
+	if (n->n_op == FLD && UPKFSZ(n->n_rval) < SZINT)
+		return makety(n, INT, 0, 0, 0);
+
 	if ((n->n_type >= CHAR && n->n_type < INT) || n->n_type == BOOL) {
 		if ((n->n_type == UCHAR && MAX_UCHAR > MAX_INT) ||
 		    (n->n_type == USHORT && MAX_USHORT > MAX_INT))

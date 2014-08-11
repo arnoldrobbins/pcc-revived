@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.261 2014/06/07 07:04:09 plunky Exp $	*/
+/*	$Id: pass1.h,v 1.262 2014/08/06 16:47:52 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -383,7 +383,6 @@ struct symtab *strmemb(struct attr *ap);
 int yylex(void);
 void yyerror(char *);
 int pragmas_gcc(char *t);
-NODE *cstknode(TWORD t, union dimfun *df, struct attr *ap);
 int concast(NODE *p, TWORD t);
 #ifdef WORD_ADDRESSED
 #define rmpconv(p) (p)
