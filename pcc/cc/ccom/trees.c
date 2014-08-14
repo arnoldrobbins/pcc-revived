@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.334 2014/08/06 16:47:52 ragge Exp $	*/
+/*	$Id: trees.c,v 1.335 2014/08/13 20:18:59 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1773,7 +1773,7 @@ opact(NODE *p)
 
 	case LS:
 	case RS:
-		if( mt12 & MINT ) return( TYPL+OTHER );
+		if( mt12 & MINT ) return( TYPL+OTHER+PROML );
 		break;
 
 	case EQ:

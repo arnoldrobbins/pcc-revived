@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.74 2014/07/03 14:03:50 ragge Exp $	*/
+/*	$Id: code.c,v 1.75 2014/08/13 13:20:17 plunky Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -618,10 +618,9 @@ mkvacall(char *fun, NODE *a, int typ)
 NODE *
 amd64_builtin_va_arg(const struct bitable *bt, NODE *a)
 {
-	NODE *ap, *r, *dp;
+	NODE *r, *dp;
 	int typ, sz;
 
-	ap = a->n_left;
 	dp = a->n_right;
 
 	nsse = ngpr = 0;
