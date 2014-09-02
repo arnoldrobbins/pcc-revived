@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.377 2014/07/25 09:30:39 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.381 2014/08/27 17:26:25 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -71,10 +71,10 @@
 
 /*
  * At last count, there were 5 shift/reduce and no reduce/reduce conflicts
- * Four are accounted for;
+ * All are accounted for;
  * One is "dangling else"
  * Two is in attribute parsing
- * One is in ({ }) parsing
+ * Two is in ({ }) parsing
  */
 
 /*
@@ -144,7 +144,6 @@
 %left '[' '(' C_STROP
 %{
 # include "pass1.h"
-# include "unicode.h"
 # include <stdarg.h>
 # include <string.h>
 # include <stdlib.h>
@@ -232,7 +231,7 @@ struct savbc {
 %type <intval> ifelprefix ifprefix whprefix forprefix doprefix switchpart
 		xbegin
 %type <nodep> e .e term enum_dcl struct_dcl cast_type declarator
-		elist type_sq cf_spec merge_attribs e2
+		elist type_sq cf_spec merge_attribs e2 ecq
 		parameter_declaration abstract_declarator initializer
 		parameter_type_list parameter_list
 		declaration_specifiers designation
@@ -347,15 +346,7 @@ declarator:	   '*' declarator { $$ = bdty(UMUL, $2); }
 			$$->n_ap = attr_add($$->n_ap, gcc_attr_wrapper($2));
 		}
 		|  '(' declarator ')' { $$ = $2; }
-		|  declarator '[' e ']' { $$ = biop(LB, $1, $3); }
-		|  declarator '[' C_CLASS e ']' {
-			if ($3->n_type != STATIC)
-				uerror("bad class keyword");
-			tfree($3); /* XXX - handle */
-			$$ = biop(LB, $1, $4);
-		}
-		|  declarator '[' maybe_r ']' { $$ = biop(LB, $1, bcon(NOOFFSET)); }
-		|  declarator '[' '*' ']' { $$ = biop(LB, $1, bcon(NOOFFSET)); }
+		|  declarator '[' ecq ']' { $$ = biop(LB, $1, $3); }
 		|  declarator '(' parameter_type_list ')' {
 			$$ = bdty(CALL, $1, $3);
 		}
@@ -364,6 +355,29 @@ declarator:	   '*' declarator { $$ = bdty(UMUL, $2); }
 			oldstyle = 1;
 		}
 		|  declarator '(' ')' { $$ = bdty(UCALL, $1); }
+		;
+
+ecq:		   maybe_r { $$ = bcon(NOOFFSET); }
+		|  e  { $$ = $1; }
+		|  r e { $$ = $2; }
+		|  c maybe_r e { $$ = $3; }
+		|  r c e { $$ = $3; }
+		|  '*' { $$ = bcon(NOOFFSET); }
+		|  r '*' { $$ = bcon(NOOFFSET); }
+		;
+
+r:		  C_QUALIFIER {
+			if ($1->n_qual != 0)
+				uerror("bad qualifier");
+			nfree($1);
+		}
+		;
+
+c:		  C_CLASS {
+			if ($1->n_type != STATIC)
+				uerror("bad class keyword");
+			nfree($1);
+		}
 		;
 
 type_qualifier_list:
@@ -1145,6 +1159,14 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 		|  C_FCON { $$ = $1; }
 		|  string { $$ = bdty(STRING, $1, widestr); }
 		|   '('  e  ')' { $$=$2; }
+		|  '(' xbegin e ';' '}' ')' {
+			/* XXX - check recursive ({ }) statements */
+			branch(($2)+2);
+			plabel($2);
+			$$ = buildtree(COMOP,
+			    biop(GOTO, bcon(($2)+1), NIL), eve($3));
+			flend();
+		}
 		|  '(' xbegin block_item_list e ';' '}' ')' {
 			/* XXX - check recursive ({ }) statements */
 			branch(($2)+2);
@@ -1756,35 +1778,85 @@ branch(int lbl)
 static char *
 mkpstr(char *str)
 {
-	char *s;
+	char *os, *s;
 	int l = strlen(str) + 3; /* \t + \n + \0 */
 
-	s = inlalloc(l);
-	snprintf(s, l, "\t%s\n", str);
-	return s;
+	os = s = inlalloc(l);
+	*s++ = '\t';
+	while (*str) {
+		if (*str == '\\')
+			*s++ = esccon(&str);
+		else
+			*s++ = *str++;
+	}
+	*s++ = '\n';
+	*s = 0;
+
+	return os;
 }
 
 /*
- * Convert string to utf-8 and append to old string.
+ * encode value as 3-digit octal escape sequence
+ */
+static char *
+voct(char *d, unsigned int v)
+{
+	*d++ = '\\';
+	*d++ = ((v & 0700) >> 6) + '0';
+	*d++ = ((v & 0070) >> 3) + '0';
+	*d++ = (v & 0007) + '0';
+	return d;
+}
+
+/*
+ * Add "raw" string new to cleaned string old.
  */
 static char *
 stradd(char *old, char *new)
 {
-	char *rv;
-    int newlen = strlen(new);
-    int oldlen = strlen(old);
+	char *rv, *p;
+	int oldlen, max;
 
-	if (*new == 'L' && new[1] == '\"')
-        widestr = 1, new++, newlen--;
-	if (*new == '\"') {
-		new++;			 /* remove first " */
-        new[newlen-=2] = 0;/* remove last " */
+	if (new[0] == 'L' && new[1] == '\"') {
+		widestr = 1;
+		new++;
 	}
-    rv=tmpalloc(oldlen + newlen + 1);
-    strlcpy(rv, old, oldlen+1);
-	char *p;
-	for (p = rv + oldlen; *new; *p++=esc2char(&new));
-	*p=0;
+
+	if (new[0] == '\"') {
+		new++;
+		new[strlen(new) - 1] = 0;
+	}
+
+	/* estimate max space needed for new string */
+	for (p = new, max = 0; *p; max++, p++)
+		if (*p == '\\' || *p < ' ' || *p > '~')
+			max += 3;
+
+	/* start new buffer with old string */
+	oldlen = strlen(old);
+	rv = tmpalloc(oldlen + max + 1);
+	memcpy(rv, old, oldlen);
+
+	/* append new string, cleaning up as we go */
+	p = rv + oldlen;
+	while (*new) {
+		if (*new == '\\') {
+			p = voct(p, esccon(&new));
+			max -= 4;
+		} else if (*new < ' ' || *new > '~') {
+			p = voct(p, *(unsigned char *)new++);
+			max -= 4;
+		} else {
+			*p++ = *new++;
+			max--;
+		}
+		if (max < 0)
+			cerror("stradd");
+	}
+
+	/* nil terminate */
+	*p = 0;
+
 	return rv;
 }
 
@@ -2040,8 +2112,6 @@ eve(NODE *p)
 #endif
 	case UPLUS:
 		r = eve(p1);
-		if (r->n_op == FLD || r->n_type < INT)
-			r = buildtree(PLUS, r, bcon(0));
 		break;
 
 	case UMINUS:

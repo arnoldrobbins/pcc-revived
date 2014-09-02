@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.116 2014/06/06 15:32:53 plunky Exp $	*/
+/*	$Id: token.c,v 1.118 2014/08/29 18:02:25 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -599,6 +599,9 @@ ppnum:		for (;;) {
 					yytext[yyp++] = (usch)ch;
 				} else
 					unch(ch);
+				if ((spechr[ch = inch()] & C_DIGIT) == 0)
+					break; /* only digits allowed */
+				unch(ch);
 				continue;
 			}
 			if ((spechr[ch] & C_ID) || ch == '.') {
@@ -1007,7 +1010,8 @@ prtline(void)
 	if (Mflag) {
 		if (dMflag)
 			return; /* no output */
-		if (ifiles->lineno == 1) {
+		if (ifiles->lineno == 1 &&
+		    (MMDflag == 0 || ifiles->idx != SYSINC)) {
 			sheap("%s: %s\n", Mfile, ifiles->fname);
 			if (MPflag &&
 			    strcmp((const char *)ifiles->fname, (char *)MPfile))

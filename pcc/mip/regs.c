@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.242 2014/08/06 20:34:06 ragge Exp $	*/
+/*	$Id: regs.c,v 1.244 2014/08/17 15:41:34 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1084,6 +1084,14 @@ insnwalk(NODE *p)
 		} else {
 			AddEdge(r, p->n_regw);
 			addalledges(r);
+			if (q->needs & NSPECIAL) {
+				struct rspecial *rc;
+				for (rc = nspecial(q); rc->op; rc++) {
+					if (rc->op != NEVER)
+						continue;
+					AddEdge(r, &ablock[rc->num]);
+				}
+			}
 		}
 		if (optype(o) != LTYPE && (q->needs & ncl[CLASS(r)]) == 0)
 			addedge_r(p->n_left, r);
@@ -2474,10 +2482,11 @@ regcanaddr(NODE *p)
 	if (o==NAME || o==ICON || o==OREG )
 		return 1;
 	if (o == UMUL) {
-		if (p->n_left->n_op == REG)
+		if (p->n_left->n_op == REG || p->n_left->n_op == TEMP)
 			return 1;
 		if ((p->n_left->n_op == PLUS || p->n_left->n_op == MINUS) &&
-		    p->n_left->n_left->n_op == REG &&
+		    (p->n_left->n_left->n_op == REG ||
+		     p->n_left->n_left->n_op == TEMP) &&
 		    p->n_left->n_right->n_op == ICON)
 			return 1;
 	}
@@ -2550,7 +2559,7 @@ down:		switch (optype(p->n_op)) {
 	/* ensure that both left and right are addressable */
 	if (!regcanaddr(p) && !callop(p->n_op)) {
 		/* this is neither leaf nor addressable */
-		if (!regcanaddr(p->n_left)) {
+		if (p->n_op != ASSIGN && !regcanaddr(p->n_left)) {
 			/* store left */
 			p->n_left = shstore(p->n_left, cip, w);
 			RDEBUG(("Node %d stored left\n", ASGNUM(w)));

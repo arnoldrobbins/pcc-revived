@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.75 2014/08/13 13:20:17 plunky Exp $	*/
+/*	$Id: code.c,v 1.77 2014/08/28 20:14:49 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -198,9 +198,13 @@ efcode(void)
 			r1 = XMM0, t1 = DOUBLE;
 		else
 			r1 = RAX, t1 = LONG;
-		if (typ == STRSSE || typ == STRIF)
+		if (typ == STRSSE)
 			r2 = XMM1, t2 = DOUBLE;
-		else
+		else if (typ == STRFI)
+			r2 = RAX, t2 = LONG;
+		else if (typ == STRIF)
+			r2 = XMM0, t2 = DOUBLE;
+		else /* if (typ == STRREG) */
 			r2 = RDX, t2 = LONG;
 
 		if (tsize(t, sp->sdf, sp->sap) > SZLONG) {
@@ -767,9 +771,12 @@ classifystruct(struct symtab *sp, int off)
 		} else if (t == LDOUBLE) {
 			return STRMEM;
 		} else if (ISSOU(t)) {
+#ifdef GCC_COMPAT
 			if (attr_find(sp->sap, GCC_ATYP_PACKED)) {
 				cl = STRMEM;
-			} else {
+			} else
+#endif
+			{
 				cl2 = classifystruct(strmemb(sp->sap), off);
 				if (cl2 == STRMEM) {
 					cl = STRMEM;
@@ -820,9 +827,12 @@ argtyp(TWORD t, union dimfun *df, struct attr *ap)
 	} else if (t == STRTY || t == UNIONTY) {
 		int sz = tsize(t, df, ap);
 
+#ifdef GCC_COMPAT
 		if (attr_find(ap, GCC_ATYP_PACKED)) {
 			cl = STRMEM;
-		} else if (iscplx87(strmemb(ap)) == STRX87) {
+		} else
+#endif
+		if (iscplx87(strmemb(ap)) == STRX87) {
 			cl = STRX87;
 		} else if (sz > 2*SZLONG) {
 			cl = STRMEM;
@@ -1179,9 +1189,17 @@ int codeatyp(NODE *);
 int
 codeatyp(NODE *p)
 {
+	TWORD t;
 	int typ;
 
 	ngpr = nsse = 0;
-	typ = argtyp(DECREF(p->n_type), p->n_df, p->n_ap);
+	t = DECREF(p->n_type);
+	if (ISSOU(t) == 0) {
+		p = p->n_left;
+		t = DECREF(DECREF(p->n_type));
+	}
+	if (ISSOU(t) == 0)
+		cerror("codeatyp");
+	typ = argtyp(t, p->n_df, p->n_ap);
 	return typ;
 }
