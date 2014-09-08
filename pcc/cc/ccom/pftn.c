@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.384 2014/08/26 18:00:04 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.387 2014/09/05 07:46:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -129,6 +129,7 @@ static void alprint(union arglist *al, int in);
 #endif
 static void lcommadd(struct symtab *sp);
 static NODE *mkcmplx(NODE *p, TWORD dt);
+static void cxargfixup(NODE *arg, TWORD dt, struct attr *ap);
 extern int fun_inline;
 
 void
@@ -2423,6 +2424,13 @@ doacall(struct symtab *sp, NODE *f, NODE *a)
 
 		/* Check structs */
 		if (type <= BTMASK && arrt <= BTMASK) {
+#ifndef NO_COMPLEX
+			if ((type != arrt) && (ANYCX(apole->node) ||
+			    (arrt == STRTY &&
+			    attr_find(al[1].sap, ATTR_COMPLEX)))) {
+				cxargfixup(apole->node, arrt, al[1].sap);
+			} else
+#endif
 			if (type != arrt) {
 				if (ISSOU(BTYPE(type)) || ISSOU(BTYPE(arrt))) {
 incomp:					uerror("incompatible types for arg %d",
@@ -3093,6 +3101,20 @@ complinit(void)
 	ddebug = d_debug;
 }
 
+static TWORD
+maxtt(NODE *p)
+{
+	TWORD t;
+
+	t = ANYCX(p) ? strmemb(p->n_ap)->stype : p->n_type;
+	t = BTYPE(t);
+	if (t == VOID)
+		t = CHAR; /* pointers */
+	if (ISITY(t))
+		t -= (FIMAG - FLOAT);
+	return t;
+}
+
 /*
  * Return the highest real floating point type.
  * Known that at least one type is complex or imaginary.
@@ -3102,12 +3124,8 @@ maxtyp(NODE *l, NODE *r)
 {
 	TWORD tl, tr, t;
 
-	tl = ANYCX(l) ? strmemb(l->n_ap)->stype : l->n_type;
-	tr = ANYCX(r) ? strmemb(r->n_ap)->stype : r->n_type;
-	if (ISITY(tl))
-		tl -= (FIMAG - FLOAT);
-	if (ISITY(tr))
-		tr -= (FIMAG - FLOAT);
+	tl = maxtt(l);
+	tr = maxtt(r);
 	t = tl > tr ? tl : tr;
 	if (!ISFTY(t))
 		cerror("maxtyp");
@@ -3147,6 +3165,8 @@ mkcmplx(NODE *p, TWORD dt)
 			r = bcon(0);
 			i = p;
 		} else {
+			if (ISPTR(p->n_type))
+				p = cast(p, INTPTR, 0);
 			r = p;
 			i = bcon(0);
 		}
@@ -3461,5 +3481,25 @@ cxcast(NODE *p1, NODE *p2)
 	}
 	nfree(p1);
 	return p2;
+}
+
+static void
+cxargfixup(NODE *a, TWORD dt, struct attr *ap)
+{
+	NODE *p;
+	TWORD t;
+
+	p = talloc();
+	*p = *a;
+	if (dt == STRTY) {
+		/* dest complex */
+		t = strmemb(ap)->stype;
+		p = mkcmplx(p, t);
+	} else {
+		/* src complex, not dest */
+		p = structref(p, DOT, ISFTY(dt) ? real : imag);
+	}
+	*a = *p;
+	nfree(p);
 }
 #endif
