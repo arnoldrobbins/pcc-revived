@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.82 2014/09/02 14:24:38 ragge Exp $	*/
+/*	$Id: code.c,v 1.85 2014/09/15 14:06:26 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -131,10 +131,14 @@ efcode(void)
 	gotnr = 0;	/* new number for next fun */
 	if (cftnsp->stype != STRTY+FTN && cftnsp->stype != UNIONTY+FTN)
 		return;
-#if defined(os_openbsd)
+
 	/* struct return for small structs */
 	int sz = tsize(BTYPE(cftnsp->stype), cftnsp->sdf, cftnsp->sap);
+#if defined(os_openbsd)
 	if (sz == SZCHAR || sz == SZSHORT || sz == SZINT || sz == SZLONGLONG) {
+#else
+	if (sz == SZLONGLONG && attr_find(cftnsp->sap, ATTR_COMPLEX)) {
+#endif
 		/* Pointer to struct in eax */
 		if (sz == SZLONGLONG) {
 			q = block(OREG, NIL, NIL, INT, 0, 0);
@@ -151,7 +155,7 @@ efcode(void)
 		ecomp(buildtree(ASSIGN, p, q));
 		return;
 	}
-#endif
+
 	/* Create struct assignment */
 	q = tempnode(structrettemp, PTR+STRTY, 0, cftnsp->sap);
 	q = buildtree(UMUL, q, NIL);
@@ -232,6 +236,7 @@ bfcode(struct symtab **sp, int cnt)
 
 	argbase = ARGINIT;
 	nrarg = regparmarg = 0;
+	argstacksize = 0;
 
 #ifdef GCC_COMPAT
         if (attr_find(cftnsp->sap, GCC_ATYP_STDCALL) != NULL)
@@ -242,10 +247,13 @@ bfcode(struct symtab **sp, int cnt)
 
 	/* Function returns struct, create return arg node */
 	if (cftnsp->stype == STRTY+FTN || cftnsp->stype == UNIONTY+FTN) {
+		sz = tsize(BTYPE(cftnsp->stype), cftnsp->sdf, cftnsp->sap);
 #if defined(os_openbsd)
 		/* OpenBSD uses non-standard return for small structs */
-		sz = tsize(BTYPE(cftnsp->stype), cftnsp->sdf, cftnsp->sap);
-		if (sz <= SZLONGLONG)
+		if (sz > SZLONGLONG)
+#else
+		if (sz != SZLONGLONG ||
+		    attr_find(cftnsp->sap, ATTR_COMPLEX) == 0)
 #endif
 		{
 			if (regparmarg) {
@@ -256,6 +264,7 @@ bfcode(struct symtab **sp, int cnt)
 				n->n_lval = argbase/SZCHAR;
 				argbase += SZINT;
 				regno(n) = FPREG;
+				argstacksize += 4; /* popped by callee */
 			}
 			p = tempnode(0, INT, 0, 0);
 			structrettemp = regno(p);
@@ -315,14 +324,15 @@ bfcode(struct symtab **sp, int cnt)
                                 ecomp(p);
                         }
 		} else if (cisreg(sp2->stype) && !ISSOU(sp2->stype) &&
-		    ((cqual(sp2->stype, sp2->squal) & VOL) == 0)) {
+		    ((cqual(sp2->stype, sp2->squal) & VOL) == 0) && xtemps) {
 			/* just put rest in temps */
 			if (sp2->sclass == REGISTER) {
 				n = block(REG, 0, 0, sp2->stype,
 				    sp2->sdf, sp2->sap);
 				if (ISLONGLONG(sp2->stype))
 					regno(n) = longregs[sp2->soffset];
-				else if (DEUNSIGN(sp2->stype) == CHAR || sp2->stype == BOOL)
+				else if (DEUNSIGN(sp2->stype) == CHAR ||
+				    sp2->stype == BOOL)
 					regno(n) = charregs[sp2->soffset];
 				else
 					regno(n) = regpregs[sp2->soffset];
@@ -340,9 +350,9 @@ bfcode(struct symtab **sp, int cnt)
 		}
 	}
 
-        argstacksize = 0;
         if (cftnsp->sflags & SSTDCALL) {
-		argstacksize = (argbase - ARGINIT)/SZCHAR;
+		/* XXX interaction STDCALL and struct return? */
+		argstacksize += (argbase - ARGINIT)/SZCHAR;
 #ifdef os_win32
 
                 char buf[256];
@@ -510,7 +520,9 @@ funcode(NODE *p)
 	    ap->amsize != SZCHAR && ap->amsize != SZSHORT &&
 	    ap->amsize != SZINT && ap->amsize != SZLONGLONG)
 #else
-	if (stcall)
+	if (stcall &&
+	    (attr_find(p->n_left->n_ap, ATTR_COMPLEX) == 0 ||
+	     ((ap = strattr(p->n_left->n_ap)) && ap->amsize > SZLONGLONG)))
 #endif
 	{
 		/* Prepend a placeholder for struct address. */

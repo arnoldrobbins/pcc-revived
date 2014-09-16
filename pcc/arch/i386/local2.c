@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.177 2014/06/04 06:43:49 gmcgarry Exp $	*/
+/*	$Id: local2.c,v 1.178 2014/09/14 15:03:28 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1207,7 +1207,7 @@ lastcall(NODE *p)
 		if (p->n_right->n_op != ASSIGN)
 			size += argsiz(p->n_right);
 	}
-	if (p->n_op != ASSIGN)
+	if (p->n_op != ASSIGN && op->n_op != STCALL)
 		size += argsiz(p);
 
 #if defined(MACHOABI)

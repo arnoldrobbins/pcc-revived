@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.382 2014/09/09 08:35:54 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.384 2014/09/15 19:46:50 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -2132,6 +2132,10 @@ eve(NODE *p)
 		if ((r = gcc_eval_tiuni(p->n_op, p1)) != NULL)
 			break;
 #endif
+#ifndef NO_COMPLEX
+		if (p->n_op == NOT && ANYCX(p1))
+			p1 = cxop(NE, p1, bcon(0));
+#endif
 		r = buildtree(p->n_op, p1, NIL);
 		break;
 
@@ -2187,6 +2191,7 @@ eve(NODE *p)
 		break;
 #endif
 
+	case COLON:
 	case MUL:
 	case DIV:
 	case PLUS:
@@ -2227,7 +2232,6 @@ eve(NODE *p)
 	case EREQ:
 	case OREQ:
 	case ANDEQ:
-	case COLON:
 	case QUEST:
 		p1 = eve(p1);
 		p2 = eve(p2);
