@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.339 2014/08/26 17:59:04 ragge Exp $	*/
+/*	$Id: trees.c,v 1.340 2014/09/18 14:44:06 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2539,6 +2539,8 @@ rmfldops(NODE *p)
 		q = rdualfld(q, t, ct, foff, fsz);
 		if (fsz < SZINT)
 			q = makety(q, INT, 0, 0, 0);
+		if (p->n_type != INT)
+			q = makety(q, p->n_type, 0, 0, 0);
 		p->n_left = bt;
 		p->n_right = q;
 		p->n_op = COMOP;
