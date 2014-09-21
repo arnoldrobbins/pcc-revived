@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.389 2014/09/15 19:46:50 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.391 2014/09/19 17:44:46 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1759,7 +1759,9 @@ typwalk(NODE *p, void *arg)
 		break;
 
 	case QUALIFIER:
-		if (p->n_qual == 0 && tc->saved && !ISPTR(tc->saved->n_type))
+		if (p->n_qual == 0 && 
+		    ((tc->saved && !ISPTR(tc->saved->n_type)) ||
+		    (tc->saved == 0)))
 			uerror("invalid use of 'restrict'");
 		tc->qual |= p->n_qual >> TSHIFT;
 		break;
@@ -2492,7 +2494,7 @@ incomp:					uerror("incompatible types for arg %d",
 			/* do not complain for pointers with signedness */
 			if ((DEUNSIGN(BTYPE(type)) == DEUNSIGN(BTYPE(arrt))) &&
 			    (BTYPE(type) != BTYPE(arrt))) {
-				warner(Wpointer_sign, NULL);
+				warner(Wpointer_sign);
 				goto skip;
 			}
 		}

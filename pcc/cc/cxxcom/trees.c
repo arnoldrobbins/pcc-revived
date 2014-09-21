@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.13 2014/06/20 07:04:49 plunky Exp $	*/
+/*	$Id: trees.c,v 1.14 2014/09/19 17:44:46 plunky Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1089,7 +1089,7 @@ chkpun(NODE *p)
 			t2 = DECREF(t2);
 		}
 		if (DEUNSIGN(t1) != DEUNSIGN(t2))
-			warner(Wpointer_sign, NULL);
+			warner(Wpointer_sign);
 	}
 }
 
@@ -2651,7 +2651,7 @@ ecomp(NODE *p)
 		fwalk(p, eprint, 0);
 #endif
 	if (!reached) {
-		warner(Wunreachable_code, NULL);
+		warner(Wunreachable_code);
 		reached = 1;
 	}
 	p = optim(p);

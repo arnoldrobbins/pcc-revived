@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.384 2014/09/15 19:46:50 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.385 2014/09/19 17:44:45 plunky Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -880,7 +880,7 @@ statement:	   e ';' { ecomp(eve($1)); symclear(blevel); }
 				uerror("return value required");
 			rch:
 			if (!reached)
-				warner(Wunreachable_code, NULL);
+				warner(Wunreachable_code);
 			reached = 0;
 		}
 		|  C_RETURN e  ';' {
