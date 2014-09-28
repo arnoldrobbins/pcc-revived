@@ -1,4 +1,4 @@
-/*	$Id: crtbegin.c,v 1.7 2011/04/12 04:44:19 gmcgarry Exp $	*/
+/*	$Id: crtbegin.c,v 1.8 2014/09/28 08:25:21 ragge Exp $	*/
 /*-
  * Copyright (c) 1998, 2001, 2002 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -84,6 +84,7 @@ __dtors(void)
 		(**p++)();
 }
 
+__attribute__((__visibility__("hidden"), __noinline__))
 void
 __do_global_ctors_aux(void)
 {
@@ -95,6 +96,7 @@ __do_global_ctors_aux(void)
 	}
 }
 
+__attribute__((__visibility__("hidden"), __noinline__))
 void
 __do_global_dtors_aux(void)
 {
@@ -120,4 +122,4 @@ void __call_##func(void)						\
 MD_CALL_STATIC_FUNCTION(.init, __do_global_ctors_aux)
 MD_CALL_STATIC_FUNCTION(.fini, __do_global_dtors_aux)
 
-IDENT("$Id: crtbegin.c,v 1.7 2011/04/12 04:44:19 gmcgarry Exp $");
+IDENT("$Id: crtbegin.c,v 1.8 2014/09/28 08:25:21 ragge Exp $");

@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.341 2014/09/19 17:44:46 plunky Exp $	*/
+/*	$Id: trees.c,v 1.342 2014/09/22 12:15:29 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1590,6 +1590,11 @@ tymatch(NODE *p)
 		if (r->n_op != ICON && tl < FLOAT && tr < FLOAT &&
 		    DEUNSIGN(tl) < DEUNSIGN(tr) && o != CAST)
 			warner(Wtruncate, tnames[tr], tnames[tl]);
+		if (l->n_type == BOOL && r->n_type != BOOL) {
+			/* must create a ?: */
+			p->n_right = buildtree(QUEST, p->n_right,
+			     buildtree(COLON, bcon(1), bcon(0)));
+		}
 		p->n_right = makety(p->n_right, l->n_type, 0, 0, 0);
 		t = p->n_type = l->n_type;
 		p->n_ap = l->n_ap;
