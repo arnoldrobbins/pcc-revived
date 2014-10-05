@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.342 2014/09/22 12:15:29 ragge Exp $	*/
+/*	$Id: trees.c,v 1.343 2014/10/01 19:59:55 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2541,6 +2541,9 @@ rmfldops(NODE *p)
 		} else
 #endif
 			bt = bcon(0);
+#if TARGET_ENDIAN == TARGET_BE
+		foff = (int)tsize(t, 0, 0) - fsz - foff;
+#endif
 		q = rdualfld(q, t, ct, foff, fsz);
 		if (fsz < SZINT)
 			q = makety(q, INT, 0, 0, 0);

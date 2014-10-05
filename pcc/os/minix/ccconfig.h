@@ -1,4 +1,4 @@
-/*	 $Id: ccconfig.h,v 1.2 2011/06/04 19:27:26 plunky Exp $ */
+/*	 $Id: ccconfig.h,v 1.3 2014/10/02 07:45:52 ragge Exp $ */
 /*
  * Escrit per Antoine Leca pel projecte PCC, 2011-03.
  * Copyright (C) 2011 Anders Magnusson (ragge@ludd.luth.se).
@@ -79,5 +79,8 @@
 	"-D_EM_SSIZE=2", "-D_EM_FSIZE=4", "-D_EM_DSIZE=8", \
 	NULL, }
 #else
-#error defines for arch missing
+#define CPPMDADD { "-D__i86", \
+	"-D_EM_WSIZE=2", "-D_EM_PSIZE=2", "-D_EM_LSIZE=4", \
+	"-D_EM_SSIZE=2", "-D_EM_FSIZE=4", "-D_EM_DSIZE=8", \
+	NULL, }
 #endif

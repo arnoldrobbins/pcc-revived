@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.179 2014/09/23 20:36:45 ragge Exp $	*/
+/*	$Id: local2.c,v 1.180 2014/09/29 16:15:38 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1001,6 +1001,9 @@ updatereg(NODE *p, void *arg)
 	    p->n_stsize == 8)
 		return;
 #endif
+	if (p->n_stalign == 42)
+		return;
+
 	if (p->n_right->n_op != CM)
 		p = p->n_right;
 	else for (p = p->n_right;

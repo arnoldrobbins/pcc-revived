@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.280 2014/08/20 19:42:20 ragge Exp $	*/
+/*	$Id: cc.c,v 1.281 2014/10/02 07:40:52 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -1313,7 +1313,7 @@ strlist_exec(struct strlist *l)
 		execvp(argv[0], argv);
 		result = write(STDERR_FILENO, "Exec of ", 8);
 		result = write(STDERR_FILENO, argv[0], strlen(argv[0]));
-		result = write(STDERR_FILENO, "failed\n", 7);
+		result = write(STDERR_FILENO, " failed\n", 7);
 		(void)result;
 		_exit(127);
 	case -1:

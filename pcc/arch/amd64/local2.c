@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.57 2014/08/28 20:14:49 ragge Exp $	*/
+/*	$Id: local2.c,v 1.58 2014/09/29 19:57:47 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1064,7 +1064,7 @@ retry:	switch (c) {
 		p->n_name = tmpstrdup(p->n_name);
 		w = strchr(p->n_name, c);
 		*w = 'r'; /* now reg */
-		return c == 'q' || c == 'x' ? 0 : 1;
+		return c == 'q' || c == 'x' || c == 't' ? 0 : 1;
 
 	case 'I':
 	case 'J':
