@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.392 2014/09/23 14:24:00 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.393 2014/10/11 10:53:14 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1153,6 +1153,9 @@ talign(unsigned int ty, struct attr *apl)
 		ty = DEUNSIGN(ty);
 
 	switch (ty) {
+#ifdef GCC_COMPAT
+	case VOID: a = ALCHAR; break; /* GCC */
+#endif
 	case BOOL: a = ALBOOL; break;
 	case CHAR: a = ALCHAR; break;
 	case SHORT: a = ALSHORT; break;

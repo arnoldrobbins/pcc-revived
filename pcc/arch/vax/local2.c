@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.37 2012/12/21 21:44:27 ragge Exp $	*/
+/*	$Id: local2.c,v 1.39 2014/10/11 15:57:17 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -556,6 +556,15 @@ zzzcode(NODE *p, int c)
 		return;
 		}
 
+	case 'l': /* print out long long constant as hex */
+	case 'r': /* works around a bug in gas */
+		l = getlr(p, c == 'l' ? 'L' : 'R');
+		if (l->n_op == ICON && ISLONGLONG(l->n_type)) {
+			printf("$0x%llx", l->n_lval);
+		} else
+			adrput(stdout, l);
+		break;
+
 	case 'O': /* print out emulated ops */
 		expand(p, FOREFF, "\tmovq	AR,-(%sp)\n");
 		expand(p, FOREFF, "\tmovq	AL,-(%sp)\n");
@@ -570,7 +579,7 @@ zzzcode(NODE *p, int c)
 
 
 	case 'Z':	/* complement mask for bit instr */
-		printf("$%Ld", ~p->n_right->n_lval);
+		printf("$%lld", ~p->n_right->n_lval);
 		return;
 
 	case 'U':	/* 32 - n, for unsigned right shifts */
@@ -859,6 +868,7 @@ shumul( p, shape ) register NODE *p; int shape; {
 void
 adrcon(CONSZ val)
 {
+	comperr("adrcon");
 	printf( "$" );
 	printf( CONFMT, val );
 }
@@ -910,7 +920,7 @@ upput(NODE *p, int size)
 		p->n_lval -= size;
 		break;
 	case ICON:
-		printf("$" CONFMT, p->n_lval >> 32);
+		printf("$" CONFMT, (p->n_lval >> 32) & 0xffffffff);
 		break;
 	default:
 		comperr("upput bad op %d size %d", p->n_op, size);
@@ -936,7 +946,10 @@ adrput(FILE *fp, NODE *p)
 		/* addressable value of the constant */
 		if (p->n_name[0] == '\0') /* uses xxxab */
 			printf("$");
-		acon(p);
+		if (ISLONGLONG(p->n_type))
+			printf("0x%llx", p->n_lval);
+		else
+			acon(p);
 		return;
 
 	case REG:
@@ -1025,14 +1038,16 @@ adrput(FILE *fp, NODE *p)
 void
 acon(NODE *p)
 {
+	int u = (int)p->n_lval;;
+	CONSZ v = u;
 
 	if (p->n_name[0] == '\0') {
-		printf(CONFMT, p->n_lval);
+		printf(CONFMT, v);
 	} else if( p->n_lval == 0 ) {
 		printf("%s", p->n_name);
 	} else {
 		printf("%s+", p->n_name);
-		printf(CONFMT, p->n_lval);
+		printf(CONFMT, v);
 	}
 }
 

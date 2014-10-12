@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.288 2014/06/01 11:33:52 ragge Exp $	*/
+/*	$Id: reader.c,v 1.290 2014/10/11 09:50:21 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -183,7 +183,7 @@ sanitychecks(struct p2env *p2e)
  * a new place, and remove the move-to-temp statement.
  */
 static int
-stkarg(int tnr, int *soff)
+stkarg(int tnr, int (*soff)[2])
 {
 	struct p2env *p2e = &p2env;
 	struct interpass *ip;
@@ -218,9 +218,11 @@ stkarg(int tnr, int *soff)
 		    p->n_left->n_op == PLUS &&
 		    p->n_left->n_left->n_op == REG &&
 		    p->n_left->n_right->n_op == ICON) {
-			soff[0] = (int)p->n_left->n_right->n_lval;
+			soff[0][0] = regno(p->n_left->n_left);
+			soff[0][1] = (int)p->n_left->n_right->n_lval;
 		} else if (p->n_op == OREG) {
-			soff[0] = (int)p->n_lval;
+			soff[0][0] = regno(p);
+			soff[0][1] = (int)p->n_lval;
 		} else
 			comperr("stkarg: bad arg");
 		tfree(ip->ip_node);
@@ -237,17 +239,18 @@ stkarg(int tnr, int *soff)
 static void
 findaof(NODE *p, void *arg)
 {
-	int *aof = arg;
+	int (*aof)[2] = arg;
 	int tnr;
 
 	if (p->n_op != ADDROF || p->n_left->n_op != TEMP)
 		return;
 	tnr = regno(p->n_left);
-	if (aof[tnr])
+	if (aof[tnr][0])
 		return; /* already gotten stack address */
 	if (stkarg(tnr, &aof[tnr]))
 		return;	/* argument was on stack */
-	aof[tnr] = freetemp(szty(p->n_left->n_type));
+	aof[tnr][0] = FPREG;
+	aof[tnr][1] = freetemp(szty(p->n_left->n_type));
 }
 
 /*
@@ -323,7 +326,7 @@ pass2_compile(struct interpass *ip)
 {
 	void deljumps(struct p2env *);
 	struct p2env *p2e = &p2env;
-	int *addrp;
+	int (*addrp)[2];
 	MARK mark;
 
 	if (ip->type == IP_PROLOG) {
@@ -1113,16 +1116,17 @@ e2print(NODE *p, int down, int *a, int *b)
 void
 deltemp(NODE *p, void *arg)
 {
-	int *aor = arg;
+	int (*aor)[2] = arg;
 	NODE *l;
 
 	if (p->n_op == TEMP) {
-		if (aor[regno(p)] == 0) {
+		if (aor[regno(p)][0] == 0) {
 			if (xtemps)
 				return;
-			aor[regno(p)] = freetemp(szty(p->n_type));
+			aor[regno(p)][0] = FPREG;
+			aor[regno(p)][1] = freetemp(szty(p->n_type));
 		}
-		storemod(p, aor[regno(p)]);
+		storemod(p, aor[regno(p)][1], aor[regno(p)][0]);
 	} else if (p->n_op == ADDROF && p->n_left->n_op == OREG) {
 		p->n_op = PLUS;
 		l = p->n_left;
@@ -1336,17 +1340,17 @@ storenode(TWORD t, int off)
 
 	p = talloc();
 	p->n_type = t;
-	storemod(p, off);
+	storemod(p, off, FPREG); /* XXX */
 	return p;
 }
 
 #ifndef MYSTOREMOD
 void
-storemod(NODE *q, int off)
+storemod(NODE *q, int off, int reg)
 {
 	NODE *l, *r, *p;
 
-	l = mklnode(REG, 0, FPREG, INCREF(q->n_type));
+	l = mklnode(REG, 0, reg, INCREF(q->n_type));
 	r = mklnode(ICON, off, 0, INT);
 	p = mkbinode(PLUS, l, r, INCREF(q->n_type));
 	q->n_op = UMUL;
@@ -1643,7 +1647,7 @@ xconv(NODE *p, void *arg)
 {
 	if (p->n_op != TEMP || p->n_rval != xasnum)
 		return;
-	storemod(p, xoffnum);
+	storemod(p, xoffnum, FPREG); /* XXX */
 }
 
 /*

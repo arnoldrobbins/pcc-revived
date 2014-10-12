@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.122 2014/05/07 16:46:31 ragge Exp $	*/
+/*	$Id: main.c,v 1.123 2014/10/11 10:50:27 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -39,7 +39,7 @@
 #include "pass2.h"
 
 int bdebug, ddebug, edebug, idebug, ndebug;
-int odebug, pdebug, sdebug, tdebug, xdebug;
+int odebug, pdebug, sdebug, tdebug, xdebug, wdebug;
 int b2debug, c2debug, e2debug, f2debug, g2debug, o2debug;
 int r2debug, s2debug, t2debug, u2debug, x2debug;
 int gflag, kflag;
@@ -231,6 +231,10 @@ main(int argc, char *argv[])
 
 		case 's': /* Statistics */
 			++sflag;
+			break;
+
+		case 'w': /* No warnings emitted */
+			++wdebug;
 			break;
 
 		case 'W': /* Enable different warnings */

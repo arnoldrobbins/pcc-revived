@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.111 2014/06/07 07:04:10 plunky Exp $	*/
+/*	$Id: common.c,v 1.112 2014/10/11 10:50:27 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -147,13 +147,21 @@ u8error(const char *s, ...)
 		incerr();
 }
 
+#ifdef MKEXT
+int wdebug;
+#endif
+
 /*
  * warning
  */
 void
 werror(char *s, ...)
 {
+	extern int wdebug;
 	va_list ap;
+
+	if (wdebug)
+		return;
 	va_start(ap, s);
 	WHERE('w');
 	fprintf(stderr, "warning: ");
