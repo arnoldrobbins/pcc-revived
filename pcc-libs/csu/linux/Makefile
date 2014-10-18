@@ -1,6 +1,6 @@
 MACH ?=	i386
 TARGET ?= $(MACH)-linux
-VERSION ?= 0.9.9
+VERSION ?= 1.1.0
 PCCLIBDIR ?= /usr/local/lib/pcc/$(TARGET)/$(VERSION)/lib
 SRCDIR ?= .
 

@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.39 2014/10/11 15:57:17 ragge Exp $	*/
+/*	$Id: local2.c,v 1.41 2014/10/13 08:46:33 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -603,6 +603,7 @@ zzzcode(NODE *p, int c)
 			register int size;
 
 			size = p->n_stsize;
+			SETOFF(size, 4);
 			l = r = NULL; /* XXX gcc */
 			if( p->n_op == STASG ){
 				l = p->n_left;
@@ -665,9 +666,9 @@ zzzcode(NODE *p, int c)
 void
 rmove(int rt, int rs, TWORD t)
 {
-	printf( "	%s	%s,%s\n",
-		(t==FLOAT ? "movf" : (t==DOUBLE ? "movd" : "movl")),
-		rnames[rt], rnames[rs] );
+	char c = (t == FLOAT ? 'f' : t == DOUBLE ? 'd' :
+	    t == LONGLONG || t == ULONGLONG ? 'q' : 'l');
+	printf("	mov%c	%s,%s\n", c, rnames[rt], rnames[rs]);
 }
 
 int
@@ -1342,7 +1343,7 @@ argsiz(NODE *p)
 	TWORD t = p->n_type;
 
 	if (t == STRTY || t == UNIONTY)
-		return p->n_stsize/(SZINT/SZCHAR);
+		return (p->n_stsize+3)/4;
 	return szty(t);
 }
 

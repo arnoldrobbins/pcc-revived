@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.27 2014/10/11 15:57:17 ragge Exp $	*/
+/*	$Id: table.c,v 1.28 2014/10/12 10:05:28 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -451,13 +451,13 @@ struct optab  table[] = {
 	SBREG|AWD,	TBREG,
 	SBREG|AWD,	TBREG,
 		0,	0,
-		"	movq	AR,AL\n", },
+		"	movq	Zr,AL\n", },
 
 { ASSIGN,	INBREG,
 	SBREG,	TBREG,
 	SBREG|AWD,	TBREG,
 		0,	RDEST,
-		"	movq	AR,AL\n", },
+		"	movq	Zr,AL\n", },
 
 { ASSIGN,	INBREG,
 	SBREG|AWD,	TBREG,

@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.245 2014/10/11 09:50:21 ragge Exp $	*/
+/*	$Id: regs.c,v 1.246 2014/10/12 19:58:29 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1414,6 +1414,12 @@ dce(struct p2env *p2e)
 	NODE *p;
 	bittype *lvar;
 	int i, bbnum, fix = 0;
+
+#ifdef mach_vax
+	return 0;	/* XXX may need to recalc tree structure */
+			/* eliminating assignments may create more OREGs */
+			/* Fix by or/either break out ASSIGN or do this earlier */
+#endif
 
 	BDEBUG(("Entering DCE\n"));
 	/*

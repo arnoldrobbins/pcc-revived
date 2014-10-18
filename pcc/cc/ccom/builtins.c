@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.54 2014/09/28 15:34:35 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.56 2014/10/13 10:00:55 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -412,7 +412,11 @@ builtin_va_arg(const struct bitable *bt, NODE *a)
 	rv = buildtree(ASSIGN, q, p);
 
 	r = a->n_right;
-	sz = (int)tsize(r->n_type, r->n_df, r->n_ap)/SZCHAR;
+	sz = (int)tsize(r->n_type, r->n_df, r->n_ap);
+#ifdef MYVAARGSZ
+	SETOFF(sz, MYVAARGSZ);
+#endif
+	sz /= SZCHAR;
 	/* add one to ap */
 #ifdef BACKAUTO
 	rv = buildtree(COMOP, rv , buildtree(PLUSEQ, a->n_left, bcon(sz)));
@@ -431,8 +435,7 @@ builtin_va_arg(const struct bitable *bt, NODE *a)
 static NODE *
 builtin_va_end(const struct bitable *bt, NODE *a)
 {
-	tfree(a);
-	return bcon(0); /* nothing */
+	return a; /* may have side effects */
 }
 
 static NODE *

@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.195 2014/08/18 18:46:05 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.196 2014/10/18 15:02:03 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -47,7 +47,6 @@
 
 #include "compat.h"
 #include "cpp.h"
-#include "cpy.h"
 
 #ifndef S_ISDIR
 #define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
@@ -404,7 +403,7 @@ line(void)
 
 	if ((c = yylex()) != NUMBER)
 		goto bad;
-	ifiles->lineno = (int)(yylval.node.nd_val - 1);
+	ifiles->lineno = (int)(yynode.nd_val - 1);
 	ifiles->escln = 0;
 
 	if ((c = yylex()) == '\n')
