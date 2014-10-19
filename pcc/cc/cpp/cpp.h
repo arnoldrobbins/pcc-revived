@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.70 2014/10/18 15:02:03 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.71 2014/10/19 17:40:36 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -39,8 +39,8 @@ extern	int	dflag;
 extern	int	tflag, Aflag, Cflag, Pflag;
 extern	int	Mflag, dMflag, MPflag, MMDflag;
 extern	usch	*Mfile, *MPfile;
-extern	int	ofd;
 extern	int	defining;
+extern	FILE	*of;
 
 /* args for lookup() */
 #define FIND    0
