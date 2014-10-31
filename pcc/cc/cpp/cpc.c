@@ -1,4 +1,4 @@
-/*      $Id: cpc.c,v 1.1 2014/10/18 15:02:03 ragge Exp $      */
+/*      $Id: cpc.c,v 1.3 2014/10/29 19:04:43 ragge Exp $      */
 
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
@@ -36,7 +36,7 @@ static int ctok;
 typedef struct nd ND;
 struct nd yynode;
 
-void qloop(void (*fun)(), ND *n1, int a0, int a1, int a2, int a3);
+void qloop(void (*fun)(ND *), ND *n1, int a0, int a1, int a2, int a3);
 void shft(void);
 int yyparse(void);
 void expr(ND *n1);
@@ -55,13 +55,13 @@ void eval(int op, ND *n1, ND *n2);
 
 
 void
-shft()
+shft(void)
 {
 	ctok = yylex();
 }
 
 int
-yyparse()
+yyparse(void)
 {
 	ND n1;
 
@@ -170,7 +170,7 @@ emdv(ND *n1)
  * Loop to evaluate all operators on the same precedence level.
  */
 void
-qloop(void (*fun)(), ND *n1, int a0, int a1, int a2, int a3)
+qloop(void (*fun)(ND *), ND *n1, int a0, int a1, int a2, int a3)
 {
 	ND n2;
 	int op;
@@ -278,13 +278,12 @@ eval(int op, ND *n1, ND *n2)
 
 	switch (op) {
 	case OROR:
-		if (n1->nd_val | n2->nd_val)
+		if (n2->nd_val)
 			n1->nd_val = 1;
 		n1->op = NUMBER;
 		break;
 	case ANDAND:
-		if (n1->nd_val && n2->nd_val)
-			n1->nd_val = 1;
+		n1->nd_val = (n1->nd_val && n2->nd_val);
 		n1->op = NUMBER;
 		break;
 	case '+': n1->nd_val += n2->nd_val; break;
