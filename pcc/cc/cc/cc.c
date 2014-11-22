@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.283 2014/10/11 10:50:26 ragge Exp $	*/
+/*	$Id: cc.c,v 1.285 2014/11/13 18:55:20 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -608,6 +608,10 @@ main(int argc, char *argv[])
 			break;
 
 		case 'm': /* target-dependent options */
+			if (strncmp(argp, "-march=", 6) == 0) {
+				strlist_append(&compiler_flags, argp);
+				break;
+			}
 #ifdef mach_amd64
 			/* need to call i386 ccom for this */
 			if (strcmp(argp, "-melf_i386") == 0) {
@@ -1317,7 +1321,7 @@ strlist_exec(struct strlist *l)
 		execvp(argv[0], argv);
 		result = write(STDERR_FILENO, "Exec of ", 8);
 		result = write(STDERR_FILENO, argv[0], strlen(argv[0]));
-		result = write(STDERR_FILENO, " failed\n", 7);
+		result = write(STDERR_FILENO, " failed\n", 8);
 		(void)result;
 		_exit(127);
 	case -1:

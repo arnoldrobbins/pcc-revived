@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.89 2014/06/01 11:35:02 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.90 2014/11/13 19:10:36 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -359,3 +359,11 @@ extern struct stub stublist;
 extern struct stub nlplist;
 void addstub(struct stub *list, char *name);
 #endif
+
+/* -m flags */
+extern int msettings;
+#define	MI386	0x001
+#define	MI486	0x002
+#define	MI586	0x004
+#define	MI686	0x008
+#define	MCPUMSK	0x00f
