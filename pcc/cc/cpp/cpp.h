@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.74 2014/12/05 10:56:37 plunky Exp $	*/
+/*	$Id: cpp.h,v 1.75 2014/12/18 19:21:29 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -51,7 +51,7 @@ extern	FILE	*of;
 #if defined(mach_pdp11)
 #define CPPBUF  BUFSIZ
 #define	BUF_STACK
-#elif defined(os_win32)
+#elif defined(_WIN32)
 /* winxp seems to fail > 26608 bytes */
 #define CPPBUF	16384
 #else

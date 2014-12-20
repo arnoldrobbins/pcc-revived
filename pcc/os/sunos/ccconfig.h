@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.5 2012/08/05 14:35:00 ragge Exp $	*/
+/*	$Id: ccconfig.h,v 1.6 2014/12/18 21:42:06 plunky Exp $	*/
 
 /*
  * Copyright (c) 2008 Adam Hoka.
@@ -30,10 +30,6 @@
 /*
  * Various settings that controls how the C compiler works.
  */
-
-#ifndef LIBDIR
-#define LIBDIR "/usr/lib/"
-#endif
 
 /* common cpp predefines */
 #define	CPPADD	{ "-Dunix", "-Dsun", "-D__SVR4", "-D__unix", "-D__sun", "-D__SunOS", "-D__ELF__", NULL }

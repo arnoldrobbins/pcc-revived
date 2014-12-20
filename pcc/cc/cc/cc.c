@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.286 2014/12/02 21:03:13 ragge Exp $	*/
+/*	$Id: cc.c,v 1.294 2014/12/18 21:37:25 plunky Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -101,7 +101,7 @@
 #endif
 #include <assert.h>
 
-#ifdef os_win32
+#ifdef  _WIN32
 #include <windows.h>
 #include <process.h>
 #include <io.h>
@@ -205,11 +205,14 @@ char *cppmdadd[] = CPPMDADD;
 #ifndef PCCLIBDIR	/* set by autoconf */
 #define PCCLIBDIR	NULL
 #endif
+#ifndef LIBDIR
+#define LIBDIR		"/usr/lib/"
+#endif
 #ifndef DEFLIBDIRS	/* default library search paths */
 #ifdef MULTIARCH_PATH
-#define DEFLIBDIRS	{ "/usr/lib/", 0 }
+#define DEFLIBDIRS	{ LIBDIR, LIBDIR MULTIARCH_PATH "/", 0 }
 #else
-#define DEFLIBDIRS	{ "/usr/lib/", "/usr/lib/" MULTIARCH_PATH "/", 0 }
+#define DEFLIBDIRS	{ LIBDIR, 0 }
 #endif
 #endif
 #ifndef DEFLIBS		/* default libraries included */
@@ -262,7 +265,7 @@ void setup_ccom_flags(void);
 void setup_as_flags(void);
 void setup_ld_flags(void);
 static void expand_sysroot(void);
-#ifdef os_win32
+#ifdef  _WIN32
 char *win32pathsubst(char *);
 char *win32commandline(struct strlist *l);
 #endif
@@ -441,7 +444,7 @@ main(int argc, char *argv[])
 	PCC_EARLY_SETUP
 #endif
 
-#ifdef os_win32
+#ifdef _WIN32
 	/* have to prefix path early.  -B may override */
 	incdir = win32pathsubst(incdir);
 	altincdir = win32pathsubst(altincdir);
@@ -1172,6 +1175,10 @@ preprocess_input(char *input, char *output, int dodep)
 			strlist_append(&args, s->value);
 		}
 	}
+	STRLIST_FOREACH(s, &dirafterdirs) {
+		strlist_append(&args, "-S");
+		strlist_append(&args, s->value);
+	}
 	if (dodep)
 		strlist_append_list(&args, &depflags);
 	strlist_append(&args, input);
@@ -1265,7 +1272,7 @@ setsuf(char *s, char ch)
 	return rp;
 }
 
-#ifdef os_win32
+#ifdef _WIN32
 
 static int
 strlist_exec(struct strlist *l)
@@ -1373,7 +1380,7 @@ cunlink(char *f)
 	return (unlink(f));
 }
 
-#ifdef os_win32
+#ifdef _WIN32
 char *
 gettmp(void)
 {
@@ -1468,7 +1475,7 @@ nxtopt(char *o)
 		if (lav[0][l] != 0)
 			return &lav[0][l];
 	}
-	if (lac == 0)
+	if (lac == 1)
 		errorx(8, "missing argument to '%s'", o);
 	lav++;
 	lac--;
@@ -1573,6 +1580,7 @@ static char *gcppflags[] = {
 #endif
 #endif
 #endif
+	NULL
 };
 
 /* These should _not_ be defined here */
@@ -1580,7 +1588,7 @@ static char *fpflags[] = {
 #ifdef TARGET_FLT_EVAL_METHOD
 	"-D__FLT_EVAL_METHOD__=" MKS(TARGET_FLT_EVAL_METHOD),
 #endif
-#if defined(os_darwin) || defined(os_netbsd)
+#if defined(os_darwin) || defined(os_netbsd) || defined(os_minix)
 	"-D__FLT_RADIX__=2",
 #if defined(mach_vax)
 	"-D__FLT_DIG__=6",
@@ -1653,6 +1661,7 @@ static char *fpflags[] = {
 	"-D__LDBL_MIN__=2.2250738585072014e-308",
 #endif
 #endif
+	NULL
 };
 
 /*
@@ -1667,14 +1676,14 @@ setup_cpp_flags(void)
 	for (i = 0; i < (int)sizeof(defflags)/(int)sizeof(char *); i++)
 		strlist_prepend(&preprocessor_flags, defflags[i]);
 
-	for (i = 0; i < (int)sizeof(gcppflags)/(int)sizeof(char *); i++)
+	for (i = 0; gcppflags[i]; i++)
 		strlist_prepend(&preprocessor_flags, gcppflags[i]);
 	strlist_prepend(&preprocessor_flags, xgnu89 ?
 	    "-D__GNUC_GNU_INLINE__" : "-D__GNUC_STDC_INLINE__");
 
 	cksetflags(cppflgcheck, &preprocessor_flags, 'p');
 
-	for (i = 0; i < (int)sizeof(fpflags)/(int)sizeof(char *); i++)
+	for (i = 0; fpflags[i]; i++)
 		strlist_prepend(&preprocessor_flags, fpflags[i]);
 
 	for (i = 0; cppadd[i]; i++)
@@ -1875,10 +1884,8 @@ setup_ld_flags(void)
 		}
 		strap(&middle_linker_flags, &crtdirs, b, 'p');
 		strap(&late_linker_flags, &crtdirs, e, 'a');
-		if (CRTI[0])
-			strap(&middle_linker_flags, &crtdirs, CRTI, 'p');
-		if (CRTN[0])
-			strap(&late_linker_flags, &crtdirs, CRTN, 'a');
+		strap(&middle_linker_flags, &crtdirs, CRTI, 'p');
+		strap(&late_linker_flags, &crtdirs, CRTN, 'a');
 		if (shared == 0) {
 			if (pgflag)
 				b = GCRT0;
@@ -1893,7 +1900,7 @@ setup_ld_flags(void)
 	}
 }
 
-#ifdef os_win32
+#ifdef _WIN32
 char *
 win32pathsubst(char *s)
 {

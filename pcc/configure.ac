@@ -134,6 +134,8 @@ case "$target_os" in
 	case "$target_cpu" in
 	    i86) targmach=i86 ;;
 	    i?86) targmach=i386 ;;
+	    arm*) targmach=arm ;;
+	    x86_64) targmach=amd64 ;;
 	esac
 	;;
 
@@ -325,52 +327,52 @@ fi
 
 # Specify alternate assembler, linker, include and lib paths
 AC_ARG_ENABLE(multiarch,
-	AC_HELP_STRING([--enable-multiarch=yes/no/auto/<triplet>],
+	AS_HELP_STRING([--enable-multiarch=yes/no/auto/<triplet>],
 		[Enable use of Linux Multi-Arch paths (default: auto)]),
 	[multiarch=$enableval], [multiarch=auto])
 AC_ARG_WITH(incdir,
-	AC_HELP_STRING([--with-incdir=<path>],
+	AS_HELP_STRING([--with-incdir=<path>],
 		[Specify the default include path.]),
 	altincdir=$withval,
 	[])
 AC_ARG_WITH(libdir,
-	AC_HELP_STRING([--with-libdir=<path>],
+	AS_HELP_STRING([--with-libdir=<path>],
 		[Specify the default library path.]),
 	altlibdir=$withval,
 	[])
 AC_ARG_WITH(assembler,
-	AC_HELP_STRING([--with-assembler=<path>],
+	AS_HELP_STRING([--with-assembler=<path>],
 		[Specify alternate assember.]),
 	assembler=$withval,
 	[])
 AC_ARG_WITH(linker,
-	AC_HELP_STRING([--with-linker=<path>],
+	AS_HELP_STRING([--with-linker=<path>],
 		[Specify alternate linker.]),
 	linker=$withval,
 	[])
 AC_ARG_ENABLE(tls,
-	AC_HELP_STRING([--enable-tls],
+	AS_HELP_STRING([--enable-tls],
 		[Enable Thread-local storage (TLS).]),
 	[tls=$enableval], [])
 if test "$tls" = "yes"; then
 	AC_DEFINE(TLS, 1, [Enable thread-local storage (TLS).])
 fi
 AC_ARG_ENABLE(Werror,
-	AC_HELP_STRING([--enable-Werror],
+	AS_HELP_STRING([--enable-Werror],
 		[Enable use of compiler -Werror flag]),
 	[werror=$enableval], [])
 if test "$werror" = "yes"; then
 	ADD_CFLAGS="$ADD_CFLAGS -Werror"
 fi
 AC_ARG_ENABLE(gcc-compat,
-	AC_HELP_STRING([--disable-gcc-compat],
+	AS_HELP_STRING([--disable-gcc-compat],
 		[Disable GCC compatibility]),
 	[gcccompat=$enableval], [])
 if test "$gcccompat" = "yes"; then
 	ADD_CPPFLAGS="$ADD_CPPFLAGS -DGCC_COMPAT";
 fi
 AC_ARG_ENABLE(pcc-debug,
-	AC_HELP_STRING([--disable-pcc-debug],
+	AS_HELP_STRING([--disable-pcc-debug],
 		[Disable PCC debugging]),
 	[pccdebug=$enableval], [])
 if test "$pccdebug" = "yes"; then
@@ -378,7 +380,7 @@ if test "$pccdebug" = "yes"; then
 fi
 
 AC_ARG_ENABLE(stripping,
-	AC_HELP_STRING([--disable-stripping],
+	AS_HELP_STRING([--disable-stripping],
 		[Disable stripping of symbols in installed binaries]),
 	[stripping=$enableval], [])
 if test "$stripping" = "yes"; then
@@ -390,7 +392,7 @@ if test "$stripping" = "yes"; then
 fi
 
 AC_ARG_WITH(yasm,
-	AC_HELP_STRING([--use-yasm], [Use yasm assembler]),
+	AS_HELP_STRING([--use-yasm], [Use yasm assembler]),
 	useyasm=$withval,
 	[])
 if test "$useyasm" = "yes"; then
@@ -398,7 +400,7 @@ if test "$useyasm" = "yes"; then
 	ADD_CPPFLAGS="$ADD_CPPFLAGS -DUSE_YASM"
 fi
 AC_ARG_ENABLE(native,
-	AC_HELP_STRING([--enable-native],
+	AS_HELP_STRING([--enable-native],
 		[Build the compiler as a native rather than cross-build compiler]),
 	[native=$enableval], [])
 
@@ -554,7 +556,7 @@ fi
 # Byteorder of host
 AC_C_BIGENDIAN([AC_DEFINE(HOST_BIG_ENDIAN, 1, [Define if host is BIG endian])],
 	[AC_DEFINE(HOST_LITTLE_ENDIAN, 1, [Define if host is LITTLE endian])],
-	[],[])
+	[])
 
 # Checks for programs.
 AC_PROG_MAKE_SET

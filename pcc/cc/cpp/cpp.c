@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.202 2014/12/05 10:56:37 plunky Exp $	*/
+/*	$Id: cpp.c,v 1.203 2014/12/18 19:21:29 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -361,7 +361,7 @@ addidir(char *idir, struct incs **ww)
 		return; /* ignore */
 	if (*ww != NULL) {
 		for (w = *ww; w->next; w = w->next) {
-#ifdef os_win32
+#ifdef _WIN32
 			if (strcmp(w->dir, idir) == 0)
 				return;
 #else
@@ -369,7 +369,7 @@ addidir(char *idir, struct incs **ww)
 				return;
 #endif
 		}
-#ifdef os_win32
+#ifdef _WIN32
 		if (strcmp(w->dir, idir) == 0)
 			return;
 #else

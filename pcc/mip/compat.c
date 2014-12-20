@@ -24,7 +24,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: compat.c,v 1.11 2011/09/27 08:22:55 plunky Exp $
+ * $Id: compat.c,v 1.12 2014/12/18 19:21:29 plunky Exp $
  */
 
 /*-
@@ -259,7 +259,7 @@ basename(char *path)
 }
 #endif
 
-#if !defined(HAVE_MKSTEMP) && !defined(os_win32)
+#if !defined(HAVE_MKSTEMP) && !defined(_WIN32)
 #include <fcntl.h>	/* open() */
 #include <unistd.h>	/* getpid() */
 
