@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.52 2014/11/08 11:34:56 ragge Exp $
+#	$Id: Makefile.in,v 1.53 2014/12/22 22:06:22 plunky Exp $
 #
 # Makefile.in for cpp
 #
@@ -31,6 +31,7 @@ MIPDIR=$(top_srcdir)/mip
 MDIR=$(top_srcdir)/arch/$(TARGMACH)
 
 DEST=@BINPREFIX@cpp$(EXEEXT)
+MANPAGE=@BINPREFIX@cpp
 
 all: $(DEST)
 
@@ -70,7 +71,7 @@ install:
 	test -z "$(DESTDIR)$(libexecdir)" || mkdir -p "$(DESTDIR)$(libexecdir)"
 	$(INSTALL_PROGRAM) $(DEST) $(DESTDIR)$(libexecdir)
 	test -z "$(DESTDIR)$(mandir)/man1" || mkdir -p "$(DESTDIR)$(mandir)/man1"
-	$(INSTALL_DATA) $(srcdir)/cpp.1 $(DESTDIR)$(mandir)/man1/$(DEST).1
+	$(INSTALL_DATA) $(srcdir)/cpp.1 $(DESTDIR)$(mandir)/man1/$(MANPAGE).1
 
 clean:
 	rm -f $(OBJS) $(DEST) tests/run*
