@@ -1,0 +1,15 @@
+Wed Dec 24 08:39:39 IST 2014
+============================
+
+CVS checkout commands (from http://pcc.ludd.ltu.se/supported-platforms/):
+
+cvs -d :pserver:anonymous@pcc.ludd.ltu.se:/cvsroot co pcc-libs
+cvs -d :pserver:anonymous@pcc.ludd.ltu.se:/cvsroot co pcc
+
+I have noticed at least once that 'cvs update' didn't get everything new
+and that after moving the old copies out of the way and doing a fresh
+checkout I got more stuff. That's weird, but maybe it's a factoid about
+CVS that I've just forgotten.
+
+In any case, it's probably a good idea to go through that exercise
+every once in a while.
