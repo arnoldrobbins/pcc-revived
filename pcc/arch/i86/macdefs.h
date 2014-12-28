@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.2 2014/10/02 07:42:49 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.4 2014/12/27 21:40:17 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -275,7 +275,7 @@ int COLORMAP(int c, int *r);
 #define ENCRA(x,y)	((x) << (6+y*6))	/* encode regs in int */
 /* XXX - return char in al? */
 #define	RETREG(x)	(x == CHAR || x == UCHAR ? AL : \
-			 x == LONG || x == LONGLONG || x == ULONGLONG ? AXDX : \
+			 x == LONG || x == ULONG || x == LONGLONG || x == ULONGLONG ? AXDX : \
 			 x == FLOAT || x == DOUBLE || x == LDOUBLE ? 31 : AX)
 
 #if 0
@@ -296,22 +296,24 @@ int COLORMAP(int c, int *r);
 #define SMIXOR		(MAXSPECIAL+4)
 #define SMILWXOR	(MAXSPECIAL+5)
 #define SMIHWXOR	(MAXSPECIAL+6)
+#define	STWO		(MAXSPECIAL+7)	/* exactly two */
+#define	SMTWO		(MAXSPECIAL+8)	/* exactly minus two */
 
 /*
- * i386-specific symbol table flags.
+ * i86-specific symbol table flags.
  */
 #define	SSECTION	SLOCAL1
 #define SSTDCALL	SLOCAL2	
 #define SDLLINDIRECT	SLOCAL3
 
 /*
- * i386-specific node flags.
+ * i86-specific node flags.
  */
 #define FSTDCALL	NLOCAL1
 #define FFPPOP		NLOCAL2
 
 /*
- * i386-specific interpass stuff.
+ * i86-specific interpass stuff.
  */
 
 #define TARGET_IPP_MEMBERS			\

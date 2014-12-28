@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.2 2014/11/11 07:43:07 ragge Exp $	*/
+/*	$Id: order.c,v 1.3 2014/12/27 21:18:19 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -147,6 +147,8 @@ setuni(NODE *p, int cookie)
 
 /*
  * Special handling of some instruction register allocation.
+ *
+ * FIXME: review 32bit specials, a lot can go as we use helpers
  */
 struct rspecial *
 nspecial(struct optab *q)
@@ -186,6 +188,7 @@ nspecial(struct optab *q)
 				{ 0 } };
 			return s;
 		}
+		/* FIXME: do we need this rule with and based moves ? */
 		/* Force signed unconversions to avoid si and di */
 		if ((q->ltype & TUCHAR) && 
 		    q->rtype == (TINT|TUNSIGNED)) {
@@ -198,18 +201,22 @@ nspecial(struct optab *q)
 			static struct rspecial s[] = { 
 				{ NOLEFT, SI }, { NOLEFT, DI }, { 0 } };
 			return s;
-                /* FIXME: TLONG rules needed here */
+                /* Need to be able to use cwd */
 		} else if ((q->ltype & (TINT|TSHORT)) &&
 		    q->rtype == (TLONG|TULONG)) {
 			static struct rspecial s[] = {
 				{ NLEFT, AX }, { NRES, AXDX },
-				{ NEVER, AX }, { NEVER, DX }, { 0 } };
+				{ NEVER, AX }, { NEVER, DX }, 
+				{ 0 } };
 			return s;
+		/* Need to be use cbw cwd */
 		} else if (q->ltype == TCHAR &&
 		    q->rtype == (TLONG|TULONG)) {
 			static struct rspecial s[] = {
 				{ NRES, AXDX }, { NLEFT, AL },
-				{ NEVER, AX }, { NEVER, DX }, { 0 } };
+				{ NEVER, AX }, { NEVER, DX },
+				{ NEVER, AH }, { NEVER, AL },
+				{ 0 } };
 			return s;
 		}
 		break;
@@ -226,7 +233,9 @@ nspecial(struct optab *q)
 				{ NLEFT, AX }, { NRES, AX },
 				{ NORIGHT, DX }, { NORIGHT, AX }, { 0 } };
 			return s;
-		} else if (q->lshape & SCREG) {
+		}
+/* using helpers */		
+		 else if (q->lshape & SCREG) {
 			static struct rspecial s[] = {
 				{ NEVER, AX }, { NEVER, DX },
 				{ NEVER, CX }, { NRES, AXDX }, { 0 } };
@@ -269,8 +278,8 @@ nspecial(struct optab *q)
 			return s;
 		} else if (q->lshape & SCREG) {
 			static struct rspecial s[] = {
-				{ NLEFT, AXDX }, { NRIGHT, CXSI },
-				{ NEVER, SI }, { NRES, AXDX }, { 0 } };
+				{ NEVER, AX }, { NEVER, DX },
+				{ NEVER, CX }, { NRES, AXDX }, { 0 } };
 			return s;
 		}
 		break;

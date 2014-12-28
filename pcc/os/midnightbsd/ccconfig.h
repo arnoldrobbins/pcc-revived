@@ -1,4 +1,4 @@
-/* $Id: ccconfig.h,v 1.6 2014/12/18 21:42:06 plunky Exp $ */
+/* $Id: ccconfig.h,v 1.7 2014/12/24 08:43:28 plunky Exp $ */
 /*-
  * Copyright (c) 2007, 2008
  *	Thorsten Glaser <tg@mirbsd.de>
@@ -38,11 +38,7 @@
 }
 
 /* for dynamically linked binaries */
-#define DYNLINKER		{		\
-	"-dynamic-linker",			\
-	"/libexec/ld-elf.so.1",			\
-	NULL					\
-}
+#define	DYNLINKLIB	"/libexec/ld-elf.so.1"
 
 /* C run-time startup */
 #define CRT0		"crt1.o"

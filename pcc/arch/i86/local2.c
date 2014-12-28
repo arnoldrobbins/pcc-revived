@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.2 2014/11/11 07:43:07 ragge Exp $	*/
+/*	$Id: local2.c,v 1.4 2014/12/27 21:18:19 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -32,8 +32,10 @@
 
 #define EXPREFIX	"_"
 
-
 static int stkpos;
+
+static int suppress_type;		/* Don't display a type on the
+					   next expansion */
 
 void
 deflab(int label)
@@ -56,9 +58,9 @@ prtprolog(struct interpass_prolog *ipp, int addto)
 #if 1
 	/* FIXME: can't use enter/leave if generating i8086 */
 	if (addto == 0 || addto > 65535 || 1) {
-		printf("	push bp\n\tmov sp,bp\n");
+		printf("	push bp\n\tmov bp,sp\n");
 		if (addto)
-			printf("	sub sp,%d\n", addto);
+			printf("	sub sp,#%d\n", addto);
 	} else
 		printf("	enter %d,0\n", addto);
 #endif
@@ -133,7 +135,7 @@ eoftn(struct interpass_prolog *ipp)
 		printf("	pop bp\n");
 		if (ipp->ipp_argstacksize)
 			/* CHECK ME */
-			printf("	add sp, %d\n", ipp->ipp_argstacksize);
+			printf("	add sp, #%d\n", ipp->ipp_argstacksize);
 		printf("	ret\n");
 	}
 }
@@ -168,7 +170,7 @@ hopcode(int f, int o)
 		comperr("hopcode2: %d", o);
 		str = 0; /* XXX gcc */
 	}
-	printf("%s%c", str, f);
+	printf("%s", str);	/* don't need %c f as far as I can see */
 }
 
 /*
@@ -279,7 +281,7 @@ starg(NODE *p)
 	if (s == 2)
 		printf("	dec sp\n	dec sp\n");
 	else
-		printf("	sub sp,%d\n", s);
+		printf("	sub sp,#%d\n", s);
 	p->n_left = mklnode(OREG, 0, SP, INT);
 	zzzcode(p, 'Q');
 	tfree(p->n_left);
@@ -319,9 +321,9 @@ ulltofp(NODE *p)
 
 	jmplab = getlab2();
 	expand(p, 0, "	push UL\n	push AL\n");
-	expand(p, 0, "	fildq (%esp)\n");
-	expand(p, 0, "	add sp, 8\n");
-	expand(p, 0, "	cmp UL, 0\n");
+	expand(p, 0, "	fildq [sp]\n");
+	expand(p, 0, "	add sp, #8\n");
+	expand(p, 0, "	cmp UL, #0\n");
 	printf("	jge " LABFMT "\n", jmplab);
 
 	printf("	faddp %%st,%%st(1)\n");
@@ -363,20 +365,51 @@ fcast(NODE *p)
 	else
 		sz = 8, c = 'l';
 
-	printf("	sub sp, %d\n", sz);
+	printf("	sub sp, #%d\n", sz);
 	printf("	fstp%c (%%sp)\n", c);
 	printf("	fld%c (%%sp)\n", c);
-	printf("	add sp, %d\n", sz);
+	printf("	add sp, #%d\n", sz);
 }
+
+
+#if 0	
 
 static void
 llshft(NODE *p)
 {
+	NODE *r = p->n_right;
 	/* FIXME: we have sal/shl/sar/shr but we are limited to
 	   shift right or left 1
 	   shift right or left by CL */
 	char *d[3];
-
+	/* We ought to shortcut this earlier but it's not obivous how
+	   to do a match and say 'any old register pair' FIXME */
+	if (r->n_op == ICON) {
+		/* FIXME: we need different versions of this for signed right
+		   shifting. Just test code - register setup needs checking
+		   for ordering etc yet */
+		if (r->n_lval == 16) {
+			if (p->n_op == RS)
+				printf("\tmov ax, dx\n\txor dx,dx\n");
+			else
+				printf("\tmov dx, ax\n\txor ax,ax\n");
+			return;
+		}
+		if (r->n_lval == 8) {
+			if (p->n_op == RS)
+				printf("\tmov al, ah\n\tmov ah, dl\n\tmov dl, dh\n\txor dh,dh\n");
+			else
+				printf("\tmov ah, al\n\tmov dl, ah\n\tmov dh, dl\n\txor al, al\n");
+			return;
+		} 
+		if (r->n_lval == 24) {
+			if (p->n_op == RS)
+				printf("\txor dx,dx\n\tmov al, dh\n\txor ax,ax\n");
+			else
+				printf("\txor ax,ax\n\tmov dh, al\n\txor dx,dx\n");
+			return;
+		}
+	}
 	if (p->n_op == LS) {
 		d[0] = "l", d[1] = "ax", d[2] = "dx";
 	} else
@@ -395,6 +428,7 @@ llshft(NODE *p)
 		printf("\txor %s,%s\n",d[1],d[1]);
 	printf("1:\n");
 }
+#endif
 
 void
 zzzcode(NODE *p, int c)
@@ -402,6 +436,7 @@ zzzcode(NODE *p, int c)
 	NODE *l;
 	int pr, lr;
 	char *ch;
+	char sv;
 
 	switch (c) {
 	case 'A': /* swap st0 and st1 if right is evaluated second */
@@ -427,7 +462,7 @@ zzzcode(NODE *p, int c)
 			if (pr == 2)
 				printf("	inc sp\n	inc sp\n");
 			else
-				printf("	add sp,%d\n", pr);
+				printf("	add sp,#%d\n", pr);
 		}
 		break;
 
@@ -480,31 +515,51 @@ zzzcode(NODE *p, int c)
 		break;
 
 	case 'O': /* print out emulated ops */
-		pr = 16;
+		pr = 8;
+		sv = 'l';
+#if 0		
 		if (p->n_op == RS || p->n_op == LS) {
 			llshft(p);
 			break;
-		} else if (p->n_op == MUL) {
-			/* FIXME */
-			printf("\tmul dx, cx\n");
-			printf("\tmul si, ax\n");
-			printf("\tadd si, dx\n");
-			printf("\tmul cx\n");
-			printf("\tadd dx, si\n");
-			break;
 		}
-		expand(p, INCREG, "\tpush UR\n\tpush AR\n");
-		expand(p, INCREG, "\tpush UL\n\tpush AL\n");
+#endif
+		if (p->n_op != RS && p->n_op != LS) {
+			/* For 64bit we will need to push pointers
+			   not u64 */
+			expand(p, INCREG, "\tpush UR\n\tpush AR\n");
+			expand(p, INCREG, "\tpush UL\n\tpush AL\n");
+		} else {
+			/* AR is a BREG so this goes wrong.. need an AREG
+			   but putting an AREG in the table rule makes the
+			   compiler shit itself - FIXME */
+			expand(p, INAREG, "\tpush AR\n");
+			expand(p, INCREG, "\tpush UL\n\tpush AL\n");
+			pr = 6;
+		}
+		
+		if (p->n_type == LONGLONG || p->n_type == ULONGLONG)
+			sv = 'L';
 		if (p->n_op == DIV && (p->n_type == ULONG || p->n_type == ULONGLONG))
 			ch = "udiv";
+		else if (p->n_op == MUL && (p->n_type == ULONG || p->n_type == ULONGLONG))
+			ch = "umul";
 		else if (p->n_op == DIV) ch = "div";
+		else if (p->n_op == MUL) ch = "mul";
 		else if (p->n_op == MOD && (p->n_type == ULONG || p->n_type == ULONGLONG))
 			ch = "umod";
 		else if (p->n_op == MOD) ch = "mod";
+		else if (p->n_op == LS) ch = "ls";
+		else if (p->n_op == RS && (p->n_type == ULONG || p->n_type == ULONGLONG))
+			ch = "rs";
+		else if (p->n_op == RS) ch = "urs";
 		else ch = 0, comperr("ZO");
-		printf("\tcall " EXPREFIX "__%sdi3\n\tadd %s,%d\n",
-			ch, rnames[SP], pr);
+		printf("\tcall " EXPREFIX "__%c%sdi3\n\tadd %s,#%d\n",
+			sv, ch, rnames[SP], pr);
                 break;
+	
+	case 'P': /* typeless right hand */
+		suppress_type = 1;
+		break;
 
 	case 'Q': /* emit struct assign */
 		/*
@@ -520,7 +575,7 @@ zzzcode(NODE *p, int c)
 				i--;
 			}
 		} else {
-			printf("\tmov cx, %d\n", p->n_stsize >> 1);
+			printf("\tmov cx, #%d\n", p->n_stsize >> 1);
 			printf("	rep movsw\n");
 		}
 		if (p->n_stsize & 2)
@@ -578,10 +633,10 @@ zzzcode(NODE *p, int c)
 		lr = regno(l);
 		pr = regno(getlr(p, '1'));
 		if (l->n_op != REG) { /* NAME or OREG */
-			/* Need to force a movb into the low half, using
+			/* Need to force a mov into the low half, using
 			   a movw might fail in protected mode or with
 			   mmio spaces */
-			printf("	movb %cl, ", rnames[pr][0]);
+			printf("	mov %cl, ", rnames[pr][0]);
 			expand(p, INAREG, "AL\n");
 		} else {
 		        if ((lr == AL && pr == AX) ||
@@ -590,10 +645,10 @@ zzzcode(NODE *p, int c)
 			    (lr == DL && pr == DX))
 				;
                          else
-                         	printf("	movb %cl,%cl\n",
+                         	printf("	mov %cl,%cl\n",
                          		rnames[pr][0],rnames[lr][0]);
                 }
-		printf("	xorb %ch,%ch\n",
+		printf("	xor %ch,%ch\n",
 				rnames[pr][0], rnames[pr][0]);
 		break;
 		                                                                                                                                                                                                   break;
@@ -674,11 +729,11 @@ conput(FILE *fp, NODE *p)
 	switch (p->n_op) {
 	case ICON:
 		if (p->n_name[0] != '\0') {
-			fprintf(fp, "%s", p->n_name);
+			fprintf(fp, "#%s", p->n_name);
 			if (val)
 				fprintf(fp, "+%d", val);
 		} else
-			fprintf(fp, "%d", val);
+			fprintf(fp, "#%d", val);
 		return;
 
 	default:
@@ -714,15 +769,14 @@ upput(NODE *p, int size)
 		p->n_lval -= size;
 		break;
 	case ICON:
-		printf(CONFMT, p->n_lval >> 16);
+		printf("#"CONFMT, p->n_lval >> 16);
 		break;
 	default:
 		comperr("upput bad op %d size %d", p->n_op, size);
 	}
 }
 
-void
-adrput(FILE *io, NODE *p)
+static void do_adrput(FILE *io, NODE *p, int ut)
 {
 	int r;
 	/* output an address, with offsets, from p */
@@ -730,14 +784,25 @@ adrput(FILE *io, NODE *p)
 	switch (p->n_op) {
 
 	case NAME:
+		if (!ut) {
+			switch (p->n_type) {
+				case SHORT:
+				case USHORT:
+				case INT:
+				case UNSIGNED:
+					printf("word ptr ");
+					break;
+				case CHAR:
+				case UCHAR:
+					printf("byte ptr ");
+			}
+		}
 		if (p->n_name[0] != '\0') {
-			printf("[");
 			fputs(p->n_name, io);
 			if (p->n_lval != 0)
 				fprintf(io, "+" CONFMT, p->n_lval);
-			printf("]");
 		} else
-			fprintf(io, CONFMT, p->n_lval);
+			fprintf(io, "#"CONFMT, p->n_lval);
 		return;
 
 	case OREG:
@@ -756,6 +821,19 @@ adrput(FILE *io, NODE *p)
 		return;
 	case ICON:
 		/* addressable value of the constant */
+		if (!ut) {
+			switch (p->n_type) {
+				case SHORT:
+				case USHORT:
+				case INT:
+				case UNSIGNED:
+					printf("word ");
+					break;
+					case CHAR:
+				case UCHAR:
+					printf("byte ");
+			}
+		}
 		conput(io, p);
 		return;
 
@@ -778,6 +856,12 @@ adrput(FILE *io, NODE *p)
 		return;
 
 	}
+}
+
+void adrput(FILE *io, NODE *p)
+{
+	do_adrput(io, p, suppress_type);
+	suppress_type = 0;
 }
 
 static char *
@@ -1112,7 +1196,7 @@ rmove(int s, int d, TWORD t)
 		break;
 	case CHAR:
 	case UCHAR:
-		printf("	movb %s,%s\n", rnames[d], rnames[s]);
+		printf("	mov %s,%s\n", rnames[d], rnames[s]);
 		break;
 	case FLOAT:
 	case DOUBLE:
@@ -1234,6 +1318,14 @@ special(NODE *p, int shape)
 		     p->n_lval == 0 || (p->n_lval >> 32) != 0)
 			break;
 		return SRDIR;
+	case STWO:
+		if (o == ICON && p->n_name[0] == 0 && p->n_lval == 2)
+			return SRDIR;
+		break;
+	case SMTWO:
+		if (o == ICON && p->n_name[0] == 0 && p->n_lval == -2)
+			return SRDIR;
+		break;
 	}
 	return SRNOPE;
 }

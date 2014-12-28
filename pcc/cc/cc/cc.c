@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.294 2014/12/18 21:37:25 plunky Exp $	*/
+/*	$Id: cc.c,v 1.297 2014/12/24 12:33:10 plunky Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -196,11 +196,6 @@ char	*sysroot = "", *isysroot;
 char *cppadd[] = CPPADD;
 char *cppmdadd[] = CPPMDADD;
 
-/* Dynamic linker definitions, per-target */
-#ifndef DYNLINKER
-#define	DYNLINKER { 0 }
-#endif
-
 /* Default libraries and search paths */
 #ifndef PCCLIBDIR	/* set by autoconf */
 #define PCCLIBDIR	NULL
@@ -227,8 +222,15 @@ char *cppmdadd[] = CPPMDADD;
 #ifndef STARTLABEL
 #define STARTLABEL "__start"
 #endif
+#ifndef DYNLINKARG
+#define DYNLINKARG	"-dynamic-linker"
+#endif
+#ifndef DYNLINKLIB
+#define DYNLINKLIB	NULL
+#endif
 
-char *dynlinker[] = DYNLINKER;
+char *dynlinkarg = DYNLINKARG;
+char *dynlinklib = DYNLINKLIB;
 char *pcclibdir = PCCLIBDIR;
 char *deflibdirs[] = DEFLIBDIRS;
 char *deflibs[] = DEFLIBS;
@@ -276,6 +278,7 @@ int	cflag;
 int	gflag;
 int	rflag;
 int	vflag;
+int	noexec;	/* -### */
 int	tflag;
 int	Eflag;
 int	Oflag;
@@ -298,6 +301,18 @@ int	xuchar = 0;
 int	cxxflag;
 int	cppflag;
 int	printprogname, printfilename;
+
+#ifdef SOFTFLOAT
+int	softfloat = 1;
+#else
+int	softfloat = 0;
+#endif
+
+#ifdef TARGET_BIG_ENDIAN
+int	bigendian = 1;
+#else
+int	bigendian = 0;
+#endif
 
 #ifdef mach_amd64
 int amd64_i386;
@@ -506,6 +521,15 @@ main(int argc, char *argv[])
 			oerror(argp);
 			break;
 
+		case '#':
+			if (match(argp, "-###")) {
+				printf("%s\n", VERSSTR);
+				vflag++;
+				noexec++;
+			} else
+				oerror(argp);
+			break;
+
 		case '-': /* double -'s */
 			if (match(argp, "--version")) {
 				printf("%s\n", VERSSTR);
@@ -628,6 +652,30 @@ main(int argc, char *argv[])
 			if (strcmp(argp, "-melf_i386") == 0) {
 				pass0 = LIBEXECDIR "/ccom_i386";
 				amd64_i386 = 1;
+				break;
+			}
+#endif
+#if defined(mach_arm) || defined(mach_mips)
+			if (match(argp, "-mbig-endian")) {
+				bigendian = 1;
+				strlist_append(&compiler_flags, argp);
+				break;
+			}
+			if (match(argp, "-mlittle-endian")) {
+				bigendian = 0;
+				strlist_append(&compiler_flags, argp);
+				break;
+			}
+			if (match(argp, "-msoft-float")) {
+				softfloat = 1;
+				strlist_append(&compiler_flags, argp);
+				break;
+			}
+#endif
+#if defined(mach_mips)
+			if (match(argp, "-mhard-float")) {
+				softfloat = 0;
+				strlist_append(&compiler_flags, argp);
 				break;
 			}
 #endif
@@ -1286,6 +1334,8 @@ strlist_exec(struct strlist *l)
 	cmd = win32commandline(l);
 	if (vflag)
 		printf("%s\n", cmd);
+	if (noexec)
+		return 0;
 
 	ZeroMemory(&si, sizeof(STARTUPINFO));
 	si.cb = sizeof(STARTUPINFO);
@@ -1327,9 +1377,11 @@ strlist_exec(struct strlist *l)
 	strlist_make_array(l, &argv, &argc);
 	if (vflag) {
 		printf("Calling ");
-		strlist_print(l, stdout);
+		strlist_print(l, stdout, noexec);
 		printf("\n");
 	}
+	if (noexec)
+		return 0;
 
 	switch ((child = fork())) {
 	case 0:
@@ -1838,15 +1890,27 @@ setup_ld_flags(void)
 	char *b, *e;
 	int i;
 
+#ifdef PCC_SETUP_LD_ARGS
+	PCC_SETUP_LD_ARGS
+#endif
+
 	cksetflags(ldflgcheck, &early_linker_flags, 'a');
 	if (Bstatic == 0 && shared == 0 && rflag == 0) {
-		for (i = 0; dynlinker[i]; i++)
-			strlist_append(&early_linker_flags, dynlinker[i]);
+		if (dynlinklib) {
+			strlist_append(&early_linker_flags, dynlinkarg);
+			strlist_append(&early_linker_flags, dynlinklib);
+		}
 		strlist_append(&early_linker_flags, "-e");
 		strlist_append(&early_linker_flags, STARTLABEL);
 	}
 	if (shared == 0 && rflag)
 		strlist_append(&early_linker_flags, "-r");
+#ifdef STARTLABEL_S
+	if (shared == 1) {
+		strlist_append(&early_linker_flags, "-e");
+		strlist_append(&early_linker_flags, STARTLABEL_S);
+	}
+#endif
 	if (sysroot && *sysroot)
 		strlist_append(&early_linker_flags, cat("--sysroot=", sysroot));
 	if (!nostdlib) {
@@ -1886,6 +1950,19 @@ setup_ld_flags(void)
 		strap(&late_linker_flags, &crtdirs, e, 'a');
 		strap(&middle_linker_flags, &crtdirs, CRTI, 'p');
 		strap(&late_linker_flags, &crtdirs, CRTN, 'a');
+#ifdef os_win32
+		/*
+		 * On Win32 Cygwin/MinGW runtimes, the profiling code gcrtN.o
+		 * comes in addition to crtN.o or dllcrtN.o
+		 */
+		if (pgflag)
+			strap(&middle_linker_flags, &crtdirs, GCRT0, 'p');
+		if (shared == 0)
+			b = CRT0;
+		else
+			b = CRT0_S;     /* dllcrtN.o */
+		strap(&middle_linker_flags, &crtdirs, b, 'p');
+#else
 		if (shared == 0) {
 			if (pgflag)
 				b = GCRT0;
@@ -1897,6 +1974,7 @@ setup_ld_flags(void)
 				b = CRT0;
 			strap(&middle_linker_flags, &crtdirs, b, 'p');
 		}
+#endif
 	}
 }
 

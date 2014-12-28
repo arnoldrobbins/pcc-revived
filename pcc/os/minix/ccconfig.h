@@ -1,4 +1,4 @@
-/*	 $Id: ccconfig.h,v 1.5 2014/12/18 21:39:30 plunky Exp $ */
+/*	 $Id: ccconfig.h,v 1.6 2014/12/24 08:43:28 plunky Exp $ */
 /*
  * Escrit per Antoine Leca pel projecte PCC, 2011-03.
  * Copyright (C) 2011 Anders Magnusson (ragge@ludd.luth.se).
@@ -37,8 +37,7 @@
 /* common cpp predefines */
 #define CPPADD	{ "-D__minix", "-D__ELF__", NULL }
 
-/* host-independent */
-#define DYNLINKER { "-dynamic-linker", "/libexec/ld.elf_so", NULL }
+#define	DYNLINKLIB	"/libexec/ld.elf_so"
 
 #define CRTEND_T	"crtend.o"
 

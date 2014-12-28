@@ -100,6 +100,9 @@ case "$target_os" in
 	    mipseb) targmach=mips endian=big ;;
 	    mips*) targmach=mips ;;
 	esac
+	case "$target_os" in
+	    *-musl*) ADD_CPPFLAGS="$ADD_CPPFLAGS -DUSE_MUSL" ;;
+	esac
 	;;
 
     midnightbsd*)
@@ -233,6 +236,7 @@ case "$target_os" in
 	case "$target_cpu" in
 	    m16c) targmach=m16c ;;
 	    nova) targmach=nova ;;
+	    i86) targmach=i86 ;;
 	esac
 	;;
 esac

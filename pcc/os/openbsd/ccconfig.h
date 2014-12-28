@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.14 2014/12/18 21:37:25 plunky Exp $	*/
+/*	$Id: ccconfig.h,v 1.15 2014/12/24 08:43:29 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -31,7 +31,7 @@
 
 /* common cpp predefines */
 #define	CPPADD	{ "-D__OpenBSD__", "-D__ELF__", NULL, }
-#define	DYNLINKER { "-dynamic-linker", "/usr/libexec/ld.so", NULL }
+#define	DYNLINKLIB	"/usr/libexec/ld.so"
 #define	CRTI 0		/* OpenBSD does not use this */
 #define	CRTN 0		/* OpenBSD does not use this */
 

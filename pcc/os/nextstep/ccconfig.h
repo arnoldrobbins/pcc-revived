@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.4 2014/12/18 21:42:06 plunky Exp $	*/
+/*	$Id: ccconfig.h,v 1.5 2014/12/24 08:43:29 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -38,8 +38,6 @@
 	"-I" LIBDIR "bsd",	\
 	NULL			\
 }
-
-#define	DYNLINKER { NULL }
 
 #define CRTBEGIN	0
 #define CRTBEGIN_S	0
