@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.105 2014/12/22 22:07:40 plunky Exp $	*/
+/*	$Id: manifest.h,v 1.106 2015/01/01 09:12:25 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -305,6 +305,29 @@ struct interpass_prolog;
 #define	MAXIP		7
 
 void send_passt(int type, ...);
+
+
+/*
+ * Attributes common to all passes.
+ */
+enum {
+	ATTR_NONE,
+#ifdef GCC_COMPAT
+	GCC_ATYP_STDCALL,
+	GCC_ATYP_CDECL,
+#endif
+#ifdef ATTR_TARGET
+	ATTR_TARGET,
+#endif
+	ATTR_MI_MAX
+};
+
+struct attr *attr_add(struct attr *orig, struct attr *new);
+struct attr *attr_new(int, int);
+struct attr *attr_find(struct attr *, int);
+struct attr *attr_copy(struct attr *src, struct attr *dst, int nelem);
+struct attr *attr_dup(struct attr *ap, int n);
+
 /*
  * External declarations, typedefs and the like
  */

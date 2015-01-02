@@ -1,4 +1,4 @@
-/*	$Id: pass2.h,v 1.138 2014/10/11 09:50:21 ragge Exp $	*/
+/*	$Id: pass2.h,v 1.139 2015/01/01 09:12:25 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -534,3 +534,11 @@ extern struct p2env p2env;
  * C compiler second pass extra defines.
  */
 #define PHI (MAXOP + 1)		/* Used in SSA trees */
+
+enum {
+	ATTR_P2_FIRST = ATTR_MI_MAX + 1,
+#ifdef ATTR_P2_TARGET
+	ATTR_P2_TARGET,
+#endif
+	ATTR_P2_MAX
+};

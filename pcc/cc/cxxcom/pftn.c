@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.12 2014/09/19 17:44:46 plunky Exp $	*/
+/*	$Id: pftn.c,v 1.13 2015/01/01 09:13:17 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2937,71 +2937,6 @@ void *
 inlalloc(int size)
 {
 	return isinlining ?  permalloc(size) : tmpalloc(size);
-}
-
-struct attr *
-attr_new(int type, int nelem)
-{
-	struct attr *ap;
-	int sz;
-
-	sz = sizeof(struct attr) + nelem * sizeof(union aarg);
-
-	ap = memset(blkalloc(sz), 0, sz);
-	ap->atype = type;
-	return ap;
-}
-
-/*
- * Add attribute list new before old and return new.
- */
-struct attr *
-attr_add(struct attr *old, struct attr *new)
-{
-	struct attr *ap;
-
-	if (new == NULL)
-		return old; /* nothing to add */
-
-	for (ap = new; ap->next; ap = ap->next)
-		;
-	ap->next = old;
-	return new;
-}
-
-/*
- * Search for attribute type in list ap.  Return entry or NULL.
- */
-struct attr *
-attr_find(struct attr *ap, int type)
-{
-
-	for (; ap && ap->atype != type; ap = ap->next)
-		;
-	return ap;
-}
-
-/*
- * Copy an attribute struct.
- * Return destination.
- */
-struct attr *
-attr_copy(struct attr *aps, struct attr *apd, int n)
-{
-	int sz = sizeof(struct attr) + n * sizeof(union aarg);
-	return memcpy(apd, aps, sz);
-}
-
-/*
- * Duplicate an attribute, like strdup.
- */
-struct attr *
-attr_dup(struct attr *ap, int n)
-{
-	int sz = sizeof(struct attr) + n * sizeof(union aarg);
-	ap = memcpy(blkalloc(sz), ap, sz);
-	ap->next = NULL;
-	return ap;
 }
 
 /*
