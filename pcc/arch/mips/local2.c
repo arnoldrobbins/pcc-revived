@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.26 2012/09/26 20:22:41 plunky Exp $	 */
+/*	$Id: local2.c,v 1.27 2015/01/04 19:17:23 ragge Exp $	 */
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -319,11 +319,12 @@ tlen(NODE *p)
 static void
 starg(NODE *p)
 {
+	int sz = attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0);
 	//assert(p->n_rval == A1);
-	printf("\tsubu %s,%s,%d\n", rnames[SP], rnames[SP], p->n_stsize);
+	printf("\tsubu %s,%s,%d\n", rnames[SP], rnames[SP], sz);
 	/* A0 = dest, A1 = src, A2 = len */
 	printf("\tmove %s,%s\n", rnames[A0], rnames[SP]);
-	printf("\tli %s,%d\t# structure size\n", rnames[A2], p->n_stsize);
+	printf("\tli %s,%d\t# structure size\n", rnames[A2], sz);
 	printf("\tsubu %s,%s,16\n", rnames[SP], rnames[SP]);
 	printf("\tjal %s\t# structure copy\n", exname("memcpy"));
 	printf("\tnop\n");
@@ -338,7 +339,8 @@ stasg(NODE *p)
 {
 	assert(p->n_right->n_rval == A1);
 	/* A0 = dest, A1 = src, A2 = len */
-	printf("\tli %s,%d\t# structure size\n", rnames[A2], p->n_stsize);
+	printf("\tli %s,%d\t# structure size\n", rnames[A2],
+	    attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0));
 	if (p->n_left->n_op == OREG) {
 		printf("\taddiu %s,%s," CONFMT "\t# dest address\n",
 		    rnames[A0], rnames[p->n_left->n_rval],
@@ -1255,7 +1257,7 @@ argsiz(NODE *p)
 	else if (t == FLOAT)
 		sz = 4;
 	else if (t == STRTY || t == UNIONTY)
-		sz = p->n_stsize;
+		sz = attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0);
 
 	if (p->n_type == STRTY || p->n_type == UNIONTY) {
 		return (size + sz);

@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.297 2014/12/24 12:33:10 plunky Exp $	*/
+/*	$Id: cc.c,v 1.298 2015/01/07 05:20:48 gmcgarry Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -536,6 +536,8 @@ main(int argc, char *argv[])
 				return 0;
 			} else if (strncmp(argp, "--sysroot=", 10) == 0) {
 				sysroot = argp + 10;
+			} else if (strncmp(argp, "--sysroot", 9) == 0) {
+				sysroot = nxtopt(argp);
 			} else if (strcmp(argp, "--param") == 0) {
 				/* NOTHING YET */;
 				(void)nxtopt(0); /* ignore arg */

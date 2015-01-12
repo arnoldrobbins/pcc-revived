@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.26 2014/06/20 07:07:33 plunky Exp $	*/
+/*	$Id: symtabs.c,v 1.27 2015/01/05 15:48:47 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -349,8 +349,6 @@ hide(struct symtab *sym)
 	new = getsymtab(sym->sname, typ|STEMP);
 	new->snext = tmpsyms[typ];
 	tmpsyms[typ] = new;
-
-	warner(Wshadow, sym->sname, sym->slevel ? "local" : "global");
 
 #ifdef PCC_DEBUG
 	if (ddebug)

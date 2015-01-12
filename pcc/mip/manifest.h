@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.106 2015/01/01 09:12:25 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.107 2015/01/04 12:57:52 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -316,8 +316,8 @@ enum {
 	GCC_ATYP_STDCALL,
 	GCC_ATYP_CDECL,
 #endif
-#ifdef ATTR_TARGET
-	ATTR_TARGET,
+#ifdef ATTR_MI_TARGET
+	ATTR_MI_TARGET,
 #endif
 	ATTR_MI_MAX
 };

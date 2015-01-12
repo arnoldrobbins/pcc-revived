@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.26 2011/06/23 13:41:25 ragge Exp $	*/
+/*	$Id: local2.c,v 1.27 2015/01/04 19:17:23 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 David Crawshaw <david@zentus.com>
@@ -138,6 +138,7 @@ zzzcode(NODE * p, int c)
 {
 	char *str;
 	NODE *l, *r;
+	int sz;
 	l = p->n_left;
 	r = p->n_right;
 
@@ -204,12 +205,13 @@ zzzcode(NODE * p, int c)
 		/* TODO Check if p->n_stsize is small and use a few ldx's
 		        to move the struct instead of memcpy. The equiv.
 			could be done on all the architectures. */
+		sz = attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0);
 		if (l->n_rval != O0)
 			printf("\tmov %s,%s\n", rnames[l->n_rval], rnames[O0]);
-		if (SIMM13(p->n_stsize))
-			printf("\tor %%g0,%d,%%o2\n", p->n_stsize);
+		if (SIMM13(sz))
+			printf("\tor %%g0,%d,%%o2\n", sz);
 		else
-			printf("\tsetx %d,%%g1,%%o2\n", p->n_stsize);
+			printf("\tsetx %d,%%g1,%%o2\n", sz);
 		printf("\tcall memcpy\t\t\t! struct assign (dest, src, len)\n");
 		printf("\tnop\n");
 		break;

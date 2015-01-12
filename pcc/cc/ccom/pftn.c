@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.394 2015/01/01 09:13:17 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.395 2015/01/05 15:48:47 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -389,6 +389,9 @@ defid2(NODE *q, int class, char *astr)
 		uerror("redeclaration of %s", p->sname);
 		return;
 	}
+	if ((ISFTN(p->stype) && ISFTN(type)) ||
+	    (!ISFTN(p->stype) && !ISFTN(type)))
+		warner(Wshadow, p->sname, p->slevel ? "local" : "global");
 	q->n_sp = p = hide(p);
 
 	enter:  /* make a new entry */

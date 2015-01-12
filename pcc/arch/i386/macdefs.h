@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.90 2014/11/13 19:10:36 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.91 2015/01/04 18:41:04 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -321,12 +321,6 @@ int COLORMAP(int c, int *r);
 #define SDLLINDIRECT	SLOCAL3
 
 /*
- * i386-specific node flags.
- */
-#define FSTDCALL	NLOCAL1
-#define FFPPOP		NLOCAL2
-
-/*
  * i386-specific interpass stuff.
  */
 
@@ -367,3 +361,6 @@ extern int msettings;
 #define	MI586	0x004
 #define	MI686	0x008
 #define	MCPUMSK	0x00f
+
+/* target specific attributes */
+#define	ATTR_MI_TARGET	ATTR_I386_FCMPLRET, ATTR_I386_FPPOP

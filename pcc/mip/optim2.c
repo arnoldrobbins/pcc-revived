@@ -1,4 +1,4 @@
-/*	$Id: optim2.c,v 1.90 2014/07/25 06:04:00 plunky Exp $	*/
+/*	$Id: optim2.c,v 1.91 2015/01/04 18:41:04 ragge Exp $	*/
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1609,6 +1609,7 @@ void flownodeprint(NODE *p,FILE *flowdiagramfile);
 void
 flownodeprint(NODE *p,FILE *flowdiagramfile)
 {	
+	struct attr *ap;
 	int opty;
 	char *o;
 
@@ -1650,8 +1651,9 @@ flownodeprint(NODE *p,FILE *flowdiagramfile)
 		case USTCALL:
 		case STARG:
 		case STASG:
-			fprintf(flowdiagramfile, " size=%d", p->n_stsize );
-			fprintf(flowdiagramfile, " align=%d", p->n_stalign );
+			ap = attr_find(p->n_ap, ATTR_P2STRUCT);
+			fprintf(flowdiagramfile, " size=%d", ap->iarg(0));
+			fprintf(flowdiagramfile, " align=%d", ap->iarg(1));
 			break;
 	}
 	

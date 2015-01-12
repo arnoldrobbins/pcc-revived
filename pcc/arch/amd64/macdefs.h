@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.31 2014/06/01 11:35:02 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.32 2015/01/04 19:17:23 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -286,3 +286,6 @@ NODE *amd64_builtin_va_arg(const struct bitable *, NODE *a);
 NODE *amd64_builtin_va_end(const struct bitable *, NODE *a);
 NODE *amd64_builtin_va_copy(const struct bitable *, NODE *a);
 #undef NODE
+
+/* target specific attributes */
+#define ATTR_MI_TARGET  ATTR_AMD64_CMPLRET

@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.264 2015/01/01 09:13:17 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.268 2015/01/07 05:24:53 gmcgarry Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -449,6 +449,7 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 	ATTR_QUALTYP,	/* Internal; const/volatile, see below */
 	ATTR_ALIGNED,	/* Internal; also used as gcc type attribute */
 	ATTR_STRUCT,	/* Internal; element list */
+	ATTR_P1LABELS,	/* used to store stuff while parsing */
 #define ATTR_MAX ATTR_STRUCT
 
 #ifdef GCC_COMPAT
@@ -492,9 +493,13 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 	GCC_ATYP_WARNING,
 	GCC_ATYP_NOCLONE,
 	GCC_ATYP_REGPARM,
+	GCC_ATYP_FASTCALL,
 
 	/* other stuff */
 	GCC_ATYP_BOUNDED,	/* OpenBSD extra boundary checks */
+
+	/* OSX toolchain */
+	GCC_ATYP_WEAKIMPORT,
 
 	GCC_ATYP_MAX,
 #endif
@@ -528,10 +533,6 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 #define amlist  aa[0].varg
 #define amsize  aa[1].iarg
 #define	strattr(x)	(attr_find(x, ATTR_STRUCT))
-
-#define	iarg(x)	aa[x].iarg
-#define	sarg(x)	aa[x].sarg
-#define	varg(x)	aa[x].varg
 
 void gcc_init(void);
 int gcc_keyword(char *, NODE **);

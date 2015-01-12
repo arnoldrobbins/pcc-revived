@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.184 2014/12/24 12:31:25 plunky Exp $	*/
+/*	$Id: local.c,v 1.188 2015/01/06 03:25:58 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -164,6 +164,7 @@ picext(NODE *p)
 		p->n_sp->sflags |= SSTDCALL;
 #endif
 	sp->sflags = p->n_sp->sflags & SSTDCALL;
+	sp->sap = p->n_sp->sap;
 	r = xbcon(0, sp, INT);
 	q = buildtree(PLUS, q, r);
 	q = block(UMUL, q, 0, PTR|VOID, 0, 0);
@@ -823,12 +824,9 @@ myp2tree(NODE *p)
 	mangle(p);
 
 	if ((p->n_op == STCALL || p->n_op == USTCALL) && 
-	    p->n_left->n_op == ICON &&
-	    attr_find(p->n_left->n_ap, ATTR_COMPLEX) &&
-	    tsize(DECREF(DECREF(p->n_left->n_type)),
-	    p->n_left->n_df, p->n_left->n_ap) == SZLONGLONG) {
-		p->n_su = 42;
-	}
+	    attr_find(p->n_ap, ATTR_COMPLEX) &&
+	    strmemb(p->n_ap)->stype == FLOAT)
+		p->n_ap = attr_add(p->n_ap, attr_new(ATTR_I386_FCMPLRET, 1));
 
 	if (p->n_op != FCON)
 		return;
@@ -1084,7 +1082,6 @@ defzero(struct symtab *sp)
 #ifdef TLS
 static int gottls;
 #endif
-static int stdcall;
 #ifdef PECOFFABI
 static int dllindirect;
 #endif
@@ -1106,19 +1103,7 @@ mypragma(char *str)
 		return 1;
 	}
 #endif
-	if (strcmp(str, "stdcall") == 0) {
-		stdcall = 1;
-		return 1;
-	}
-	if (strcmp(str, "cdecl") == 0) {
-		stdcall = 0;
-		return 1;
-	}
 #ifdef PECOFFABI
-	if (strcmp(str, "fastcall") == 0) {
-		stdcall = 2;
-		return 1;
-	}
 	if (strcmp(str, "dllimport") == 0) {
 		dllindirect = 1;
 		return 1;
@@ -1230,10 +1215,6 @@ fixdef(struct symtab *sp)
 #endif
 		constructor = destructor = 0;
 	}
-	if (stdcall && (sp->sclass != PARAM)) {
-		sp->sflags |= SSTDCALL;
-		stdcall = 0;
-	}
 #ifdef PECOFFABI
 	if (dllindirect && (sp->sclass != PARAM)) {
 		sp->sflags |= SDLLINDIRECT;
@@ -1250,20 +1231,9 @@ mangle(NODE *p)
 {
 	NODE *l;
 
-	if (p->n_op == NAME || p->n_op == ICON) {
-		p->n_flags = 0; /* for later setting of STDCALL */
-		if (p->n_sp) {
-			 if (p->n_sp->sflags & SSTDCALL)
-				p->n_flags = FSTDCALL;
-		}
-	} else if (p->n_op == TEMP)
-		p->n_flags = 0; /* STDCALL fun ptr not allowed */
-
 	if (p->n_op != CALL && p->n_op != STCALL &&
 	    p->n_op != UCALL && p->n_op != USTCALL)
 		return;
-
-	p->n_flags = 0;
 
 	l = p->n_left;
 	while (cdope(l->n_op) & CALLFLG)
@@ -1309,28 +1279,14 @@ mangle(NODE *p)
 #endif
 }
 
-/*
- * find struct return functions and clear stalign field if float _Complex.
- */
-static void
-fixstcall(NODE *p, void *arg)
-{
-	if (p->n_op != STCALL && p->n_op != USTCALL)
-		return;
-	if (p->n_su == 42)
-		p->n_stalign = 42;
-}
-
-
 void
 pass1_lastchance(struct interpass *ip)
 {
 	if (ip->type == IP_NODE &&
 	    (ip->ip_node->n_op == CALL || ip->ip_node->n_op == UCALL) &&
 	    ISFTY(ip->ip_node->n_type))
-		ip->ip_node->n_flags = FFPPOP;
-	if (ip->type == IP_NODE)
-		walkf(ip->ip_node, fixstcall, 0);
+		ip->ip_node->n_ap = attr_add(ip->ip_node->n_ap,
+		    attr_new(ATTR_I386_FPPOP, 1));
  
 	if (ip->type == IP_EPILOG) {
 		struct interpass_prolog *ipp = (struct interpass_prolog *)ip;

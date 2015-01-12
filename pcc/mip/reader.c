@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.290 2014/10/11 09:50:21 ragge Exp $	*/
+/*	$Id: reader.c,v 1.292 2015/01/04 18:41:04 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -661,9 +661,6 @@ again:	switch (o = p->n_op) {
 
 	case XARG:
 		/* generate code for correct class here */
-#if 0
-		geninsn(p->n_left, 1 << p->n_label);
-#endif
 		break;
 
 	default:
@@ -882,7 +879,7 @@ gencode(NODE *p, int cookie)
 	NODE *p1, *l, *r;
 	int o = optype(p->n_op);
 #ifdef FINDMOPS
-	int ismops = (p->n_op == ASSIGN && (p->n_flags & 1));
+	int ismops = (p->n_op == ASSIGN && (p->n_su & ISMOPS));
 #endif
 
 	l = p->n_left;
@@ -1041,6 +1038,7 @@ size_t negrelsize = sizeof negrel / sizeof negrel[0];
 void
 e2print(NODE *p, int down, int *a, int *b)
 {
+	struct attr *ap;
 #ifdef PRTABLE
 	extern int tablesize;
 #endif
@@ -1085,8 +1083,9 @@ e2print(NODE *p, int down, int *a, int *b)
 	case USTCALL:
 	case STARG:
 	case STASG:
-		printf(" size=%d", p->n_stsize );
-		printf(" align=%d", p->n_stalign );
+		ap = attr_find(p->n_ap, ATTR_P2STRUCT);
+		printf(" size=%d", ap->iarg(0));
+		printf(" align=%d", ap->iarg(1));
 		break;
 		}
 
@@ -1095,7 +1094,7 @@ e2print(NODE *p, int down, int *a, int *b)
 	printf(", " );
 
 	prtreg(p);
-	printf(", SU= %d(%cREG,%s,%s,%s,%s,%s,%s)\n",
+	printf(", SU= %d(%cREG,%s,%s,%s,%s)\n",
 	    TBLIDX(p->n_su), 
 	    TCLASS(p->n_su)+'@',
 #ifdef PRTABLE
@@ -1104,7 +1103,6 @@ e2print(NODE *p, int down, int *a, int *b)
 #else
 	    "",
 #endif
-	    p->n_su & LREG ? "LREG" : "", p->n_su & RREG ? "RREG" : "",
 	    p->n_su & RVEFF ? "RVEFF" : "", p->n_su & RVCC ? "RVCC" : "",
 	    p->n_su & DORIGHT ? "DORIGHT" : "");
 }
@@ -1366,8 +1364,8 @@ mklnode(int op, CONSZ lval, int rval, TWORD type)
 
 	p->n_name = "";
 	p->n_qual = 0;
+	p->n_ap = 0;
 	p->n_op = op;
-	p->n_label = 0;
 	p->n_lval = lval;
 	p->n_rval = rval;
 	p->n_type = type;
@@ -1383,8 +1381,8 @@ mkbinode(int op, NODE *left, NODE *right, TWORD type)
 
 	p->n_name = "";
 	p->n_qual = 0;
+	p->n_ap = 0;
 	p->n_op = op;
-	p->n_label = 0;
 	p->n_left = left;
 	p->n_right = right;
 	p->n_type = type;
@@ -1400,8 +1398,8 @@ mkunode(int op, NODE *left, int rval, TWORD type)
 
 	p->n_name = "";
 	p->n_qual = 0;
+	p->n_ap = 0;
 	p->n_op = op;
-	p->n_label = 0;
 	p->n_left = left;
 	p->n_rval = rval;
 	p->n_type = type;
@@ -1522,7 +1520,6 @@ again:
 		/* FALLTHROUGH */
 	case 'r': /* general reg */
 		/* set register class */
-		p->n_label = gclass(p->n_left->n_type);
 		if (p->n_left->n_op == REG || p->n_left->n_op == TEMP)
 			break;
 		q = p->n_left;
