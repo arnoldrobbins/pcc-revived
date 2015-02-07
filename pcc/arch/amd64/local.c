@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.86 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local.c,v 1.87 2015/02/07 08:47:54 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -542,7 +542,9 @@ myp2tree(NODE *p)
 			printf(LABFMT ":\n", fltxor);
 			printf("\t.long 0x80000000,0,0,0\n");
 		}
-		p->n_label = p->n_type == FLOAT ? fltxor : dblxor;
+		p->n_ap = attr_add(p->n_ap,
+		    ap = attr_new(ATTR_AMD64_XORLBL, 1));
+		ap->iarg(0) = p->n_type == FLOAT ? fltxor : dblxor;
 		return;
 	}
 	if (kflag && (cdope(p->n_op) & CALLFLG) && p->n_left->n_op == NAME) {

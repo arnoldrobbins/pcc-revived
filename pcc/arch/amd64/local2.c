@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.60 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local2.c,v 1.61 2015/02/07 08:47:54 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -445,6 +445,12 @@ zzzcode(NODE *p, int c)
 			}
 			printf("\tleaq -%d(%%rbp),%%rax\n", stkpos);
 		}
+		break;
+
+	case 'c': /* xor label */
+		if ((ap = attr_find(p->n_ap, ATTR_AMD64_XORLBL)) == NULL)
+			comperr("missing xor label");
+		printf(LABFMT, ap->iarg(0));
 		break;
 
 	case 'F': /* Structure argument */
