@@ -59,7 +59,7 @@ typedef unsigned int wint_t;
 
 #if defined(_LIBPCC_STDDEF_H_) || defined(__need_NULL)
 #undef NULL
-#define NULL (0)
+#define NULL ((void *)(0))
 #endif
 
 #if defined(_LIBPCC_STDDEF_H_)
