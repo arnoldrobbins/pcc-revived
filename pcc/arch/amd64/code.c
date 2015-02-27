@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.80 2014/09/28 12:51:31 ragge Exp $	*/
+/*	$Id: code.c,v 1.81 2015/02/17 19:08:45 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -950,6 +950,8 @@ argput(NODE *p)
 	case INTMEM:
 		r = nrsp;
 		nrsp += SZLONG;
+		if (p->n_type < INT || p->n_type == BOOL)
+			p = cast(p, INT, 0);
 		p = movtomem(p, r, STKREG);
 		break;
 

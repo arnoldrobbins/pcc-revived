@@ -1,4 +1,4 @@
-/*      $Id: cpc.c,v 1.4 2014/12/17 11:36:21 plunky Exp $      */
+/*      $Id: cpc.c,v 1.5 2015/02/26 19:30:32 ragge Exp $      */
 
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
@@ -187,7 +187,7 @@ qloop(void (*fun)(ND *), ND *n1, int a0, int a1, int a2, int a3)
 static void
 gnum(int o, ND *n1)
 {
-	n1->op = o;
+	n1->op = yynode.op;
 	n1->nd_val = yynode.nd_val;
 	shft();
 }
