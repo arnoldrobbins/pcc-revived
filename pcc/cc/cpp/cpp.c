@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.205 2015/01/15 19:38:24 plunky Exp $	*/
+/*	$Id: cpp.c,v 1.207 2015/03/03 19:24:58 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -1578,7 +1578,7 @@ readargs(struct symtab *sp, const usch **args)
 {
 	const usch *vp = sp->value;
 	int c, i, plev, narg, ellips = 0;
-	int warn;
+	int warn, nblk;
 
 	DPRINT(("readargs\n"));
 
@@ -1604,7 +1604,9 @@ readargs(struct symtab *sp, const usch **args)
 				chkdir();
 			}
 		for (;;) {
+			nblk = 0;
 			while (c == EBLOCK) {
+				nblk += 3;
 				sss();
 				c = sloscan();
 			}
@@ -1618,7 +1620,12 @@ readargs(struct symtab *sp, const usch **args)
 				plev++;
 			if (c == ')')
 				plev--;
-			savstr(yytext);
+			if (c == IDENT && (sp = lookup(yytext, FIND)) &&
+			    (sp == linloc)) {
+				stringbuf -= nblk;
+				sheap("%d", ifiles->lineno);
+			} else
+				savstr(yytext);
 oho:			while ((c = sloscan()) == '\n') {
 				ifiles->lineno++;
 				putch(cinput());
