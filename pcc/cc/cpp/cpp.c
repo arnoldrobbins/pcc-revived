@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.207 2015/03/03 19:24:58 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.208 2015/03/14 14:13:39 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -796,7 +796,9 @@ define(void)
 
 	if (flslvl)
 		return;
-	if (sloscan() != WSPACE || sloscan() != IDENT)
+	while ((i = sloscan()) == WSPACE)
+		;
+	if (i != IDENT)
 		goto bad;
 
 	np = lookup(yytext, ENTER);
