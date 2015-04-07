@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.12 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local2.c,v 1.13 2015/03/28 08:28:46 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -603,7 +603,7 @@ myxasm(struct interpass *ip, NODE *p)
 }
 
 void
-storemod(NODE *q, int off)
+storemod(NODE *q, int off, int reg)
 {
 	NODE *l, *r, *p;
 
@@ -612,7 +612,7 @@ storemod(NODE *q, int off)
 		q->n_name = "";
 		q->n_lval = -off/2 + ZPOFF;
 	} else {
-		l = mklnode(REG, 0, FPREG, INCREF(q->n_type));
+		l = mklnode(REG, 0, reg, INCREF(q->n_type));
 		r = mklnode(ICON, off, 0, INT);
 		p = mkbinode(PLUS, l, r, INCREF(q->n_type));
 		q->n_op = UMUL;

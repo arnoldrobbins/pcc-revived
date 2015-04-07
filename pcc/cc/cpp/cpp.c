@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.208 2015/03/14 14:13:39 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.209 2015/03/26 17:34:26 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -396,9 +396,16 @@ line(void)
 
 	if ((c = yylex()) != NUMBER)
 		goto bad;
-	ifiles->lineno = (int)(yynode.nd_val - 1);
-	ifiles->escln = 0;
+	p = yytext;
+	c = 0;
+	/* Can only be decimal number here between 1-2147483647 */
+	while (spechr[*p] & C_DIGIT)
+		c = c * 10 + *p++ - '0';
+	if (*p != 0 || c < 1 || c > 2147483647)
+		goto bad;
 
+	ifiles->lineno = c-1;
+	ifiles->escln = 0;
 	if ((c = yylex()) == '\n')
 		goto okret;
 
