@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.75 2014/12/18 19:21:29 plunky Exp $	*/
+/*	$Id: cpp.h,v 1.79 2015/05/02 08:45:27 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -94,8 +94,11 @@ extern int bidx;
 extern usch spechr[];
 
 #define iswsnl(x)	(spechr[x] & (C_WSNL))
+#define ISWS(x)		((x) == '\t' || (x) == ' ')
 
-/* definition for include file info */
+/*
+ * definition for include file info
+ */
 struct includ {
 	struct includ *next;
 	const usch *fname;	/* current fn, changed if #line found */
@@ -156,6 +159,8 @@ extern struct nd yynode;
 enum { NUMBER = 257, UNUMBER, LS, RS, EQ, NE, STRING, WSPACE, CMNT, IDENT,
 	OROR, ANDAND, DEFINED, LE, GE };
 
+#define	SLO_IGNOREWS	001
+
 struct symtab *lookup(const usch *namep, int enterf);
 int submac(struct symtab *nl, int);
 int kfind(struct symtab *nl);
@@ -170,7 +175,7 @@ void line(void);
 int pushfile(const usch *fname, const usch *fn, int idx, void *incs);
 void prtline(void);
 int yylex(void);
-int sloscan(void);
+int sloscan(void (d)(int), int);
 void cunput(int);
 int yyparse(void);
 void unpstr(const usch *);
@@ -182,4 +187,3 @@ usch *sheap(const char *fmt, ...);
 void warning(const char *fmt, ...);
 void error(const char *fmt, ...);
 int cinput(void);
-void getcmnt(void);
