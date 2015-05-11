@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.79 2015/05/02 08:45:27 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.80 2015/05/09 15:06:56 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -137,6 +137,15 @@ struct initar {
 	int type;
 	char *str;
 };
+
+/* buffer definition */
+struct obuf {
+	usch *buf;
+	int curpos;
+	int bufsz;
+};
+extern struct obuf *obufp;
+extern usch *ibufp;
 
 /*
  * Struct used in parse tree evaluation.

@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.130 2015/05/02 08:45:27 ragge Exp $	*/
+/*	$Id: token.c,v 1.133 2015/05/10 07:28:19 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -39,11 +39,16 @@
  *	- unch() pushes back a character to the input stream.
  *
  * Input data can be read from either stdio or a buffer.
+ * If a buffer is read, it will return EOF when ended and then jump back
+ * to the previous buffer.
+ *	- setibuf(usch *ptr). Buffer to read from, until NULL, return EOF.
+ *		When EOF returned, pop buffer.
+ *	- setobuf(usch *ptr).  Buffer to write to
  *
  * There are three places data is read:
  *	- fastscan() which has a small loop that will scan over input data.
  *	- flscan() where everything is skipped except directives (flslvl)
- *	- getc_cooked() that everything else uses.
+ *	- inch() that everything else uses.
  *
  * 5.1.1.2 Translation phases:
  *	1) Convert UCN to UTF-8 which is what pcc uses internally (chkucn).
@@ -190,10 +195,28 @@ unch(int c)
 	if (c == -1)
 		return;
 
+	if (ibufp) {
+		ibufp--;
+		if (*ibufp != c)
+			error("unch");
+		return;
+	}
+
 	ifiles->curptr--;
 	if (ifiles->curptr < ifiles->bbuf)
 		error("pushback buffer full");
 	*ifiles->curptr = (usch)c;
+}
+
+static int
+ibread(void)
+{
+	int ch = *ibufp++;
+	if (ch == 0) {
+		ibufp = NULL;
+		ch = WARN;
+	}
+	return ch;
 }
 
 /*
@@ -251,6 +274,9 @@ inc2(void)
 {
 	int ch, c2;
 
+	if (ibufp)
+		return ibread();
+
 	if ((ch = inc1()) != '\\')
 		return ch;
 	if ((c2 = inc1()) == '\n') {
@@ -276,7 +302,8 @@ fastcmnt(int ps)
 		unch(ch);
 	} else if (ch == '*') {
 		for (;;) {
-			ch = inc2();
+			if ((ch = inc2()) < 0)
+				break;
 			if (ch == '*') {
 				if ((ch = inc2()) == '/') {
 					break;
@@ -292,6 +319,8 @@ fastcmnt(int ps)
 		unch(ch);
                 return 0;
         }
+	if (ch < 0)
+		error("file ends in comment");
         return 1;
 }
 
@@ -302,6 +331,9 @@ static int
 inch(void)
 {
 	int ch, n;
+
+	if (ibufp)
+		return ibread();
 
 	ch = inc2();
 	n = ifiles->lineno;
@@ -455,6 +487,19 @@ fastid(int ch)
 		yytext[i++] = ch;
 	} while (spechr[ch = inch()] & C_ID);
 	yytext[i] = 0;
+	unch(ch);
+}
+
+/*
+ * readin chars and store on heap. Warn about too long names.
+ */
+static void
+heapid(int ch)
+{
+	do {
+		savch(ch);
+	} while (spechr[ch = inch()] & C_ID);
+	savch(0);
 	unch(ch);
 }
 
@@ -631,18 +676,15 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 				error("fastscan");
 #endif
 		ident:
-			fastid(ch);
-			if (flslvl == 0) {
-				cp = stringbuf;
-				if ((nl = lookup(yytext, FIND)) && kfind(nl))
-					putstr(stringbuf);
-				else
-					putstr((usch *)yytext);
-				stringbuf = cp;
-			}
-			if (ch == -1)
-				goto eof;
-
+			if (flslvl)
+				error("fastscan flslvl");
+			cp = stringbuf;
+			heapid(ch);
+			if ((nl = lookup(cp, FIND)) && kfind(nl))
+				putstr(stringbuf);
+			else
+				putstr(cp);
+			stringbuf = cp;
 			break;
 
 		case '\\':
@@ -655,7 +697,7 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 		}
 	}
 
-eof:	warning("unexpected EOF");
+/*eof:*/	warning("unexpected EOF");
 	putch('\n');
 }
 
@@ -746,7 +788,6 @@ yagain:	yyp = 0;
 		if (tflag && defining)
 			goto any;
 		yytp = 0;
-	strng:
 		faststr(ch, yyts);
 		yyts(0);
 		return STRING;
@@ -763,8 +804,9 @@ yagain:	yyp = 0;
 		if ((c2 == '\"' || c2 == '\'') && !tflag) {
 			yytp = 0;
 			yyts(ch);
-			ch = c2;
-			goto strng;
+			faststr(c2, yyts);
+			yyts(0);
+			return c2 == '\'' ? NUMBER : STRING;
 		}
 		unch(c2);
 		/* FALLTHROUGH */
