@@ -1,4 +1,4 @@
-/*	$Id: node.h,v 1.37 2015/01/04 18:41:04 ragge Exp $	*/
+/*	$Id: node.h,v 1.38 2015/07/03 11:13:17 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -64,7 +64,6 @@ struct suedef;
 struct regw;
 
 typedef struct node {
-	struct	node *next;
 	int	n_op;
 	union {
 		int _reg;

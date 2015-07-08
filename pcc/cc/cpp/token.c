@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.134 2015/06/21 18:04:09 ragge Exp $	*/
+/*	$Id: token.c,v 1.140 2015/06/27 13:02:02 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -29,7 +29,6 @@
  * There are three main routines:
  *	- fastscan() loops over the input stream searching for magic
  *		characters that may require actions.
- *	- sloscan() tokenize the input stream and returns tokens.
  *	- yylex() returns something from the input stream that
  *		is suitable for yacc.
  *
@@ -71,9 +70,9 @@
 #include "compat.h"
 #include "cpp.h"
 
-static void cvtdig(int);
+static void cvtdig(usch **);
 static int dig2num(int);
-static int charcon(usch *);
+static int charcon(usch **);
 static void elsestmt(void);
 static void ifdefstmt(void);
 static void ifndefstmt(void);
@@ -95,8 +94,6 @@ static void unch(int c);
 #define MAX_INCLEVEL	100
 static int inclevel;
 
-usch yytext[CPPBUF];
-
 struct includ *ifiles;
 
 /* some common special combos for init */
@@ -116,7 +113,7 @@ usch spechr[256] = {
 	C_WSNL,	C_2,	C_SPEC,	0,	0,	0,	C_2,	C_SPEC,
 	0,	0,	0,	C_2,	0,	C_2,	0,	C_SPEC|C_2,
 	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,
-	C_DX,	C_DX,	0,	0,	C_2,	C_2,	C_2,	0,
+	C_DX,	C_DX,	0,	0,	C_2,	C_2,	C_2,	C_SPEC,
 
 	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IXE,	C_IX,	C_I,
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
@@ -170,6 +167,28 @@ inpbuf(void)
 	}
 	return len;
 }
+
+/*
+ * Fillup input buffer to contain at least minsz characters.
+ */
+static int
+refill(int minsz)
+{
+	usch *dp;
+	int i, sz;
+
+	if (ifiles->curptr+minsz < ifiles->maxread)
+		return 0; /* already enough in input buffer */
+
+	sz = ifiles->maxread - ifiles->curptr;
+	dp = ifiles->buffer - sz;
+	for (i = 0; i < sz; i++)
+		dp[i] = ifiles->curptr[i];
+	(void)inpbuf();
+	ifiles->curptr = dp;
+	return 0;
+}
+#define	REFILL(x) if (ifiles->curptr+x < ifiles->maxread) refill(x)
 
 /*
  * return a raw character from the input stream
@@ -452,21 +471,6 @@ fastspcg(void)
 }
 
 /*
- * readin chars and store in yytext. Warn about too long names.
- */
-void
-fastid(int ch)
-{
-	int i = 0;
-
-	do {
-		yytext[i++] = ch;
-	} while (spechr[ch = inch()] & C_ID);
-	yytext[i] = 0;
-	unch(ch);
-}
-
-/*
  * readin chars and store on heap. Warn about too long names.
  */
 usch *
@@ -568,7 +572,7 @@ static void
 fastscan(void)
 {
 	struct symtab *nl;
-	int ch, c2, i;
+	int ch, c2, i, nch;
 	usch *cp;
 
 	goto run;
@@ -577,7 +581,13 @@ fastscan(void)
 		/* tight loop to find special chars */
 		/* should use getchar/putchar here */
 		for (;;) {
-			ch = inch();
+			if (ifiles->curptr < ifiles->maxread) {
+				ch = *ifiles->curptr++;
+			} else {
+				if (inpbuf() > 0)
+					continue;
+				return;
+			}
 xloop:			if (ch < 0)
 				return; /* EOF */
 			if ((spechr[ch] & C_SPEC) != 0)
@@ -585,6 +595,8 @@ xloop:			if (ch < 0)
 			putch(ch);
 		}
 
+		REFILL(2);
+		nch = *ifiles->curptr;
 		switch (ch) {
 		case WARN:
 		case CONC:
@@ -592,6 +604,10 @@ xloop:			if (ch < 0)
 			break;
 
 		case '/': /* Comments */
+			if (nch != '/' && nch != '*') {
+				putch(ch);
+				continue;
+			}
 			if (Cflag == 0) {
 				if (fastcmnt(1))
 					putch(' '); /* 5.1.1.2 p3 */
@@ -622,6 +638,12 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 				goto xloop;
 			break;
 
+		case '?':
+			if (nch == '?' && (ch = chktg()))
+				goto xloop;
+			putch('?');
+			break;
+
 		case '\'': /* character constant */
 			if (tflag) {
 				putch(ch);
@@ -639,13 +661,10 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 			goto xloop;
 
 		case 'L':
-			if ((ch = inch()) == '\"' || ch == '\'') {
-				putch('L');
-				goto xloop;
+			if (nch == '\"' || nch == '\'') {
+				putch(ch);
+				break;
 			}
-			unch(ch);
-			ch = 'L';
-
 			/* FALLTHROUGH */
 		default:
 #ifdef PCC_DEBUG
@@ -667,6 +686,11 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 			break;
 
 		case '\\':
+			if (nch == '\n') {
+				ifiles->escln++;
+				ifiles->curptr++;
+				break;
+			}
 			if (chkucn()) {
 				ch = inch();
 				goto ident;
@@ -680,160 +704,70 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 	putch('\n');
 }
 
-static int yytp;
-static void
-yyts(int c)
+/*
+ * Store an if/elif line on heap for parsing, evaluate macros and 
+ * call yyparse().
+ */
+static usch *yyinp;
+static int
+exprline(void)
 {
-	yytext[yytp++] = c;
-}
+	struct symtab *nl;
+	int oCflag = Cflag;
+	usch *cp, *bp = stringbuf;
+	int c, ifdef;
 
-int
-sloscan(void (*d)(int), int flags)
-{
-	int ch, c2;
-	int yyp;
+	Cflag = ifdef = 0;
 
-zagain:
-	ch = inch();
-
-yagain:	yyp = 0;
-	yytext[yyp++] = (usch)ch;
-	switch (ch) {
-	case -1: /* EOF */
-		return 0;
-
-	case '\n': /* do not pass NL */
-		unch(ch);
-		yytext[yyp] = 0;
-		return ch;
-
-	case '\r': /* Ignore CR */
-		goto zagain;
-
-	case '.':
-	case '0': case '1': case '2': case '3': case '4': case '5':
-	case '6': case '7': case '8': case '9':
-		yytp = 0;
-		unch(fastnum(ch, yyts));
-		yyts(0);
-		if (yytext[0] == '.' && yytext[1] == 0)
-			return '.';
-		return NUMBER;
-
-	case '\'':
-		if (tflag)
-			goto any;
-		yytp = 0;
-		faststr(ch, yyts);
-		yyts(0);
-		return NUMBER;
-
-	case ' ':
-	case '\t':
-		do {
-			ch = inch();
-		} while (ISWS(ch));
-		if (flags & SLO_IGNOREWS)
-			goto yagain;
-		unch(ch);
-		yytext[yyp] = 0;
-		return WSPACE;
-
-	case '/':
-		if (Cflag == 0) {
-			if (fastcmnt(0))
-				error("comment and no Cflag");
-		} else {
-			extern int readmac;
-
-#if 0
-			if (readmac) {
-				unch(c2 = inch());
-				yytext[1] = 0;
-				if (c2 == '*')
-					return CMNT;
-			}
-#endif
-			yytp = 1;
-			Ccmnt(d ? d : putch);
-			yyts(0);
-			if (readmac)
-				return CMNT;
-			goto zagain;
-		}
-		goto any;
-
-	case '\"':
-		if (tflag && defining)
-			goto any;
-		yytp = 0;
-		faststr(ch, yyts);
-		yyts(0);
-		return STRING;
-
-	case '\\':
-		if (chkucn()) {
-			--yyp;
-			goto ident;
-		}
-		goto any;
-
-	case 'L':
-		c2 = inch();
-		if ((c2 == '\"' || c2 == '\'') && !tflag) {
-			yytp = 0;
-			yyts(ch);
-			faststr(c2, yyts);
-			yyts(0);
-			return c2 == '\'' ? NUMBER : STRING;
-		}
-		unch(c2);
-		/* FALLTHROUGH */
-
-	/* Yetch, all identifiers */
-	case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-	case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
-	case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
-	case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-	case 'y': case 'z':
-	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-	case 'G': case 'H': case 'I': case 'J': case 'K':
-	case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
-	case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
-	case 'Y': case 'Z':
-	case '_': /* {L}({L}|{D})* */
-
-	ident:
-		fastid(ch);
-		return IDENT;
-
-	default:
-		if ((ch & 0x80))
-			goto ident;
-
-	any:
-		yytext[yyp] = 0;
-		return yytext[0];
-	} /* endcase */
-
-	/* NOTREACHED */
+	while ((c = inch()) != '\n') {
+		if (ISID0(c)) {
+			cp = heapid(c);
+			stringbuf = cp;
+			nl = lookup(cp, FIND);
+			if (strcmp((char *)cp, "defined") == 0) {
+				ifdef = 1;
+			} else if (ifdef) {
+				savch(nl ? '1' : '0');
+				ifdef = 0;
+			} else if (nl != NULL) {
+				kfind(nl);
+				while (*stringbuf) {
+					if (ISID0(*stringbuf)) {
+						*stringbuf++ = '0';
+						while (ISID(*stringbuf))
+							*stringbuf++ = ' ';
+					} else
+						stringbuf++;
+				}
+			} else
+				savch('0');
+		} else
+			savch(c);
+	}
+	savch(0);
+	unch('\n');
+	yyinp = bp;
+	c = yyparse();
+	stringbuf = bp;
+	Cflag = oCflag;
+	return c;
 }
 
 int
 yylex(void)
 {
-	static int ifdef, noex;
-	struct symtab *nl;
-	int ch, c2;
+	int ch, c2, t;
 
-	ch = sloscan(NULL, SLO_IGNOREWS);
+	while ((ch = *yyinp++) == ' ' || ch == '\t')
 		;
+	t = ISDIGIT(ch) ? NUMBER : ch;
 	if (ch < 128 && (spechr[ch] & C_2))
-		c2 = inch();
+		c2 = *yyinp++;
 	else
 		c2 = 0;
 
-	switch (ch) {
+	switch (t) {
+	case 0: return WARN;
 	case '=':
 		if (c2 == '=') return EQ;
 		break;
@@ -860,63 +794,19 @@ yylex(void)
 			error("invalid preprocessor operator %c%c", ch, c2);
 		break;
 
-	case '/':
-		if (Cflag == 0 || c2 != '*')
-			break;
-		/* Found comment that need to be skipped */
-		for (;;) {
-			ch = inch();
-		c1:	if (ch != '*')
-				continue;
-			if ((ch = inch()) == '/')
-				break;
-			goto c1;
-		}
-		return yylex();
+	case '\'':
+		yynode.op = NUMBER;
+		yynode.nd_val = charcon(&yyinp);
+		return NUMBER;
 
 	case NUMBER:
-		if (yytext[0] == '\'') {
-			yynode.op = NUMBER;
-			yynode.nd_val = charcon(yytext);
-		} else
-			cvtdig(yytext[0] != '0' ? 10 :
-			    yytext[1] == 'x' || yytext[1] == 'X' ? 16 : 8);
+		cvtdig(&yyinp);
 		return NUMBER;
 
-	case IDENT:
-		if (strcmp((char *)yytext, "defined") == 0) {
-			ifdef = 1;
-			return DEFINED;
-		}
-		nl = lookup(yytext, FIND);
-		if (ifdef) {
-			yynode.nd_val = nl != NULL;
-			ifdef = 0;
-		} else if (nl && noex == 0) {
-			usch *och = stringbuf;
-			int i;
-
-			i = kfind(nl);
-			unch(WARN);
-			if (i)
-				unpstr(stringbuf);
-			else
-				unpstr(nl->namep);
-			stringbuf = och;
-			noex = 1;
-			return yylex();
-		} else {
-			yynode.nd_val = 0;
-		}
-		yynode.op = NUMBER;
-		return NUMBER;
-	case WARN:
-		noex = 0;
-		return yylex();
 	default:
 		return ch;
 	}
-	unch(c2);
+	yyinp--;
 	return ch;
 }
 
@@ -991,7 +881,7 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 #ifndef BUF_STACK
 	ic->bbuf = malloc(BBUFSZ);
 #endif
-	ic->buffer = ic->bbuf+NAMEMAX;
+	ic->buffer = ic->bbuf+PBMAX;
 	ic->curptr = ic->buffer;
 	ifiles = ic;
 	ic->lineno = 1;
@@ -1000,7 +890,7 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 	ic->idx = idx;
 	ic->incs = incs;
 	ic->fn = fn;
-	prtline();
+	prtline(1);
 	if (initar) {
 		int oin = ic->infil;
 		ic->infil = -1;
@@ -1010,7 +900,7 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 		if (dMflag)
 			printf("%s", (char *)ic->buffer);
 		fastscan();
-		prtline();
+		prtline(1);
 		ic->infil = oin;
 	}
 
@@ -1034,7 +924,7 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
  * Print current position to output file.
  */
 void
-prtline(void)
+prtline(int nl)
 {
 	usch *sb = stringbuf;
 
@@ -1052,7 +942,7 @@ prtline(void)
 		sheap("\n# %d \"%s\"", ifiles->lineno, ifiles->fname);
 		if (ifiles->idx == SYSINC)
 			sheap(" 3");
-		sheap("\n");
+		if (nl) sheap("\n");
 		putstr(sb);
 	}
 	stringbuf = sb;
@@ -1083,42 +973,46 @@ dig2num(int c)
  * Convert string numbers to unsigned long long and check overflow.
  */
 static void
-cvtdig(int rad)
+cvtdig(usch **yyp)
 {
 	unsigned long long rv = 0;
 	unsigned long long rv2 = 0;
-	usch *y = yytext;
-	int c;
+	usch *y = *yyp;
+	int rad;
 
-	c = *y++;
+	y--;
+	rad = *y != '0' ? 10 : y[1] == 'x' ||  y[1] == 'X' ? 16 : 8;
 	if (rad == 16)
-		y++;
-	while ((spechr[c] & C_HEX)) {
-		rv = rv * rad + dig2num(c);
+		y += 2;
+	while ((spechr[*y] & C_HEX)) {
+		rv = rv * rad + dig2num(*y);
 		/* check overflow */
 		if (rv / rad < rv2)
-			error("constant \"%s\" is out of range", yytext);
+			error("constant is out of range");
 		rv2 = rv;
-		c = *y++;
-	}
-	y--;
-	while (*y == 'l' || *y == 'L')
 		y++;
-	yynode.op = *y == 'u' || *y == 'U' ? UNUMBER : NUMBER;
+	}
+	yynode.op = NUMBER;
+	while (*y == 'l' || *y == 'L' || *y == 'u' || *y == 'U') {
+		if (*y == 'u' || *y == 'U')
+			yynode.op = UNUMBER;
+		y++;
+	}
 	yynode.nd_uval = rv;
 	if ((rad == 8 || rad == 16) && yynode.nd_val < 0)
 		yynode.op = UNUMBER;
 	if (yynode.op == NUMBER && yynode.nd_val < 0)
 		/* too large for signed, see 6.4.4.1 */
-		error("constant \"%s\" is out of range", yytext);
+		error("constant is out of range");
+	*yyp = y;
 }
 
 static int
-charcon(usch *p)
+charcon(usch **yyp)
 {
 	int val, c;
+	usch *p = *yyp;
 
-	p++; /* skip first ' */
 	val = 0;
 	if (*p++ == '\\') {
 		switch (*p++) {
@@ -1151,31 +1045,27 @@ charcon(usch *p)
 
 	} else
 		val = p[-1];
+	*yyp = p;
 	return val;
 }
 
 static void
 chknl(int ignore)
 {
+	void (*f)(const char *, ...);
 	int t;
 
-	if ((t = sloscan(NULL, SLO_IGNOREWS)) != '\n') {
+	f = ignore ? warning : error;
+	if ((t = fastspc()) != '\n') {
 		if (t) {
-			if (ignore) {
-				warning("newline expected, got \"%s\"", yytext);
-				/* ignore rest of line */
-				while ((t = sloscan(NULL, 0)) && t != '\n')
-					;
-			}
-			else
-				error("newline expected, got \"%s\"", yytext);
-		} else {
-			if (ignore)
-				warning("no newline at end of file");
-			else
-				error("no newline at end of file");
-		}
+			f("newline expected");
+			/* ignore rest of line */
+			while ((t = inch()) >= 0 && t != '\n')
+				;
+		} else
+			f("no newline at end of file");
 	}
+	unch(t);
 }
 
 static void
@@ -1202,11 +1092,15 @@ elsestmt(void)
 static void
 ifdefstmt(void)
 {
-	int t;
+	usch *bp;
+	int ch;
 
-	if ((t = sloscan(NULL, SLO_IGNOREWS)) != IDENT)
+	if (!ISID0(ch = fastspc()))
 		error("bad #ifdef");
-	if (lookup(yytext, FIND) == NULL)
+	bp = heapid(ch);
+	stringbuf = bp;
+
+	if (lookup(bp, FIND) == NULL)
 		flslvl++;
 	else
 		trulvl++;
@@ -1216,11 +1110,14 @@ ifdefstmt(void)
 static void
 ifndefstmt(void)
 {
-	int t;
+	usch *bp;
+	int ch;
 
-	if ((t = sloscan(NULL, SLO_IGNOREWS)) != IDENT)
+	if (!ISID0(ch = fastspc()))
 		error("bad #ifndef");
-	if (lookup(yytext, FIND) != NULL)
+	bp = heapid(ch);
+	stringbuf = bp;
+	if (lookup(bp, FIND) != NULL)
 		flslvl++;
 	else
 		trulvl++;
@@ -1245,7 +1142,7 @@ endifstmt(void)
 static void
 ifstmt(void)
 {
-	yyparse() ? trulvl++ : flslvl++;
+	exprline() ? trulvl++ : flslvl++;
 }
 
 static void
@@ -1258,7 +1155,7 @@ elifstmt(void)
 			;
 		else if (--flslvl!=0)
 			flslvl++;
-		else if (yyparse())
+		else if (exprline())
 			trulvl++;
 		else
 			flslvl++;
@@ -1292,26 +1189,17 @@ static void
 cpperror(void)
 {
 	usch *cp;
-	int c;
 
-	if (flslvl)
-		return;
-	if ((c = sloscan(NULL, SLO_IGNOREWS)) != '\n')
-		error("bad #error");
 	cp = savln();
 	error("#error %s", cp);
+	stringbuf = cp;
 }
 
 static void
 cppwarning(void)
 {
 	usch *cp;
-	int c;
 
-	if (flslvl)
-		return;
-	if ((c = sloscan(NULL, SLO_IGNOREWS)) != WSPACE && c != '\n')
-		error("bad #warning");
 	cp = savln();
 	warning("#warning %s", cp);
 	stringbuf = cp;
@@ -1321,13 +1209,15 @@ static void
 undefstmt(void)
 {
 	struct symtab *np;
+	usch *bp;
+	int ch;
 
-	if (flslvl)
-		return;
-	if (sloscan(NULL, SLO_IGNOREWS) != IDENT)
+	if (!ISID0(ch = fastspc()))
 		error("bad #undef");
-	if ((np = lookup(yytext, FIND)) != NULL)
+	bp = heapid(ch);
+	if ((np = lookup(bp, FIND)) != NULL)
 		np->value = 0;
+	stringbuf = bp;
 	chknl(0);
 }
 
@@ -1335,19 +1225,23 @@ static void
 identstmt(void)
 {
 	struct symtab *sp;
-	int i;
+	usch *bp;
+	int ch;
 
-	if (sloscan(NULL, 0) != WSPACE)
+	bp = stringbuf;
+	if (ISID0(ch = fastspc())) {
+		bp = heapid(ch);
+		stringbuf = bp;
+		if ((sp = lookup(bp, FIND)))
+			kfind(sp);
+		if (bp[0] != '\"')
+			goto bad;
+	} else if (ch == '\"') {
+		faststr(ch, savch);
+	} else
 		goto bad;
-
-	if ((i = sloscan(NULL, 0)) == IDENT) {
-		if ((sp = lookup(yytext, FIND)) && kfind(sp))
-			unpstr(stringbuf);
-		i = sloscan(NULL, 0);
-	}
-
-	if (i != STRING)
-		goto bad;
+	stringbuf = bp;
+	chknl(1);
 	return;
 bad:
 	error("bad #ident directive");
@@ -1356,18 +1250,13 @@ bad:
 static void
 pragmastmt(void)
 {
-	usch *sb;
+	int ch;
 
-	if (flslvl)
-		return;
-	if (sloscan(NULL, 0) != WSPACE)
-		error("bad #pragma");
-	sb = stringbuf;
-	savstr((const usch *)"\n#pragma ");
-	savln();
-	putstr(sb);
-	prtline();
-	stringbuf = sb;
+	putstr((const usch *)"\n#pragma");
+	while ((ch = inch()) != '\n' && ch > 0)
+		putch(ch);
+	unch(ch);
+	prtline(1);
 }
 
 int
@@ -1454,6 +1343,7 @@ void
 ppdir(void)
 {
 	int ch, i, oldC;
+	usch *bp;
 
 	oldC = Cflag;
 redo:	Cflag = 0;
@@ -1465,12 +1355,13 @@ redo:	Cflag = 0;
 	Cflag = oldC;
 	if ((spechr[ch] & C_ID0) == 0)
 		goto out;
-	fastid(ch);
+	bp = heapid(ch);
+	stringbuf = bp;
 
 	/* got some keyword */
 	for (i = 0; i < NPPD; i++) {
-		if (yytext[0] == ppd[i].name[0] &&
-		    strcmp((char *)yytext, ppd[i].name) == 0) {
+		if (bp[0] == ppd[i].name[0] &&
+		    strcmp((char *)bp, ppd[i].name) == 0) {
 			if (flslvl == 0) {
 				(*ppd[i].fun)();
 				if (flslvl == 0)

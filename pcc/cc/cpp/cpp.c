@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.215 2015/06/21 18:04:09 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.220 2015/07/04 07:50:19 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -83,8 +83,6 @@ static void prrep(const usch *s);
 int Aflag, Cflag, Eflag, Mflag, dMflag, Pflag, MPflag, MMDflag;
 usch *Mfile, *MPfile, *Mxfile;
 struct initar *initar;
-int readmac;
-int defining;
 int warnings;
 FILE *of;
 
@@ -133,13 +131,8 @@ usch *stringbuf = sbf;
 
 /*
  * No-replacement array.  If a macro is found and exists in this array
- * then no replacement shall occur.  This is a stack.
+ * then no replacement shall occur.
  */
-struct symtab *norep[RECMAX];	/* Symbol table index table */
-int norepptr = 1;			/* Top of index table */
-unsigned short bptr[RECMAX];	/* currently active noexpand macro stack */
-int bidx;			/* Top of bptr stack */
-
 struct blocker {
 	struct blocker *next;
 	struct symtab *sp;
@@ -157,6 +150,8 @@ static void addidir(char *idir, struct incs **ww);
 static void vsheap(const char *, va_list);
 static int skipws(struct iobuf *ib);
 static int getyp(usch *s);
+static void *xrealloc(void *p, int sz);
+static void *xmalloc(int sz);
 
 int
 main(int argc, char **argv)
@@ -190,7 +185,7 @@ main(int argc, char **argv)
 		case 'i': /* include */
 		case 'U': /* undef */
 			/* XXX should not need malloc() here */
-			if ((it = malloc(sizeof(struct initar))) == NULL)
+			if ((it = xmalloc(sizeof(struct initar))) == NULL)
 				error("couldn't apply -%c %s", ch, optarg);
 			it->type = ch;
 			it->str = optarg;
@@ -372,7 +367,7 @@ putob(struct iobuf *ob, int ch)
 {
 	if (ob->cptr == ob->bsz) {
 		int sz = ob->bsz - ob->buf;
-		ob->buf = realloc(ob->buf, sz + BUFSIZ);
+		ob->buf = xrealloc(ob->buf, sz + BUFSIZ);
 		ob->cptr = ob->buf + sz;
 		ob->bsz = ob->buf + sz + BUFSIZ;
 	}
@@ -380,28 +375,31 @@ putob(struct iobuf *ob, int ch)
 	*ob->cptr++ = ch;
 }
 
+static int nbufused;
 /*
  * Write a character to an out buffer.
  */
 static struct iobuf *
 getobuf(void)
 {
-	struct iobuf *iob = malloc(sizeof(struct iobuf));
+	struct iobuf *iob = xmalloc(sizeof(struct iobuf));
 
-	iob->buf = iob->cptr = malloc(BUFSIZ);
+	nbufused++;
+	iob->buf = iob->cptr = xmalloc(BUFSIZ);
 	iob->bsz = iob->buf + BUFSIZ;
 	iob->ro = 0;
 	return iob;
 }
 
 /*
- * Write a character to an out buffer.
+ * Create a read-only input buffer.
  */
 static struct iobuf *
 mkrobuf(const usch *s)
 {
-	struct iobuf *iob = malloc(sizeof(struct iobuf));
+	struct iobuf *iob = xmalloc(sizeof(struct iobuf));
 
+	nbufused++;
 	DPRINT(("mkrobuf %s\n", s));
 	iob->buf = iob->cptr = (usch *)s;
 	iob->bsz = iob->buf + strlen((char *)iob->buf);
@@ -428,6 +426,7 @@ strtobuf(usch *str, struct iobuf *iob)
 static void
 bufree(struct iobuf *iob)
 {
+	nbufused--;
 	if (iob->ro == 0)
 		free(iob->buf);
 	free(iob);
@@ -471,48 +470,40 @@ addidir(char *idir, struct incs **ww)
 void
 line(void)
 {
-	static usch *lbuf;
-	static int llen;
-	usch *p;
-	int c;
+	int c, n;
 
-	if ((c = yylex()) != NUMBER)
+	if (!ISDIGIT(c = skipws(0)))
 		goto bad;
-	p = yytext;
-	c = 0;
+	n = 0;
+	do {
+		n = n * 10 + c - '0';
+	} while (ISDIGIT(c = cinput()));
+
 	/* Can only be decimal number here between 1-2147483647 */
-	while (spechr[*p] & C_DIGIT)
-		c = c * 10 + *p++ - '0';
-	if (*p != 0 || c < 1 || c > 2147483647)
+	if (n < 1 || n > 2147483647)
 		goto bad;
 
-	ifiles->lineno = c-1;
+	ifiles->lineno = n;
 	ifiles->escln = 0;
-	if ((c = yylex()) == '\n')
-		goto okret;
+	if (ISWS(c)) {
+		c = skipws(NULL);
+		if (c == 'L')
+			c = cinput();
+		if (c != '\"')
+			goto bad;
+		/* loses space on heap... does it matter? */
+		ifiles->fname = stringbuf+1;
+		faststr(c, savch);
+		stringbuf--;
+		savch(0);
 
-	if (c != STRING)
-		goto bad;
-
-	p = yytext;
-	if (*p++ == 'L')
-		p++;
-	c = strlen((char *)p);
-	p[c - 1] = '\0';
-	if (llen < c) {
-		/* XXX may lose heap space */
-		lbuf = stringbuf;
-		stringbuf += c;
-		llen = c;
-		if (stringbuf >= &sbf[SBSIZE])
-			error("#line filename exceeds buffer size");
+		c = skipws(0);
 	}
-	memcpy(lbuf, p, c);
-	ifiles->fname = lbuf;
-	if (yylex() != '\n')
+	if (c != '\n')
 		goto bad;
 
-okret:	prtline();
+	prtline(0);
+	cunput('\n');
 	return;
 
 bad:	error("bad #line");
@@ -717,7 +708,7 @@ include(void)
 bad:	error("bad #include");
 	/* error() do not return */
 okret:
-	prtline();
+	prtline(1);
 }
 
 void
@@ -749,7 +740,7 @@ include_next(void)
 	if (fsrch(fn, ifiles->idx, ifiles->incs) == 0)
 		error("cannot find '%s'", fn);
 
-	prtline();
+	prtline(1);
 	return;
 
 bad:	error("bad #include_next");
@@ -840,7 +831,6 @@ define(void)
 		redef = 0;
 
 	vararg = NULL;
-	defining = readmac = 1;
 	sbeg = stringbuf++;
 	if ((c = cinput()) == '(') {
 		narg = 0;
@@ -960,7 +950,10 @@ define(void)
 				savch(c);
 				c = cinput();
 			}
-			faststr(c, savch);
+			if (tflag)
+				savch(c);
+			else
+				faststr(c, savch);
 			break;
 
 		case IDENT:
@@ -994,7 +987,6 @@ define(void)
 		c = cinput();
 	}
 	cunput(c);
-	defining = readmac = 0;
 	/* remove trailing whitespace */
 	DELEWS();
 
@@ -1404,13 +1396,17 @@ sstr:				for (; cp < ib->cptr; cp++)
 				if (*sp->value != OBJCT) {
 					while (ISWS(*ib->cptr))
 						ib->cptr++;
-					if (*ib->cptr == 0)
+					if (*ib->cptr == 0) {
+						bufree(xb);
 						return sp;
+					}
 				}
 newmac:				if ((xob = submac(sp, 1, ib, NULL)) == NULL) {
 					savstr(sp->namep);
 				} else {
-					if ((sp = loopover(xob)))
+					sp = loopover(xob);
+					bufree(xob);
+					if (sp != NULL)
 						goto newmac;
 				}
 			}
@@ -1442,8 +1438,7 @@ kfind(struct symtab *sp)
 	const usch *argary[MAXARGS+1], *sbp;
 	int c, n = 0;
 
-	blkidp = norepptr = 1;
-	bidx = 0;
+	blkidp = 1;
 	sbp = stringbuf;
 	DPRINT(("%d:enter kfind(%s)\n",0,sp->namep));
 	switch (*sp->value) {
@@ -1464,6 +1459,7 @@ kfind(struct symtab *sp)
 		ib = mkrobuf(sp->value+1);
 		ob = getobuf();
 		ob = exparg(1, ib, ob, bl);
+		bufree(ib);
 		break;
 
 	default:
@@ -1487,6 +1483,7 @@ again:		if (readargs1(sp, argary))
 		ib = subarg(sp, argary, 1, bl);
 		ob = getobuf();
 		ob = exparg(1, ib, ob, bl);
+		bufree(ib);
 		break;
 	}
 
@@ -1502,16 +1499,21 @@ again:		if (readargs1(sp, argary))
 		while (ISWSNL(c = cinput()))
 			if (c == '\n')
 				n++;
-		if (c == '(')
+		if (c == '(') {
+			bufree(ob);
 			goto again;
+		}
 		cunput(c);
 		savstr(sp->namep);
 	}
+	bufree(ob);
 
 	for (ifiles->lineno += n; n; n--)
 		savch('\n');
 	savch(0);
 	stringbuf = (usch *)sbp;
+	if (nbufused)
+		error("lost buffer");
 	return 1;
 }
 
@@ -1548,6 +1550,7 @@ submac(struct symtab *sp, int lvl, struct iobuf *ib, struct blocker *obl)
 		ob = getobuf();
 		DPRINT(("%d:submac: calling exparg\n", lvl));
 		ob = exparg(lvl+1, ib, ob, bl);
+		bufree(ib);
 		DPRINT(("%d:submac: return exparg\n", lvl));
 		break;
 	default:
@@ -1569,6 +1572,7 @@ submac(struct symtab *sp, int lvl, struct iobuf *ib, struct blocker *obl)
 		ob = getobuf();
 		DPRINT(("%d:submac(: calling exparg\n", lvl));
 		ob = exparg(lvl+1, ib, ob, bl);
+		bufree(ib);
 		DPRINT(("%d:submac(: return exparg\n", lvl));
 		break;
 	}
@@ -1811,8 +1815,12 @@ readargs2(usch **inp, struct symtab *sp, const usch **args)
 					error("eof in macro");
 			} else if (c == BLKID) {
 				savch(c), savch(raread());
-			} else if (c == '/') error("FIXME ccmnt");
-			else if (c == '\"' || c == '\'') {
+			} else if (c == '/') {
+				if ((c = raread()) == '*')
+					error("FIXME ccmnt");
+				savch('/');
+				continue;
+			} else if (c == '\"' || c == '\'') {
 				if (raptr) {
 					struct iobuf *xob = getobuf();
 					raptr = fstrstr(raptr-1, xob);
@@ -1887,7 +1895,7 @@ readargs2(usch **inp, struct symtab *sp, const usch **args)
 /*
  * expand a function-like macro.
  * vp points to end of replacement-list
- * reads function arguments from sloscan(NULL)
+ * reads function arguments from input stream.
  * result is pushed-back for more scanning.
  */
 struct iobuf *
@@ -2118,15 +2126,6 @@ sblk:				storeblk(blkix(mergeadd(bl, m)), ob);
 }
 
 #ifdef PCC_DEBUG
-#if 0
-static void
-imp(const char *str)
-{
-	printf("%s (%d) '", str, bidx);
-	prline(ifiles->curptr);
-	printf("'\n");
-}
-#endif
 
 static void
 prrep(const usch *s)
@@ -2325,16 +2324,35 @@ struct tree {
 static struct tree *sympole;
 static int numsyms;
 
+static struct tree *
+gtree(void)
+{
+	static int ntrees;
+	static struct tree *tp;
+
+	if (ntrees == 0) {
+		tp = xmalloc(BUFSIZ);
+		ntrees = BUFSIZ/sizeof(*tp);
+	}
+	return &tp[--ntrees];
+}
+
 /*
  * Allocate a symtab struct and store the string.
  */
 static struct symtab *
 getsymtab(const usch *str)
 {
-	struct symtab *sp = malloc(sizeof(struct symtab));
+	static int nsyms;
+	static struct symtab *spp;
+	struct symtab *sp;
 
-	if (sp == NULL)
-		error("getsymtab: couldn't allocate symtab");
+	if (nsyms == 0) {
+		spp = xmalloc(BUFSIZ);
+		nsyms = BUFSIZ/sizeof(*sp);
+	}
+	sp = &spp[--nsyms];
+
 	sp->namep = str;
 	sp->value = NULL;
 	sp->file = ifiles ? ifiles->orgfn : (const usch *)"<initial>";
@@ -2407,8 +2425,7 @@ lookup(const usch *key, int enterf)
 		ix >>= 1, cix++;
 
 	/* Create new node */
-	if ((new = malloc(sizeof *new)) == NULL)
-		error("getree: couldn't allocate tree");
+	new = gtree();
 	bit = P_BIT(key, cix);
 	new->bitno = cix | (bit ? RIGHT_IS_LEAF : LEFT_IS_LEAF);
 	new->lr[bit] = (struct tree *)getsymtab(key);
@@ -2446,6 +2463,26 @@ lookup(const usch *key, int enterf)
 	if (bitno < cix)
 		new->bitno |= (bit ? LEFT_IS_LEAF : RIGHT_IS_LEAF);
 	return (struct symtab *)new->lr[bit];
+}
+
+static void *
+xmalloc(int sz)
+{
+	usch *rv;
+
+	if ((rv = (void *)malloc(sz)) == NULL)
+		error("xmalloc: out of mem");
+	return rv;
+}
+
+static void *
+xrealloc(void *p, int sz)
+{
+	usch *rv;
+
+	if ((rv = (void *)realloc(p, sz)) == NULL)
+		error("xrealloc: out of mem");
+	return rv;
 }
 
 static usch *

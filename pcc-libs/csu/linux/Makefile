@@ -6,9 +6,9 @@ SRCDIR ?= .
 
 CFLAGS = -I$(SRCDIR)/$(MACH) -I$(SRCDIR) -Wall -Wstrict-prototypes -Wmissing-prototypes
 
-#OBJS = crt0.o crt1.o gcrt1.o crti.o crtn.o crtbegin.o crtend.o \
-#	crtbeginS.o crtendS.o crtbeginT.o crtendT.o
-OBJS = crtbegin.o crtend.o crtbeginS.o crtendS.o crtbeginT.o crtendT.o
+OBJS = crt0.o crt1.o gcrt1.o crti.o crtn.o crtbegin.o crtend.o \
+	crtbeginS.o crtendS.o crtbeginT.o crtendT.o
+#OBJS = crtbegin.o crtend.o crtbeginS.o crtendS.o crtbeginT.o crtendT.o
 
 
 all:	$(OBJS)

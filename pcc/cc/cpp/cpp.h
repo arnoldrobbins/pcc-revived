@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.81 2015/06/21 18:04:09 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.85 2015/06/27 13:02:02 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -28,7 +28,6 @@
 #include <stdio.h>	/* for debug/printf */
 
 typedef unsigned char usch;
-extern usch yytext[];
 extern usch *stringbuf;
 
 extern	int	trulvl;
@@ -51,18 +50,15 @@ extern	FILE	*of;
 #if defined(mach_pdp11)
 #define CPPBUF  BUFSIZ
 #define	BUF_STACK
-#elif defined(_WIN32)
-/* winxp seems to fail > 26608 bytes */
-#define CPPBUF	16384
 #else
-#define CPPBUF	(65536*2)
+#define CPPBUF	16384
 #endif
 #endif
 
 #define	MAXARGS	128	/* Max # of args to a macro. Should be enough */
 
-#define	NAMEMAX	CPPBUF	/* currently pushbackbuffer */
-#define	BBUFSZ	(NAMEMAX+CPPBUF+1)
+#define	PBMAX	10	/* min pushbackbuffer size */
+#define	BBUFSZ	(PBMAX+CPPBUF+1)
 
 #define	PRAGLOC	0xfa	/* _Pragma */
 #define	LINLOC	0xfb	/* __LINE__ */
@@ -77,10 +73,6 @@ extern	FILE	*of;
 
 /* Used in macro expansion */
 #define RECMAX	10000			/* max # of recursive macros */
-extern struct symtab *norep[RECMAX];
-extern int norepptr;
-extern unsigned short bptr[RECMAX];
-extern int bidx;
 #define	MKB(l,h)	(l+((h)<<8))
 
 /* quick checks for some characters */
@@ -99,6 +91,7 @@ extern usch spechr[];
 #define ISWS(x)		((x) == '\t' || (x) == ' ')
 #define ISID(x)		(spechr[x] & C_ID)
 #define ISID0(x)	(spechr[x] & C_ID0)
+#define	ISDIGIT(x)	(spechr[x] & C_DIGIT)
 
 /*
  * definition for include file info
@@ -187,9 +180,8 @@ void include_next(void);
 void line(void);
 
 int pushfile(const usch *fname, const usch *fn, int idx, void *incs);
-void prtline(void);
+void prtline(int nl);
 int yylex(void);
-int sloscan(void (d)(int), int);
 void cunput(int);
 int yyparse(void);
 void unpstr(const usch *);
@@ -202,7 +194,6 @@ void warning(const char *fmt, ...);
 void error(const char *fmt, ...);
 int cinput(void);
 int Ccmnt(void (*d)(int));
-void fastid(int ch);
 usch *heapid(int ch);
 void faststr(int bc, void (*d)(int));
 int fastnum(int ch, void (*d)(int));

@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.114 2015/01/01 09:12:25 ragge Exp $	*/
+/*	$Id: common.c,v 1.115 2015/07/03 11:13:17 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -335,7 +335,7 @@ talloc(void)
 
 	if (freelink != NULL) {
 		p = freelink;
-		freelink = p->next;
+		freelink = p->n_left;
 		if (p->n_op != FREE)
 			cerror("node not FREE: %p", p);
 		if (ndebug)
@@ -422,14 +422,14 @@ nfree(NODE *p)
 	while (q != NULL) {
 		if (q == p)
 			cerror("freeing free node %p", p);
-		q = q->next;
+		q = q->n_left;
 	}
 #endif
 
 	if (ndebug)
 		printf("freeing node %p\n", p);
 	p->n_op = FREE;
-	p->next = freelink;
+	p->n_left = freelink;
 	freelink = p;
 	usednodes--;
 	return l;

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.8 2014/06/01 11:35:03 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.9 2015/06/29 18:49:36 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -116,6 +116,7 @@ typedef long long OFFSZ;
 #undef	FIELDOPS		/* no bit-field instructions */
 #define TARGET_ENDIAN TARGET_LE /* XXX TARGET_PDP */
 #define	MYINSTRING
+#define	MYALIGN
 
 /* Definitions mostly used in pass2 */
 
@@ -125,7 +126,6 @@ typedef long long OFFSZ;
 #define STOARG(p)
 #define STOFARG(p)
 #define STOSTARG(p)
-#define genfcall(a,b)	gencall(a,b)
 
 #define	FINDMOPS	/* pdp11 has instructions that modifies memory */
 
