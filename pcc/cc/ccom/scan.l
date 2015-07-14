@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.127 2015/01/01 09:16:59 ragge Exp $	*/
+/*	$Id: scan.l,v 1.129 2015/07/14 08:01:14 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -93,6 +93,8 @@ extern void yyset_lineno (int);
 				yylval.strp = cftnsp->sname; /* XXX - not C99 */
 				return(C_STRING);
 			}
+"_Alignas"		{ return(C_ALIGNAS); }
+"_Alignof"		{ return(C_ALIGNOF); }
 "asm"			{ return(C_ASM); }
 "auto"			{ 	return resw(AUTO, C_CLASS); }
 "_Bool"			{ 	return resw(BOOL, C_TYPE); }
@@ -110,12 +112,14 @@ extern void yyset_lineno (int);
 "extern"		{ 	return resw(EXTERN, C_CLASS); }
 "float"			{ 	return resw(FLOAT, C_TYPE); }
 "for"			{ return(C_FOR); }
+"_Generic"		{ return(C_GENERIC); }
 "goto"			{ notype=1; return(C_GOTO); }
 "if"			{ return(C_IF); }
 "_Imaginary"		{ 	return resw(IMAG, C_TYPE); }
-"inline"		{ return(C_FUNSPEC); }
+"inline"		{	return resw(INLINE, C_FUNSPEC); }
 "int"			{ 	return resw(INT, C_TYPE); }
 "long"			{ 	return resw(LONG, C_TYPE); }
+"_Noreturn"		{	return resw(NORETURN, C_FUNSPEC); }
 "register"		{ 	return resw(REGISTER, C_CLASS); }
 "restrict"		{ return resw(0, C_QUALIFIER); }
 "return"		{ return(C_RETURN); }
@@ -123,6 +127,7 @@ extern void yyset_lineno (int);
 "signed"		{ 	return resw(SIGNED, C_TYPE); }
 "sizeof"		{ return(C_SIZEOF); }
 "static"		{ 	return resw(STATIC, C_CLASS); }
+"_Static_assert"	{ return C_STATICASSERT; }
 "struct"		{ yylval.intval = STNAME; notype=1; return(C_STRUCT); }
 "switch"		{ return(C_SWITCH); }
 "typedef"		{ 	return resw(TYPEDEF, C_CLASS); }
@@ -264,6 +269,10 @@ resw(TWORD t, int rv)
 	case C_QUALIFIER:
 		yylval.nodep = block(QUALIFIER, NIL, NIL, 0, 0, 0);
 		yylval.nodep->n_qual = t;
+		return rv;
+
+	case C_FUNSPEC:
+		yylval.nodep = block(FUNSPEC, NIL, NIL, t, 0, 0);
 		return rv;
 
 	case C_TYPE:

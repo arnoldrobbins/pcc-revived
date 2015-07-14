@@ -1,4 +1,4 @@
-/*      $Id: gcc_compat.c,v 1.109 2015/01/07 05:14:24 gmcgarry Exp $     */
+/*      $Id: gcc_compat.c,v 1.110 2015/07/14 08:01:14 ragge Exp $     */
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -323,6 +323,7 @@ struct atax {
 	CS(ATTR_QUALTYP)	{ 0, NULL },
 	CS(ATTR_STRUCT)		{ 0, NULL },
 	CS(ATTR_ALIGNED)	{ A_0ARG|A_1ARG, "aligned" },
+	CS(ATTR_NORETURN)	{ A_0ARG, "noreturn" },
 	CS(GCC_ATYP_PACKED)	{ A_0ARG|A_1ARG, "packed" },
 	CS(GCC_ATYP_SECTION)	{ A_1ARG|A1_STR, "section" },
 	CS(GCC_ATYP_TRANSP_UNION) { A_0ARG, "transparent_union" },
@@ -330,7 +331,6 @@ struct atax {
 	CS(GCC_ATYP_DEPRECATED)	{ A_0ARG, "deprecated" },
 	CS(GCC_ATYP_MAYALIAS)	{ A_0ARG, "may_alias" },
 	CS(GCC_ATYP_MODE)	{ A_1ARG|A1_NAME, "mode" },
-	CS(GCC_ATYP_NORETURN)	{ A_0ARG, "noreturn" },
 	CS(GCC_ATYP_FORMAT)	{ A_3ARG|A1_NAME, "format" },
 	CS(GCC_ATYP_NONNULL)	{ A_MANY, "nonnull" },
 	CS(GCC_ATYP_SENTINEL)	{ A_0ARG|A_1ARG, "sentinel" },

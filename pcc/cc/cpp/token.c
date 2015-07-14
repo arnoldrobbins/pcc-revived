@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.140 2015/06/27 13:02:02 ragge Exp $	*/
+/*	$Id: token.c,v 1.148 2015/07/13 20:15:18 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -270,7 +270,7 @@ inc1(void)
 /*
  * 5.1.1.2 Translation phase 2.
  */
-static int
+int
 inc2(void)
 {
 	int ch, c2;
@@ -285,6 +285,7 @@ inc2(void)
 	return ch;
 }
 
+static int incmnt;
 /*
  * deal with comments in the fast scanner.
  * ps prints out the initial '/' if failing to batch comment.
@@ -292,8 +293,9 @@ inc2(void)
 static int
 fastcmnt(int ps)
 {
-	int ch;
+	int ch, rv = 1;
 
+	incmnt = 1;
 	if ((ch = inc2()) == '/') { /* C++ comment */
 		while ((ch = inc2()) != '\n')
 			;
@@ -315,11 +317,12 @@ fastcmnt(int ps)
 	} else {
 		if (ps) PUTCH('/'); /* XXX ? */
 		unch(ch);
-                return 0;
+		rv = 0;
         }
 	if (ch < 0)
 		error("file ends in comment");
-        return 1;
+	incmnt = 0;
+	return rv;
 }
 
 /*
@@ -350,7 +353,9 @@ chkucn(void)
 	unsigned long cp, m;
 	int ch, n;
 
-	if ((ch = inch()) == -1)
+	if (incmnt)
+		return 0;
+	if ((ch = inpch()) == -1)
 		return 0;
 	if (ch == 'u')
 		n = 4;
@@ -363,7 +368,7 @@ chkucn(void)
 
 	cp = 0;
 	while (n-- > 0) {
-		if ((ch = inch()) == -1 || (spechr[ch] & C_HEX) == 0) {
+		if ((ch = inpch()) == -1 || (spechr[ch] & C_HEX) == 0) {
 			warning("invalid universal character name");
 			// XXX should actually unput the chars and return 0
 			unch(ch); // XXX eof
@@ -493,22 +498,29 @@ faststr(int bc, void (*d)(int))
 {
 	int ch;
 
+	incmnt = 1;
 	d(bc);
 	while ((ch = inc2()) != bc) {
 		if (ch == '\n') {
 			warning("unterminated literal");
+			incmnt = 0;
 			unch(ch);
 			return;
 		}
 		if (ch < 0)
 			return;
 		if (ch == '\\') {
+			incmnt = 0;
+			if (chkucn())
+				continue;
+			incmnt = 1;
 			d(ch);
 			ch = inc2();
 		}
 		d(ch);
 	}
 	d(ch);
+	incmnt = 0;
 }
 
 /*
@@ -709,6 +721,7 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
  * call yyparse().
  */
 static usch *yyinp;
+int inexpr;
 static int
 exprline(void)
 {
@@ -720,6 +733,17 @@ exprline(void)
 	Cflag = ifdef = 0;
 
 	while ((c = inch()) != '\n') {
+		if (c == '\'' || c == '\"') {
+			faststr(c, savch);
+			continue;
+		}
+		if (ISDIGIT(c) || c == '.') {
+			c = fastnum(c, savch);
+			if (c == '\n')
+				break;
+			unch(c);
+			continue;
+		}
 		if (ISID0(c)) {
 			cp = heapid(c);
 			stringbuf = cp;
@@ -730,15 +754,11 @@ exprline(void)
 				savch(nl ? '1' : '0');
 				ifdef = 0;
 			} else if (nl != NULL) {
+				inexpr = 1;
 				kfind(nl);
-				while (*stringbuf) {
-					if (ISID0(*stringbuf)) {
-						*stringbuf++ = '0';
-						while (ISID(*stringbuf))
-							*stringbuf++ = ' ';
-					} else
-						stringbuf++;
-				}
+				inexpr = 0;
+				while (*stringbuf)
+					stringbuf++;
 			} else
 				savch('0');
 		} else
@@ -796,7 +816,9 @@ yylex(void)
 
 	case '\'':
 		yynode.op = NUMBER;
+printf("ret NUM1 : yyinp %s\n", yyinp);
 		yynode.nd_val = charcon(&yyinp);
+printf("ret NUM %d: yyinp %s\n", (int)yynode.nd_val, yyinp);
 		return NUMBER;
 
 	case NUMBER:
@@ -804,6 +826,13 @@ yylex(void)
 		return NUMBER;
 
 	default:
+		if (ISID0(t)) {
+			yyinp--;
+			while (ISID(*yyinp))
+				yyinp++;
+			yynode.nd_val = 0;
+			return NUMBER;
+		}
 		return ch;
 	}
 	yyinp--;
@@ -1045,7 +1074,9 @@ charcon(usch **yyp)
 
 	} else
 		val = p[-1];
-	*yyp = p;
+	if (*p != '\'')
+		error("bad charcon");
+	*yyp = ++p;
 	return val;
 }
 

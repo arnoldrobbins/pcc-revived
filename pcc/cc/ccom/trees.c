@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.346 2015/02/05 10:33:43 ragge Exp $	*/
+/*	$Id: trees.c,v 1.348 2015/07/14 08:01:14 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -3199,6 +3199,8 @@ copst(int op)
 	SNAM(TYMERGE,TYMERGE)
 	SNAM(LABEL,LABEL)
 	SNAM(UPLUS,U+)
+	SNAM(ALIGN,ALIGNMENT)
+	SNAM(FUNSPEC,FUNSPEC)
 #ifdef GCC_COMPAT
 	SNAM(XREAL,__real__)
 	SNAM(XIMAG,__imag__)
@@ -3222,6 +3224,8 @@ cdope(int op)
 	case RB:
 	case ELLIPSIS:
 	case TYPE:
+	case ALIGN:
+	case FUNSPEC:
 		return LTYPE;
 	case DOT:
 	case SZOF:

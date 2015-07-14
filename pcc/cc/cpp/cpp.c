@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.220 2015/07/04 07:50:19 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.227 2015/07/13 20:53:39 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -97,6 +97,7 @@ struct incs {
 static struct symtab *filloc;
 static struct symtab *linloc;
 static struct symtab *pragloc;
+static struct symtab *defloc;
 int	trulvl;
 int	flslvl;
 int	elflvl;
@@ -268,12 +269,15 @@ main(int argc, char **argv)
 	filloc = lookup((const usch *)"__FILE__", ENTER);
 	linloc = lookup((const usch *)"__LINE__", ENTER);
 	pragloc = lookup((const usch *)"_Pragma", ENTER);
+	defloc = lookup((const usch *)"defined", ENTER);
 	filloc->value = stringbuf;
 	*stringbuf++ = FILLOC;
 	linloc->value = stringbuf;
 	*stringbuf++ = LINLOC;
 	pragloc->value = stringbuf;
 	*stringbuf++ = PRAGLOC;
+	defloc->value = stringbuf;
+	*stringbuf++ = DEFLOC; savstr((usch *)"defined"); savch(0);
 
 	if (tflag == 0) {
 		time_t t = time(NULL);
@@ -626,21 +630,46 @@ prem(void)
 	error("premature EOF");
 }
 
-static int
-incfn(int e)
+static struct iobuf *
+incfn(void)
 {
+	struct iobuf *ob;
+	struct symtab *nl;
+	usch *sb;
 	int c;
 
-	while ((c = cinput()) != e) {
-		if (c < 0 || c == '\n')
-			return 0;
-		savch(c);
+	sb = stringbuf;
+	if (spechr[c = skipws(NULL)] & C_ID0) {
+		heapid(c);
+		if ((nl = lookup(sb, FIND)) == NULL)
+			return NULL;
+
+		stringbuf = sb;
+		if (kfind(nl) == 0)
+			return NULL;
+		ob = strtobuf(sb, NULL);
+	} else {
+		ob = getobuf();
+		putob(ob, c);
+		while ((c = cinput()) && c != '\n')
+			putob(ob, c);
+		if (c != '\n')
+			return NULL;
+		cunput(c);
 	}
-	savch(0);
-	if (skipws(NULL) != '\n')
-		return 0;
-	cunput('\n');
-	return 1;
+	putob(ob, 0);
+	ob->cptr--;
+
+	/* now we have an (expanded?) filename in obuf */
+	while (ob->buf < ob->cptr && ISWS(ob->cptr[-1]))
+		ob->cptr--;
+
+	if (ob->buf[0] != '\"' && ob->buf[0] != '<')
+		return NULL;
+	if (ob->cptr[-1] != '\"' && ob->cptr[-1] != '>')
+		return NULL;
+	ob->cptr[-1] = 0;
+	return ob;
 }
 
 /*
@@ -651,62 +680,41 @@ incfn(int e)
 void
 include(void)
 {
-	struct symtab *nl;
-	usch *fn, *nm, *sb;
-	int c;
+	struct iobuf *ob;
+	usch *fn, *nm;
 
 	if (flslvl)
 		return;
 
-	fn = sb = stringbuf;
-	if (spechr[c = skipws(NULL)] & C_ID0) {
-		heapid(c);
-		if ((nl = lookup(sb, FIND)) == NULL)
-			goto bad;
+	if ((ob = incfn()) == NULL) /* get include file name in obuf */
+		error("bad #include");
 
-		stringbuf = sb;
-		if (kfind(nl) == 0)
-			goto bad;
-		if (*sb != '<' && *sb != '\"')
-			goto bad;
-		c = *++fn;
-	} else if (c == '<' || c == '\"') {
-		if (incfn(c == '<' ? '>' : c) == 0)
-			goto bad;
-	} else
-		goto bad;
-
-	if (c == '<') {
-	} else if (c == '\"') {
-		/* first try to open file relative to previous file */
-		/* but only if it is not an absolute path */
-		nm = stringbuf;
-		if (*fn != '/') {
-			savstr(ifiles->orgfn);
-			stringbuf = (usch *)strrchr((char *)nm, '/');
-			if (stringbuf == NULL)
-				stringbuf = nm;
-			else
-				stringbuf++;
-		}
-		savstr(fn);
-		savch(0);
-
-		if (pushfile(nm, fn, 0, NULL) == 0)
+	fn = xstrdup(ob->buf) + 1;	/* Save on string heap? */
+	bufree(ob);
+	if (fn[-1] == '\"') {
+		/* local includes. first try directly. */
+		if (pushfile(fn, fn, 0, NULL) == 0)
 			goto okret;
-
-		/* XXX may lose stringbuf space */
-	} else
-		goto bad;
-
+		/* nope, failed, try to create a path for it */
+		if ((nm = (usch *)strrchr((char *)ifiles->orgfn, '/'))) {
+			ob = strtobuf((usch *)ifiles->orgfn, NULL);
+			ob->cptr = ob->buf + (nm - ifiles->orgfn) + 1;
+			strtobuf(fn, ob);
+			putob(ob, 0);
+			nm = xstrdup(ob->buf);
+			bufree(ob);
+			if (pushfile(nm, nm, 0, NULL) == 0) {
+				free(fn);
+				goto okret;
+			}
+		}
+	}
 	if (fsrch(fn, 0, incdir[0]))
 		goto okret;
 
 	error("cannot find '%s'", fn);
 	/* error() do not return */
 
-bad:	error("bad #include");
-	/* error() do not return */
 okret:
 	prtline(1);
 }
@@ -714,37 +722,21 @@ okret:
 void
 include_next(void)
 {
-	struct symtab *nl;
-	usch *fn, *sb;
-	int c;
+	struct iobuf *ob;
+	usch *nm;
 
 	if (flslvl)
 		return;
 
-	fn = sb = stringbuf;
-	if (spechr[c = skipws(NULL)] & C_ID0) {
-		heapid(c);
-		if ((nl = lookup(sb, FIND)) == NULL)
-			goto bad;
+	if ((ob = incfn()) == NULL) /* get include file name in obuf */
+		error("bad #include_next");
 
-		if (kfind(nl) == 0)
-			goto bad;
+	nm = xstrdup(ob->buf+1);
+	bufree(ob);
 
-		c = *++fn;
-	} else if (c == '<' || c == '\"') {
-		if (incfn(c == '<' ? '>' : c) == 0)
-			goto bad;
-	} else
-		goto bad;
-
-	if (fsrch(fn, ifiles->idx, ifiles->incs) == 0)
-		error("cannot find '%s'", fn);
-
+	if (fsrch(nm, ifiles->idx, ifiles->incs) == 0)
+		error("cannot find '%s'", nm);
 	prtline(1);
-	return;
-
-bad:	error("bad #include_next");
-	/* error() do not return */
 }
 
 /*
@@ -864,7 +856,8 @@ define(void)
 					if (isell() == 0 || skipws(0) != ')')
 						goto bad;
 					vararg = args[--narg];
-					break;
+					c = ')';
+					continue;
 				default:
 					goto bad;
 				}
@@ -890,12 +883,12 @@ define(void)
 	if (ISWS(c))
 		c = skipwscmnt(0);
 
-#define	DELEWS() while (stringbuf > sbeg && ISWS(stringbuf[-1])) stringbuf--
+#define	DELEWS() while (stringbuf > sbeg+1+(vararg!=NULL) && ISWS(stringbuf[-1])) stringbuf--
 
 	/* parse replacement-list, substituting arguments */
 	wascon = 0;
 	while (c != '\n') {
-		cc[0] = c, cc[1] = cinput();
+		cc[0] = c, cc[1] = inc2();
 		t = getyp(cc);
 		cunput(cc[1]);
 
@@ -1454,6 +1447,7 @@ kfind(struct symtab *sp)
 		pragoper(NULL);
 		return 1;
 
+	case DEFLOC:
 	case OBJCT:
 		bl = blkget(sp, NULL);
 		ib = mkrobuf(sp->value+1);
@@ -1469,7 +1463,9 @@ kfind(struct symtab *sp)
 				n++;
 		if (c != '(') {
 			putstr(sp->namep);
-			for (ifiles->lineno += n; n; n--)
+			if (n == 0)
+				putch(' ');
+			else for (ifiles->lineno += n; n; n--)
 				putch('\n');
 			cunput(c);
 			return 0; /* Failed */
@@ -1717,11 +1713,11 @@ readargs1(struct symtab *sp, const usch **args)
 		for (;;) {
 			if (plev == 0 && c == ')')
 				break;
-			if (c == '(')
-				plev++;
-			if (c == ')')
-				plev--;
-			savch(c);
+			if (c == '(') plev++;
+			if (c == ')') plev--;
+			if (c == '\"' || c == '\'') faststr(c, savch);
+			else
+				savch(c);
 			if ((c = cinput()) == '\n')
 				ifiles->lineno++, c = ' ';
 		}
@@ -2024,6 +2020,7 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 struct iobuf *
 exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 {
+	extern int inexpr;
 	struct iobuf *nob;
 	struct symtab *nl;
 	int c, m;
@@ -2090,6 +2087,21 @@ if (dflag) { printf("!! ident2 "); prline(bp); printf("\n"); }
 sstr:				for (; bp < cp; bp++)
 					putob(ob, *bp);
 				stringbuf = sbp;
+				break;
+			} else if (inexpr && *nl->value == DEFLOC) {
+				int gotlp = 0;
+				while (ISWS(*ib->cptr)) ib->cptr++;
+				if (*ib->cptr == '(')
+					gotlp++, ib->cptr++;
+				while (ISWS(*ib->cptr)) ib->cptr++;
+				if (!ISID0(*ib->cptr))
+					error("bad defined");
+				putob(ob, lookup(ib->cptr, FIND) ? '1' : '0');
+				while (ISID(*ib->cptr)) ib->cptr++;
+				while (ISWS(*ib->cptr)) ib->cptr++;
+				if (gotlp && *ib->cptr != ')')
+					error("bad defined");
+				ib->cptr++;
 				break;
 			}
 			stringbuf = sbp;

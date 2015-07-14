@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.397 2015/07/03 15:10:58 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.401 2015/07/14 08:01:14 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1731,7 +1731,7 @@ lcommprint(void)
  * 	DOUBLE, STRTY, UNIONTY.
  */
 struct typctx {
-	int class, qual, sig, uns, cmplx, imag, err;
+	int class, qual, sig, uns, cmplx, imag, err, align;
 	TWORD type;
 	NODE *saved;
 	struct attr *pre, *post;
@@ -1744,6 +1744,10 @@ typwalk(NODE *p, void *arg)
 
 #define	cmop(x,y) block(CM, x, y, INT, 0, 0)
 	switch (p->n_op) {
+	case ALIGN:
+		if (tc->align < p->n_lval)
+			tc->align = p->n_lval;
+                break;
 	case ATTRIB:
 #ifdef GCC_COMPAT
 		if (tc->saved && (tc->saved->n_qual & 1)) {
@@ -1762,6 +1766,15 @@ typwalk(NODE *p, void *arg)
 		if (tc->class)
 			tc->err = 1; /* max 1 class */
 		tc->class = p->n_type;
+		break;
+
+	case FUNSPEC:
+		if (p->n_type == INLINE) {
+			fun_inline = 1;
+		} else if (p->n_type == NORETURN) {
+			tc->pre = attr_add(tc->pre, attr_new(ATTR_NORETURN, 3));
+		} else
+			tc->err = 1;
 		break;
 
 	case QUALIFIER:
@@ -1858,6 +1871,7 @@ typwalk(NODE *p, void *arg)
 NODE *
 typenode(NODE *p)
 {
+	struct attr *ap;
 	struct symtab *sp;
 	struct typctx tc;
 	NODE *q;
@@ -1910,8 +1924,8 @@ typenode(NODE *p)
 	}
 	if (pragma_aligned) {
 		/* Deal with relevant pragmas */
-		q = bdty(CALL, bdty(NAME, "aligned"), bcon(pragma_aligned));
-		tc.post = attr_add(tc.post, gcc_attr_parse(q));
+		if (tc.align < pragma_aligned)
+			tc.align = pragma_aligned;
 	}
 	pragma_aligned = pragma_packed = 0;
 #endif
@@ -1941,6 +1955,13 @@ typenode(NODE *p)
 		q->n_ap = attr_add(q->n_ap, tc.pre);
 	gcc_tcattrfix(q);
 #endif
+
+	if ((ap = attr_find(q->n_ap, ATTR_ALIGNED)) && ap->iarg(0) &&
+	    tc.align > talign(q->n_type, q->n_ap)/SZCHAR) {
+		q->n_ap = attr_add(q->n_ap, attr_new(ATTR_ALIGNED, 1));
+		q->n_ap->aa[0].iarg = SZCHAR * tc.align;
+	}
+
 	return q;
 
 bad:	uerror("illegal type combination");

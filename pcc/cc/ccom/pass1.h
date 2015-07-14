@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.268 2015/01/07 05:24:53 gmcgarry Exp $	*/
+/*	$Id: pass1.h,v 1.270 2015/07/14 08:01:14 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -448,9 +448,11 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 	xxxATTR_BASETYP,	/* Internal; see below */
 	ATTR_QUALTYP,	/* Internal; const/volatile, see below */
 	ATTR_ALIGNED,	/* Internal; also used as gcc type attribute */
+	ATTR_NORETURN,	/* Function does not return */
 	ATTR_STRUCT,	/* Internal; element list */
-	ATTR_P1LABELS,	/* used to store stuff while parsing */
 #define ATTR_MAX ATTR_STRUCT
+
+	ATTR_P1LABELS,	/* used to store stuff while parsing */
 
 #ifdef GCC_COMPAT
 	/* type attributes */
@@ -465,7 +467,6 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 	GCC_ATYP_MODE,
 
 	/* function attributes */
-	GCC_ATYP_NORETURN,
 	GCC_ATYP_FORMAT,
 	GCC_ATYP_NONNULL,
 	GCC_ATYP_SENTINEL,
@@ -604,6 +605,12 @@ void stabs_struct(struct symtab *, struct attr *);
 #define SZMASK(y) ((((1LL << ((y)-1))-1) << 1) | 1)
 
 /*
+ * finction specifiers.
+ */
+#define	INLINE		1
+#define	NORETURN	2
+
+/*
  * C compiler first pass extra defines.
  */
 #define	QUALIFIER	(MAXOP+1)
@@ -647,7 +654,8 @@ void stabs_struct(struct symtab *, struct attr *);
 #define LABEL		(MAXOP+34)
 #define BIQUEST		(MAXOP+35)
 #define UPLUS		(MAXOP+36)
-
+#define ALIGN		(MAXOP+37)
+#define FUNSPEC		(MAXOP+38)
 
 /*
  * The following types are only used in pass1.

@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.85 2015/06/27 13:02:02 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.87 2015/07/12 08:13:58 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -60,6 +60,7 @@ extern	FILE	*of;
 #define	PBMAX	10	/* min pushbackbuffer size */
 #define	BBUFSZ	(PBMAX+CPPBUF+1)
 
+#define	DEFLOC	0xf9	/* defined */
 #define	PRAGLOC	0xfa	/* _Pragma */
 #define	LINLOC	0xfb	/* __LINE__ */
 #define	FILLOC	0xfc	/* __FILE__ */
@@ -193,6 +194,7 @@ usch *sheap(const char *fmt, ...);
 void warning(const char *fmt, ...);
 void error(const char *fmt, ...);
 int cinput(void);
+int inc2(void);
 int Ccmnt(void (*d)(int));
 usch *heapid(int ch);
 void faststr(int bc, void (*d)(int));
