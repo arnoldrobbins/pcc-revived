@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.148 2015/07/13 20:15:18 ragge Exp $	*/
+/*	$Id: token.c,v 1.149 2015/07/14 20:49:18 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -816,9 +816,7 @@ yylex(void)
 
 	case '\'':
 		yynode.op = NUMBER;
-printf("ret NUM1 : yyinp %s\n", yyinp);
 		yynode.nd_val = charcon(&yyinp);
-printf("ret NUM %d: yyinp %s\n", (int)yynode.nd_val, yyinp);
 		return NUMBER;
 
 	case NUMBER:
