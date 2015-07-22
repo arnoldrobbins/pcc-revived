@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.149 2015/07/14 20:49:18 plunky Exp $	*/
+/*	$Id: token.c,v 1.151 2015/07/21 08:13:52 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -184,11 +184,15 @@ refill(int minsz)
 	dp = ifiles->buffer - sz;
 	for (i = 0; i < sz; i++)
 		dp[i] = ifiles->curptr[i];
-	(void)inpbuf();
+	i = inpbuf();
 	ifiles->curptr = dp;
+	if (i == 0) {
+		ifiles->maxread = ifiles->buffer;
+		ifiles->buffer[0] = 0;
+	}
 	return 0;
 }
-#define	REFILL(x) if (ifiles->curptr+x < ifiles->maxread) refill(x)
+#define	REFILL(x) if (ifiles->curptr+x >= ifiles->maxread) refill(x)
 
 /*
  * return a raw character from the input stream
@@ -672,7 +676,14 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 			ch = fastnum(ch, putch);
 			goto xloop;
 
+		case 'u':
+			if (nch == '8' && ifiles->curptr[1] == '\"') {
+				putch(ch);
+				break;
+			}
+			/* FALLTHROUGH */
 		case 'L':
+		case 'U':
 			if (nch == '\"' || nch == '\'') {
 				putch(ch);
 				break;

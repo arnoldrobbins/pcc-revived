@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.27 2015/01/05 15:48:47 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.30 2015/07/20 15:05:16 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -28,6 +28,8 @@
 
 
 #include "pass1.h"
+#include "unicode.h"
+#include <stdlib.h>
 
 /*
  * These definitions are used in the patricia tree that stores
@@ -456,3 +458,172 @@ symdirec(struct symtab *sp)
 #endif
 }
 #endif
+
+static char *csbuf;
+static int csbufp, cssz, strtype;
+static struct symtab *strpole;
+#define	STCHNK	128
+
+static void
+savch(int ch)
+{
+	if (csbufp == cssz) {
+		cssz += STCHNK;
+		csbuf = realloc(csbuf, cssz);
+	}
+	csbuf[csbufp++] = ch;
+}
+
+/*
+ * save value as 3-digit octal escape sequence
+ */
+static void
+voct(unsigned int v)
+{
+	savch('\\');
+	savch(((v & 0700) >> 6) + '0');
+	savch(((v & 0070) >> 3) + '0');
+	savch((v & 0007) + '0');
+}
+
+
+/*
+ * Add string new to string old.  
+ * String new must come directly after old.
+ * new is expected to be utf-8.  Will be cleaned slightly here.
+ */
+char *
+stradd(char *old, char *new)
+{
+	if (old == NULL) {
+		strtype = 0;
+		csbufp = 0;
+	} else if (old != csbuf)
+		cerror("string synk error");
+
+	/* special hack for function names */
+	for (old = new; *old; old++)
+		;
+	if (old[-1] != '\"') {
+		do {
+			savch(*new);
+		} while (*new++);
+		return csbuf;
+	}
+
+	if (*new != '\"') {
+		int ny = *new++;
+		if (ny == 'u' && *new == '8')
+			ny = '8', new++;
+		if (strtype && ny != strtype)
+			uerror("clash in string types");
+		strtype = ny;
+	}
+	if (*new++ != '\"')
+		cerror("snuff synk error");
+
+	while (*new != '\"') {
+		if (*new == '\\') {
+			voct(esccon(&new));
+		} else if (*new < ' ' || *new > '~') {
+			voct(*(unsigned char *)new++);
+		} else {
+			savch(*new++);
+		}
+	}
+	savch(0);
+	csbufp--;
+	return csbuf;
+}
+
+TWORD
+styp(void)
+{
+	TWORD t;
+
+	if (strtype == 0 || strtype == '8')
+		t = xuchar ? UCHAR+ARY : CHAR+ARY;
+	else if (strtype == 'u')
+		t = ctype(USHORT)+ARY;
+	else if (strtype == 'L')
+		t = WCHAR_TYPE+ARY;
+	else
+		t = ctype(SZINT < 32 ? ULONG : UNSIGNED)+ARY;
+	return t;
+}
+
+/*
+ * Create a string struct.
+ */
+static void
+strst(struct symtab *sp, TWORD t)
+{
+	char *wr;
+	int i;
+
+	sp->sclass = STATIC;
+	sp->slevel = 1;
+	sp->soffset = getlab();
+	sp->squal = (CON >> TSHIFT);
+	sp->sdf = permalloc(sizeof(union dimfun));
+	sp->stype = t;
+
+	for (wr = sp->sname, i = 1; *wr; i++) {
+		if (strtype == 'L' || strtype == 'U' || strtype == 'u')
+			(void)u82cp(&wr);
+		else if (*wr == '\\')
+			(void)esccon(&wr);
+		else
+			wr++;
+	}
+	sp->sdf->ddim = i;
+	sp->snext = strpole;
+	strpole = sp;
+}
+
+/*
+ * Save string (if needed) and return NODE for it.
+ * String is already in utf-8 format.
+ */
+NODE *
+strend(char *s, TWORD t)
+{
+	struct symtab *sp, *sp2;
+	NODE *p;
+
+	s = addstring(s);
+	sp = lookup(s, SSTRING);
+
+	if (sp->soffset && sp->stype != t) {
+		/* same string stored but different type */
+		/* This is uncommon, create a new symtab struct for it */
+		sp2 = permalloc(sizeof(*sp));
+		*sp2 = *sp;
+		strst(sp2, t);
+		sp = sp2;
+	} else if (sp->soffset == 0) { /* No string */
+		strst(sp, t);
+	}
+	if (cssz > STCHNK) {
+		cssz = STCHNK;
+		csbuf = realloc(csbuf, cssz);
+	}
+	p = block(NAME, NIL, NIL, sp->stype, sp->sdf, sp->sap);
+	p->n_sp = sp;
+	return(clocal(p));
+}
+
+/*
+ * Print out strings that have been referenced.
+ */
+void
+strprint(void)
+{
+	struct symtab *sp;
+
+	for (sp = strpole; sp; sp = sp->snext) {
+		if ((sp->sflags & SASG) == 0)
+			continue; /* not referenced */
+		instring(sp);
+	}
+}

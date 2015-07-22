@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.401 2015/07/14 08:01:14 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.407 2015/07/21 21:04:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -396,6 +396,9 @@ defid2(NODE *q, int class, char *astr)
 
 	enter:  /* make a new entry */
 
+	if (type == VOID && class != TYPEDEF)
+		uerror("void not allowed for variables");
+
 #ifdef PCC_DEBUG
 	if(ddebug)
 		printf("	new entry made\n");
@@ -585,7 +588,7 @@ void
 dclargs(void)
 {
 	union dimfun *df;
-	union arglist *al, *al2, *alb;
+	union arglist *al;
 	struct params *a;
 	struct symtab *p, **parr = NULL; /* XXX gcc */
 	int i;
@@ -601,7 +604,7 @@ dclargs(void)
 	 * Parameters were pushed in reverse order.
 	 */
 	if (nparams != 0)
-		parr = tmpalloc(sizeof(struct symtab *) * nparams);
+		parr = FUNALLO(sizeof(struct symtab *) * nparams);
 
 	if (nparams)
 	    for (a = lparam, i = 0; a != NULL; a = a->prev) {
@@ -629,7 +632,9 @@ dclargs(void)
 		/*
 		 * Check against prototype of oldstyle function.
 		 */
-		alb = al2 = tmpalloc(sizeof(union arglist) * nparams * 3 + 1);
+		union arglist *al2, *alb;
+
+		alb = al2 = FUNALLO(sizeof(union arglist) * nparams * 3 + 1);
 		for (i = 0; i < nparams; i++) {
 			TWORD type = parr[i]->stype;
 			(al2++)->type = type;
@@ -644,6 +649,7 @@ dclargs(void)
 		intcompare = 1;
 		if (chkftn(al, alb))
 			uerror("function doesn't match prototype");
+		FUNFREE(alb);
 		intcompare = 0;
 
 	}
@@ -668,6 +674,7 @@ done:	autooff = AUTOINIT;
 #endif
 		))
 		inline_args(parr, nparams);
+	FUNFREE(parr);
 	plabel(getlab()); /* used when spilling */
 	if (parlink)
 		ecomp(parlink);
@@ -1231,83 +1238,6 @@ tsize(TWORD ty, union dimfun *d, struct attr *apl)
 	return((unsigned int)sz * mult);
 }
 
-/*
- * Save string (and print it out).  If wide then wide string.
- */
-NODE *
-strend(int wide, char *str)
-{
-	struct symtab *sp;
-	NODE *p;
-
-	/* If an identical string is already emitted, just forget this one */
-	if (wide) {
-		/* Do not save wide strings, at least not now */
-		sp = getsymtab(str, SSTRING|STEMP);
-	} else {
-		str = addstring(str);	/* enter string in string table */
-		sp = lookup(str, SSTRING);	/* check for existence */
-	}
-
-	if (sp->soffset == 0) { /* No string */
-		char *wr;
-		int i;
-
-		sp->sclass = STATIC;
-		sp->slevel = 1;
-		sp->soffset = getlab();
-		sp->squal = (CON >> TSHIFT);
-		sp->sdf = permalloc(sizeof(union dimfun));
-		if (wide) {
-			sp->stype = WCHAR_TYPE+ARY;
-		} else {
-			if (xuchar) {
-				sp->stype = UCHAR+ARY;
-			} else {
-				sp->stype = CHAR+ARY;
-			}
-		}
-		for (wr = sp->sname, i = 1; *wr; i++) {
-			if (wide)
-				(void)u82cp(&wr);
-			else if (*wr == '\\')
-				(void)esccon(&wr);
-			else
-				wr++;
-		}
-		sp->sdf->ddim = i;
-
-		if (wide)
-			inwstring(sp);
-		else
-			instring(sp);
-	}
-
-	p = block(NAME, NIL, NIL, sp->stype, sp->sdf, sp->sap);
-	p->n_sp = sp;
-	return(clocal(p));
-}
-
-/*
- * Print out a wide string by calling ninval().
- */
-void
-inwstring(struct symtab *sp)
-{
-	char *s = sp->sname;
-	NODE *p;
-	int n;
-
-	locctr(STRNG, sp);
-	defloc(sp);
-	p = xbcon(0, NULL, WCHAR_TYPE);
-	for (n = sp->sdf->ddim; n > 0; n--) {
-		p->n_lval = u82cp(&s);
-		inval(0, tsize(WCHAR_TYPE, NULL, NULL), p);
-	}
-	nfree(p);
-}
-
 #ifndef MYINSTRING
 /*
  * Print out a string of characters.
@@ -1317,28 +1247,59 @@ inwstring(struct symtab *sp)
 void
 instring(struct symtab *sp)
 {
+	unsigned short sh[2];
 	char *s, *str;
+	TWORD t;
+	NODE *p;
 
 	locctr(STRNG, sp);
 	defloc(sp);
 
-	printf("\t.ascii \"");
+	t = BTYPE(sp->stype);
 	str = s = sp->sname;
-	while (*s) {
-		if (*s == '\\')
-			(void)esccon(&s);
-		else
-			s++;
-
-		if (s - str > 60) {
-			fwrite(str, 1, s - str, stdout);
-			printf("\"\n\t.ascii \"");
-			str = s;
+	if (t == ctype(USHORT)) {
+		/* convert to UTF-16 */
+		p = xbcon(0, NULL, t);
+		while (*s) {
+			cp2u16(u82cp(&s), sh);
+			if ((p->n_lval = sh[0]))
+				inval(0, SZSHORT, p);
+			if ((p->n_lval = sh[1]))
+				inval(0, SZSHORT, p);
 		}
-	}
+		p->n_lval = 0;
+		inval(0, SZSHORT, p);
+		nfree(p);
+	} else if (t == ctype(SZINT < 32 ? ULONG : UNSIGNED) ||
+	    t == ctype(SZINT < 32 ? LONG : INT)) {
+		/* convert to UTF-32 */
+		p = xbcon(0, NULL, t);
+		while (*s) {
+			p->n_lval = u82cp(&s);
+			inval(0, SZINT < 32 ? SZLONG : SZINT, p);
+		}
+		p->n_lval = 0;
+		inval(0, SZINT < 32 ? SZLONG : SZINT, p);
+		nfree(p);
+	} else if (t == CHAR || t == UCHAR) {
+		printf("\t.ascii \"");
+		while (*s) {
+			if (*s == '\\')
+				(void)esccon(&s);
+			else
+				s++;
+	
+			if (s - str > 60) {
+				fwrite(str, 1, s - str, stdout);
+				printf("\"\n\t.ascii \"");
+				str = s;
+			}
+		}
 
-	fwrite(str, 1, s - str, stdout);
-	printf("\\0\"\n");
+		fwrite(str, 1, s - str, stdout);
+		printf("\\0\"\n");
+	} else
+		cerror("instring %ld", t);
 }
 #endif
 
@@ -1956,8 +1917,8 @@ typenode(NODE *p)
 	gcc_tcattrfix(q);
 #endif
 
-	if ((ap = attr_find(q->n_ap, ATTR_ALIGNED)) && ap->iarg(0) &&
-	    tc.align > talign(q->n_type, q->n_ap)/SZCHAR) {
+	if (tc.align && (ap = attr_find(q->n_ap, ATTR_ALIGNED)) &&
+	    ap->iarg(0) && tc.align > talign(q->n_type, q->n_ap)/SZCHAR) {
 		q->n_ap = attr_add(q->n_ap, attr_new(ATTR_ALIGNED, 1));
 		q->n_ap->aa[0].iarg = SZCHAR * tc.align;
 	}
@@ -2025,7 +1986,7 @@ arglist(NODE *n)
 	num += 2; /* TEND + last arg type */
 
 	/* Second: Create list to work on */
-	ap = tmpalloc(sizeof(NODE *) * cnt);
+	ap = FUNALLO(sizeof(NODE *) * cnt);
 	al = permalloc(sizeof(union arglist) * num);
 	arglistcnt += num;
 
@@ -2072,6 +2033,7 @@ arglist(NODE *n)
 	if (k > num)
 		cerror("arglist: k%d > num%d", k, num);
 	tfree(n);
+	FUNFREE(ap);
 #ifdef PCC_DEBUG
 	if (pdebug)
 		alprint(al, 0);
@@ -2319,8 +2281,8 @@ doacall(struct symtab *sp, NODE *f, NODE *a)
 	struct ap {
 		struct ap *next;
 		NODE *node;
-	} *at, *apole = NULL;
-	int argidx/* , hasarray = 0*/;
+	} *at, *apole = NULL, *apary = NULL;
+	int i, argidx/* , hasarray = 0*/;
 	TWORD type, arrt;
 
 #ifdef PCC_DEBUG
@@ -2400,13 +2362,17 @@ doacall(struct symtab *sp, NODE *f, NODE *a)
 	/*
 	 * Create a list of pointers to the nodes given as arg.
 	 */
-	for (w = a; w->n_op == CM; w = w->n_left) {
-		at = tmpalloc(sizeof(struct ap));
+	for (w = a, i = 1; w->n_op == CM; w = w->n_left)
+		i++;
+	apary = FUNALLO(sizeof(struct ap) * i);
+
+	for (w = a, i = 0; w->n_op == CM; w = w->n_left) {
+		at = &apary[i++];
 		at->node = w->n_right;
 		at->next = apole;
 		apole = at;
 	}
-	at = tmpalloc(sizeof(struct ap));
+	at = &apary[i];
 	at->node = w;
 	at->next = apole;
 	apole = at;
@@ -2558,7 +2524,9 @@ out:		al++;
 	if (apole != NULL)
 		uerror("too many arguments to function");
 
-build:	if (sp != NULL && (sp->sflags & SINLINE) && (w = inlinetree(sp, f, a)))
+build:	if (apary)
+		FUNFREE(apary);
+	if (sp != NULL && (sp->sflags & SINLINE) && (w = inlinetree(sp, f, a)))
 		return w;
 	return buildtree(a == NIL ? UCALL : CALL, f, a);
 }
@@ -2970,7 +2938,7 @@ sspend(void)
 	p->n_sp = lookup(stack_chk_fail, SNORMAL);
 	p = clocal(p);
 
-	q = eve(bdty(STRING, cftnsp->sname, 0));
+	q = eve(bdty(STRING, cftnsp->sname, PTR|CHAR));
 	ecomp(buildtree(CALL, p, q));
 
 	plabel(lab);

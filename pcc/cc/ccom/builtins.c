@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.56 2014/10/13 10:00:55 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.58 2015/07/20 15:05:16 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.

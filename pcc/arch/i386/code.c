@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.88 2015/01/06 12:45:46 ragge Exp $	*/
+/*	$Id: code.c,v 1.89 2015/07/20 15:15:58 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -172,9 +172,11 @@ efcode(void)
 	ecomp(buildtree(ASSIGN, p, q));
 }
 
-static TWORD longregs[] = { EAXEDX, EDXECX };
+#ifdef GCC_COMPAT
 static TWORD reparegs[] = { EAX, EDX, ECX };
 static TWORD fastregs[] = { ECX, EDX };
+#endif
+static TWORD longregs[] = { EAXEDX, EDXECX };
 static TWORD charregs[] = { AL, DL, CL };
 static TWORD *regpregs;
 
@@ -497,9 +499,7 @@ NODE *
 funcode(NODE *p)
 {
 	extern int gotnr;
-#ifdef GCC_COMPAT
 	struct attr *ap;
-#endif
 	NODE *r, *l;
 	TWORD t = DECREF(DECREF(p->n_left->n_type));
 	int stcall;

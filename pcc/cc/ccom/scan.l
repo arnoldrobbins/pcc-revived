@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.130 2015/07/18 10:55:39 ragge Exp $	*/
+/*	$Id: scan.l,v 1.132 2015/07/19 13:59:00 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -38,7 +38,7 @@ FS			(f|F|l|L|i)*
 IS			(u|U|l|L|i)*
 UL			({L}|[\x80-\xFF])
 UC			(L|u|U)
-US			(L|u|U|u8)?
+US			(L|u|U|u8)
 
 %{
 #include <stdlib.h>
@@ -92,11 +92,12 @@ extern void yyset_lineno (int);
 "__func__"		{
 				if (cftnsp == NULL)
 					uerror("__func__ outside function");
-				yylval.strp = cftnsp->sname; /* XXX - not C99 */
+				yylval.strp = cftnsp->sname;
 				return(C_STRING);
 			}
 "_Alignas"		{ return(C_ALIGNAS); }
 "_Alignof"		{ return(C_ALIGNOF); }
+"_Atomic"		{ return(C_ATOMIC); }
 "asm"			{ return(C_ASM); }
 "auto"			{ 	return resw(AUTO, C_CLASS); }
 "_Bool"			{ 	return resw(BOOL, C_TYPE); }
@@ -132,6 +133,7 @@ extern void yyset_lineno (int);
 "_Static_assert"	{ return C_STATICASSERT; }
 "struct"		{ yylval.intval = STNAME; notype=1; return(C_STRUCT); }
 "switch"		{ return(C_SWITCH); }
+"_Thread_local"		{ 	return resw(THLOCAL, C_CLASS); }
 "typedef"		{ 	return resw(TYPEDEF, C_CLASS); }
 "union"			{ yylval.intval = UNAME; notype=1; return(C_STRUCT); }
 "unsigned"		{ 	return resw(UNSIGNED, C_TYPE); }
@@ -180,7 +182,7 @@ extern void yyset_lineno (int);
 0[xX]{H}+"."{P}{FS}?	{ yylval.nodep = fhexcon(yytext); return(C_FCON); }
 0[xX]{H}+{P}{FS}?	{ yylval.nodep = fhexcon(yytext); return(C_FCON); }
 
-L?\"(\\.|[^\\"])*\"	{ yylval.strp = yytext; return C_STRING; }
+{US}?\"(\\.|[^\\"])*\"	{ yylval.strp = yytext; return C_STRING; }
 
 "..."			{ return(C_ELLIPSIS); }
 ">>="			{ yylval.intval = RSEQ; return(C_ASOP); }
@@ -265,6 +267,8 @@ resw(TWORD t, int rv)
 
 	switch (rv) {
 	case C_CLASS:
+		if (t == THLOCAL)
+			uerror("_Thread_local not supported");
 		yylval.nodep = block(CLASS, NIL, NIL, t, 0, 0);
 		return rv;
 

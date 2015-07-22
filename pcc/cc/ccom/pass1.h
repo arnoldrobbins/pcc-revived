@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.270 2015/07/14 08:01:14 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.274 2015/07/20 19:08:47 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -58,7 +58,7 @@ typedef unsigned int bittype; /* XXX - for basicblock */
 #define STATIC		3
 #define REGISTER	4
 #define EXTDEF		5
-/* #define LABEL	6*/
+#define THLOCAL		6
 /* #define ULABEL	7*/
 #define MOS		8
 #define PARAM		9
@@ -238,7 +238,7 @@ extern	NODE
 	*mkty(unsigned, union dimfun *, struct attr *),
 	*rstruct(char *, int),
 	*dclstruct(struct rstack *),
-	*strend(int gtype, char *),
+	*strend(char *, TWORD),
 	*tymerge(NODE *, NODE *),
 	*stref(NODE *),
 #ifdef WORD_ADDRESSED
@@ -329,7 +329,7 @@ void p1print(char *, ...);
 char *copst(int);
 int cdope(int);
 void myp2tree(NODE *);
-void lcommprint(void);
+void lcommprint(void), strprint(void);
 void lcommdel(struct symtab *);
 NODE *funcode(NODE *);
 struct symtab *enumhd(char *);
@@ -385,6 +385,7 @@ int yylex(void);
 void yyerror(char *);
 int pragmas_gcc(char *t);
 int concast(NODE *p, TWORD t);
+char *stradd(char *old, char *new);
 #ifdef WORD_ADDRESSED
 #define rmpconv(p) (p)
 #else
@@ -392,6 +393,7 @@ NODE *rmpconv(NODE *);
 #endif
 NODE *optloop(NODE *);
 NODE *nlabel(int label);
+TWORD styp(void);
 
 #ifdef SOFTFLOAT
 typedef struct softfloat SF;
@@ -679,3 +681,16 @@ void stabs_struct(struct symtab *, struct attr *);
 #define clogop(o)	(cdope(o)&LOGFLG)
 #define casgop(o)	(cdope(o)&ASGFLG)
 
+/*
+ * Allocation routines.
+ */
+#if defined(__PCC__) || defined(__GNUC__)
+#define	FUNALLO(x)	__builtin_alloca(x)
+#define	FUNFREE(x)
+#elif defined(HAVE_ALLOCA)
+#define FUNALLO(x)      alloca(x)
+#define FUNFREE(x)
+#else
+#define FUNALLO(x)	malloc(x)
+#define FUNFREE(x)	free(x)
+#endif

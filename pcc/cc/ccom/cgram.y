@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.394 2015/07/14 08:01:14 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.399 2015/07/22 07:49:34 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -127,6 +127,7 @@
 %token	C_ALIGNAS
 %token	C_ALIGNOF
 %token	C_GENERIC
+%token	C_ATOMIC
 
 /*
  * Precedence
@@ -158,7 +159,7 @@ int oldstyle;	/* Current function being defined */
 static struct symtab *xnf;
 extern int enummer, tvaloff, inattr;
 extern struct rstack *rpole;
-static int widestr, alwinl;
+static int alwinl;
 NODE *cftnod;
 static int attrwarn = 1;
 
@@ -187,7 +188,6 @@ static NODE *cmop(NODE *l, NODE *r);
 static NODE *xcmop(NODE *out, NODE *in, NODE *str);
 static void mkxasm(char *str, NODE *p);
 static NODE *xasmop(char *str, NODE *p);
-static char *stradd(char *old, char *new);
 static NODE *biop(int op, NODE *l, NODE *r);
 static void flend(void);
 static NODE *gccexpr(int bn, NODE *q);
@@ -247,7 +247,7 @@ struct savbc {
 		designator_list designator xasm oplist oper cnstr funtype
 		typeof attribute attribute_specifier /* COMPAT_GCC */
 		attribute_list attr_spec_list attr_var /* COMPAT_GCC */
-%type <strp>	string C_STRING GCC_DESIG
+%type <strp>	string C_STRING GCC_DESIG svstr
 %type <rp>	str_head
 %type <symp>	xnfdeclarator clbrace enum_head
 
@@ -317,6 +317,10 @@ type_sq:	   C_TYPE { $$ = $1; }
 			$$ = biop(ALIGN, NIL, NIL);
 			$$->n_lval = talign($3->n_type, $3->n_ap)/SZCHAR;
 			tfree($3);
+		}
+		|  C_ATOMIC { uerror("_Atomic not supported"); $$ = bcon(0); }
+		|  C_ATOMIC '(' cast_type ')' {
+			uerror("_Atomic not supported"); $$ = $3;
 		}
 		|  typeof { $$ = $1; }
 		;
@@ -716,9 +720,8 @@ struct_declarator: declarator attr_var {
 xnfdeclarator:	   declarator attr_var {
 			$$ = xnf = init_declarator($<nodep>0, $1, 1, $2, 0);
 		}
-		|  declarator C_ASM '(' string ')' {
-			$$ = xnf = init_declarator($<nodep>0, $1, 1, NULL, 
-			    newstring($4, strlen($4)));
+		|  declarator C_ASM '(' svstr ')' {
+			$$ = xnf = init_declarator($<nodep>0, $1, 1, NULL, $4);
 		}
 		;
 
@@ -729,9 +732,8 @@ xnfdeclarator:	   declarator attr_var {
 init_declarator:   declarator attr_var {
 			init_declarator($<nodep>0, $1, 0, $2, 0);
 		}
-		|  declarator C_ASM '(' string ')' attr_var {
-			init_declarator($<nodep>0, $1, 0, $6,
-			    newstring($4, strlen($4)));
+		|  declarator C_ASM '(' svstr ')' attr_var {
+			init_declarator($<nodep>0, $1, 0, $6, $4);
 		}
 		|  xnfdeclarator '=' e { 
 			if ($1->sclass == STATIC || $1->sclass == EXTDEF)
@@ -804,7 +806,7 @@ compoundstmt:	   begin block_item_list '}' { flend(); }
 		;
 
 begin:		  '{' {
-			struct savbc *bc = tmpalloc(sizeof(struct savbc));
+			struct savbc *bc = malloc(sizeof(struct savbc));
 			if (blevel == 1) {
 #ifdef STABS
 				if (gflag)
@@ -943,8 +945,11 @@ statement:	   e ';' { ecomp(eve($1)); symclear(blevel); }
 		|  label statement
 		;
 
-asmstatement:	   C_ASM mvol '(' string ')' { send_passt(IP_ASM, mkpstr($4)); }
-		|  C_ASM mvol '(' string xasm ')' { mkxasm($4, $5); }
+asmstatement:	   C_ASM mvol '(' svstr ')' { send_passt(IP_ASM, mkpstr($4)); }
+		|  C_ASM mvol '(' svstr xasm ')' { mkxasm($4, $5); }
+		;
+
+svstr:		  string { $$ = addstring($1); }
 		;
 
 mvol:		   /* empty */
@@ -960,14 +965,14 @@ oplist:		   /* nothing */ { $$ = NIL; }
 		|  oper { $$ = $1; }
 		;
 
-oper:		   string '(' e ')' { $$ = xasmop($1, pconvert(eve($3))); }
-		|  oper ',' string '(' e ')' {
+oper:		   svstr '(' e ')' { $$ = xasmop($1, pconvert(eve($3))); }
+		|  oper ',' svstr '(' e ')' {
 			$$ = cmop($1, xasmop($3, pconvert(eve($5))));
 		}
 		;
 
-cnstr:		   string { $$ = xasmop($1, bcon(0)); }
-		|  cnstr ',' string { $$ = cmop($1, xasmop($3, bcon(0))); }
+cnstr:		   svstr { $$ = xasmop($1, bcon(0)); }
+		|  cnstr ',' svstr { $$ = cmop($1, xasmop($3, bcon(0))); }
                 ;
 
 label:		   C_NAME ':' attr_var { deflabel($1, $3); reached = 1; }
@@ -1179,7 +1184,7 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 		}
 		|  C_ICON { $$ = $1; }
 		|  C_FCON { $$ = $1; }
-		|  string { $$ = bdty(STRING, $1, widestr); }
+		|  svstr { $$ = bdty(STRING, $1, styp()); }
 		|   '('  e  ')' { $$=$2; }
 		|  '(' xbegin e ';' '}' ')' { $$ = gccexpr($2, eve($3)); }
 		|  '(' xbegin block_item_list e ';' '}' ')' {
@@ -1216,7 +1221,7 @@ xa:		  { $<intval>$ = inattr; inattr = 0; }
 clbrace:	   '{'	{ NODE *q = $<nodep>-1; TYMFIX(q); $$ = clbrace(q); }
 		;
 
-string:		   C_STRING { widestr = 0; $$ = stradd("", $1); }
+string:		   C_STRING { $$ = stradd(NULL, $1); }
 		|  string C_STRING { $$ = stradd($1, $2); }
 		;
 
@@ -1278,7 +1283,7 @@ bdty(int op, ...)
 	case STRING:
 		q->n_type = PTR|CHAR;
 		q->n_name = va_arg(ap, char *);
-		q->n_lval = va_arg(ap, int);
+		q->n_lval = va_arg(ap, TWORD);
 		break;
 
 	default:
@@ -1292,6 +1297,8 @@ bdty(int op, ...)
 static void
 flend(void)
 {
+	struct savbc *sc;
+
 	if (!isinlining && sspflag && blevel == 2)
 		sspend();
 #ifdef STABS
@@ -1305,7 +1312,9 @@ flend(void)
 	if (autooff > maxautooff)
 		maxautooff = autooff;
 	autooff = savctx->contlab;
-	savctx = savctx->next;
+	sc = savctx->next;
+	free(savctx);
+	savctx = sc;
 }
 
 static NODE *
@@ -1328,7 +1337,7 @@ gccexpr(int bn, NODE *q)
 static void
 savebc(void)
 {
-	struct savbc *bc = tmpalloc(sizeof(struct savbc));
+	struct savbc *bc = malloc(sizeof(struct savbc));
 
 	bc->brklab = brklab;
 	bc->contlab = contlab;
@@ -1341,10 +1350,14 @@ savebc(void)
 static void
 resetbc(int mask)
 {
+	struct savbc *bc;
+
 	flostat = savbc->flostat | (flostat&mask);
 	contlab = savbc->contlab;
 	brklab = savbc->brklab;
-	savbc = savbc->next;
+	bc = savbc->next;
+	free(savbc);
+	savbc = bc;
 }
 
 struct swdef {
@@ -1362,7 +1375,7 @@ struct swdef {
 static void
 addcase(NODE *p)
 {
-	struct swents **put, *w, *sw = tmpalloc(sizeof(struct swents));
+	struct swents **put, *w, *sw = malloc(sizeof(struct swents));
 	CONSZ val;
 
 	p = optloop(p);  /* change enum to ints */
@@ -1441,7 +1454,7 @@ adddef(void)
 static void
 swstart(int num, TWORD type)
 {
-	struct swdef *sw = tmpalloc(sizeof(struct swdef));
+	struct swdef *sw = malloc(sizeof(struct swdef));
 
 	sw->deflbl = sw->nents = 0;
 	sw->ents = NULL;
@@ -1458,10 +1471,11 @@ static void
 swend(void)
 {
 	struct swents *sw, **swp;
+	struct swdef *sp;
 	int i;
 
-	sw = tmpalloc(sizeof(struct swents));
-	swp = tmpalloc(sizeof(struct swents *) * (swpole->nents+1));
+	sw = FUNALLO(sizeof(struct swents));
+	swp = FUNALLO(sizeof(struct swents *) * (swpole->nents+1));
 
 	sw->slab = swpole->deflbl;
 	swp[0] = sw;
@@ -1472,7 +1486,16 @@ swend(void)
 	}
 	genswitch(swpole->num, swpole->type, swp, swpole->nents);
 
-	swpole = swpole->next;
+	FUNFREE(sw);
+	FUNFREE(swp);
+	while (swpole->ents) {
+		sw = swpole->ents;
+		swpole->ents = sw->next;
+		free(sw);
+	}
+	sp = swpole->next;
+	free(swpole);
+	swpole = sp;
 }
 
 /*
@@ -1829,71 +1852,6 @@ mkpstr(char *str)
 }
 
 /*
- * encode value as 3-digit octal escape sequence
- */
-static char *
-voct(char *d, unsigned int v)
-{
-	*d++ = '\\';
-	*d++ = ((v & 0700) >> 6) + '0';
-	*d++ = ((v & 0070) >> 3) + '0';
-	*d++ = (v & 0007) + '0';
-	return d;
-}
-
-/*
- * Add "raw" string new to cleaned string old.
- */
-static char *
-stradd(char *old, char *new)
-{
-	char *rv, *p;
-	int oldlen, max;
-
-	if (new[0] == 'L' && new[1] == '\"') {
-		widestr = 1;
-		new++;
-	}
-
-	if (new[0] == '\"') {
-		new++;
-		new[strlen(new) - 1] = 0;
-	}
-
-	/* estimate max space needed for new string */
-	for (p = new, max = 0; *p; max++, p++)
-		if (*p == '\\' || *p < ' ' || *p > '~')
-			max += 3;
-
-	/* start new buffer with old string */
-	oldlen = strlen(old);
-	rv = tmpalloc(oldlen + max + 1);
-	memcpy(rv, old, oldlen);
-
-	/* append new string, cleaning up as we go */
-	p = rv + oldlen;
-	while (*new) {
-		if (*new == '\\') {
-			p = voct(p, esccon(&new));
-			max -= 4;
-		} else if (*new < ' ' || *new > '~') {
-			p = voct(p, *(unsigned char *)new++);
-			max -= 4;
-		} else {
-			*p++ = *new++;
-			max--;
-		}
-		if (max < 0)
-			cerror("stradd");
-	}
-
-	/* nil terminate */
-	*p = 0;
-
-	return rv;
-}
-
-/*
  * Fake a symtab entry for compound literals.
  */
 static struct symtab *
@@ -1926,7 +1884,7 @@ char *
 simname(char *s)
 {
 	int len = strlen(s) + 10 + 1;
-	char *w = tmpalloc(len);
+	char *w = tmpalloc(len); /* uncommon */
 
 	snprintf(w, len, "%s%d", s, getlab());
 	return w;
@@ -2007,7 +1965,7 @@ xasmop(char *str, NODE *p)
 {
 
 	p = biop(XARG, p, NIL);
-	p->n_name = isinlining ? newstring(str, strlen(str)) : str;
+	p->n_name = str;
 	return p;
 }
 
@@ -2020,7 +1978,7 @@ mkxasm(char *str, NODE *p)
 	NODE *q;
 
 	q = biop(XASM, p->n_left, p->n_right);
-	q->n_name = isinlining ? newstring(str, strlen(str)) : str;
+	q->n_name = str;
 	nfree(p);
 	ecomp(optloop(q));
 }
@@ -2313,7 +2271,7 @@ eve(NODE *p)
 		break;
 
 	case STRING:
-		r = strend(p->n_lval, p->n_name);
+		r = strend(p->n_name, (TWORD)p->n_lval);
 		break;
 
 	case COMOP:
@@ -2454,7 +2412,7 @@ struct labs {
 static void
 savlab(int lab)
 {
-	struct labs *l = tmpalloc(sizeof(struct labs));
+	struct labs *l = tmpalloc(sizeof(struct labs)); /* uncommon */
 	l->lab = lab < 0 ? -lab : lab;
 	l->next = labp;
 	labp = l;
