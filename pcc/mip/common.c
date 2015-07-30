@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.115 2015/07/03 11:13:17 ragge Exp $	*/
+/*	$Id: common.c,v 1.116 2015/07/24 08:14:56 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -574,7 +574,7 @@ mkdope(void)
 void
 tprint(TWORD t, TWORD q)
 {
-	static char * tnames[] = {
+	static char * tnames[BTMASK+1] = {
 		"undef",
 		"bool",
 		"char",
@@ -604,7 +604,7 @@ tprint(TWORD t, TWORD q)
 		"dcomplex", /* pass1 */
 		"lcomplex", /* pass1 */
 		"enumty", /* pass1 */
-		"?", "?"
+		"?", "?", "?"
 		};
 
 	for(;; t = DECREF(t), q = DECREF(q)) {

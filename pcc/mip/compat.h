@@ -1,4 +1,4 @@
-/*	$Id: compat.h,v 1.5 2011/06/09 19:24:46 plunky Exp $	*/
+/*	$Id: compat.h,v 1.6 2015/07/24 08:26:05 ragge Exp $	*/
 
 /*
  * Just compatibility function prototypes.
@@ -22,10 +22,6 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 extern char *optarg;
 extern int optind;
 int getopt(int, char * const [], const char *);
-#endif
-
-#ifndef HAVE_BASENAME
-char *basename(char *);
 #endif
 
 #ifndef HAVE_MKSTEMP
