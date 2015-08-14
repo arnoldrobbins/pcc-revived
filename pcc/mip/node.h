@@ -1,4 +1,4 @@
-/*	$Id: node.h,v 1.38 2015/07/03 11:13:17 ragge Exp $	*/
+/*	$Id: node.h,v 1.39 2015/08/11 20:08:22 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -41,7 +41,7 @@ union aarg {
 
 struct attr {
 	struct attr *next;
-	int atype;
+	unsigned int atype:12, sz:2;
 	union aarg aa[];
 };
 

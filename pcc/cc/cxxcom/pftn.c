@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.13 2015/01/01 09:13:17 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.14 2015/08/11 20:08:22 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -275,7 +275,7 @@ defid(NODE *q, int class)
 		if (p->slevel == blevel) {
 			for (ap = q->n_ap; ap; ap = ap->next) {
 				if (ap->atype > ATTR_MAX)
-					p->sap = attr_add(p->sap, attr_dup(ap, 3));
+					p->sap = attr_add(p->sap, attr_dup(ap));
 			}
 		} else
 			p->sap = q->n_ap;

@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.116 2015/07/24 08:14:56 ragge Exp $	*/
+/*	$Id: common.c,v 1.120 2015/08/11 20:08:22 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -74,6 +74,7 @@
 int nerrors = 0;  /* number of errors */
 extern char *ftitle;
 int lineno;
+int savstringsz, newattrsz, nodesszcnt;
 
 int warniserr = 0;
 
@@ -300,10 +301,12 @@ warner(int type, ...)
 {
 	va_list ap;
 	char *t;
+#ifndef PASS2
 	extern int issyshdr;
 
 	if (issyshdr && type == Wtruncate)
 		return; /* Too many false positives */
+#endif
 
 	if (Warnings[type].warn == 0)
 		return; /* no warning */
@@ -344,6 +347,7 @@ talloc(void)
 	}
 
 	p = permalloc(sizeof(NODE));
+	nodesszcnt += sizeof(NODE);
 	p->n_op = FREE;
 	if (ndebug)
 		printf("alloc node %p from memory\n", p);
@@ -379,7 +383,11 @@ tcopy(NODE *p)
 void
 tcheck(void)
 {
+#ifdef PASS2
+#define	inlnodecnt 0
+#else
 	extern int inlnodecnt;
+#endif
 
 	if (nerrors)
 		return;
@@ -445,8 +453,12 @@ nfree(NODE *p)
 #ifdef MKEXT
 #define coptype(o)	(dope[o]&TYFLG)
 #else
+#ifndef PASS2
 int cdope(int);
 #define coptype(o)	(cdope(o)&TYFLG)
+#else
+#define coptype(o)	(dope[o]&TYFLG)
+#endif
 #endif
 
 void
@@ -820,6 +832,7 @@ newstring(char *s, size_t len)
 	char *u, *c;
 
 	len++;
+	savstringsz += len;
 	if (allocleft < len) {
 		u = c = permalloc(len);
 	} else {
@@ -911,7 +924,9 @@ attr_new(int type, int nelem)
 	sz = sizeof(struct attr) + nelem * sizeof(union aarg);
 
 	ap = memset(permalloc(sz), 0, sz);
+	newattrsz += sz;
 	ap->atype = type;
+	ap->sz = nelem;
 	return ap;
 }
 
@@ -959,11 +974,40 @@ attr_copy(struct attr *aps, struct attr *apd, int n)
  * Duplicate an attribute, like strdup.
  */
 struct attr *
-attr_dup(struct attr *ap, int n)
+attr_dup(struct attr *ap)
 {
-	int sz = sizeof(struct attr) + n * sizeof(union aarg);
+	int sz = sizeof(struct attr) + ap->sz * sizeof(union aarg);
 	ap = memcpy(permalloc(sz), ap, sz);
 	ap->next = NULL;
 	return ap;
 }
 
+void *
+xmalloc(int size)
+{
+	void *rv;
+
+	if ((rv = malloc(size)) == NULL)
+		cerror("out of memory!");
+	return rv;
+}
+
+void *
+xstrdup(char *s)
+{
+	void *rv;
+
+	if ((rv = strdup(s)) == NULL)
+		cerror("out of memory!");
+	return rv;
+}
+
+void *
+xcalloc(int a, int b)
+{
+	void *rv;
+
+	if ((rv = calloc(a, b)) == NULL)
+		cerror("out of memory!");
+	return rv;
+}

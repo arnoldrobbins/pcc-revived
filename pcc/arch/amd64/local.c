@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.87 2015/02/07 08:47:54 ragge Exp $	*/
+/*	$Id: local.c,v 1.88 2015/08/13 12:20:55 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -27,6 +27,15 @@
 
 
 #include "pass1.h"
+
+#ifndef LANG_CXX
+#define	NODE P1ND
+#define	ccopy p1tcopy
+#define	tfree p1tfree
+#define	nfree p1nfree
+#define	fwalk p1fwalk
+#define	talloc p1alloc
+#endif
 
 /*	this file contains code which is dependent on the target machine */
 

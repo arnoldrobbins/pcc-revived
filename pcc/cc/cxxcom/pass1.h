@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.12 2015/01/05 21:31:01 plunky Exp $	*/
+/*	$Id: pass1.h,v 1.14 2015/08/11 20:08:22 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -543,12 +543,6 @@ void gcc_tcattrfix(NODE *);
 struct gcc_attrib *gcc_get_attr(struct suedef *, int);
 void dump_attr(struct attr *gap);
 
-struct attr *attr_add(struct attr *orig, struct attr *new);
-struct attr *attr_new(int, int);
-struct attr *attr_find(struct attr *, int);
-struct attr *attr_copy(struct attr *src, struct attr *dst, int nelem);
-struct attr *attr_dup(struct attr *ap, int n);
-
 #ifndef NO_C_BUILTINS
 struct bitable {
 	char *name;
@@ -601,6 +595,12 @@ void stabs_struct(struct symtab *, struct attr *);
 #else
 #error int size unknown
 #endif
+
+#ifdef TWOPASS
+#define PRTPREF "* "  
+#else
+#define PRTPREF "" 
+#endif 
 
 /* Generate a bitmask from a given type size */
 #define SZMASK(y) ((((1LL << ((y)-1))-1) << 1) | 1)

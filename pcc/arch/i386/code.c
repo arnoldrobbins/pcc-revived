@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.89 2015/07/20 15:15:58 ragge Exp $	*/
+/*	$Id: code.c,v 1.92 2015/08/13 11:56:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -28,6 +28,14 @@
 
 
 # include "pass1.h"
+
+#ifdef LANG_CXX
+#define	p1listf	listf
+#define	p1tfree tfree
+#else
+#define	NODE P1ND
+#define	talloc p1alloc
+#endif
 
 /*
  * Print out assembler segment name.
@@ -67,18 +75,18 @@ setseg(int seg, char *name)
 	case DTORS: name = ".section\t.dtors,\"aw\",@progbits"; break;
 #endif
 	case NMSEG: 
-		printf("\t.section %s,\"a%c\",@progbits\n", name,
+		printf(PRTPREF "\t.section %s,\"a%c\",@progbits\n", name,
 		    cftnsp ? 'x' : 'w');
 		return;
 	}
-	printf("\t%s\n", name);
+	printf(PRTPREF "\t%s\n", name);
 }
 
 #ifdef MACHOABI
 void
 defalign(int al)
 {
-	printf("\t.align %d\n", ispow2(al/ALCHAR));
+	printf(PRTPREF "\t.align %d\n", ispow2(al/ALCHAR));
 }
 #endif
 
@@ -94,26 +102,26 @@ defloc(struct symtab *sp)
 	if ((name = sp->soname) == NULL)
 		name = exname(sp->sname);
 	if (sp->sclass == EXTDEF) {
-		printf("	.globl %s\n", name);
+		printf(PRTPREF "	.globl %s\n", name);
 #if defined(ELFABI)
-		printf("\t.type %s,@%s\n", name,
+		printf(PRTPREF "\t.type %s,@%s\n", name,
 		    ISFTN(sp->stype)? "function" : "object");
 #endif
 	}
 #if defined(ELFABI)
 	if (!ISFTN(sp->stype)) {
 		if (sp->slevel == 0)
-			printf("\t.size %s,%d\n", name,
+			printf(PRTPREF "\t.size %s,%d\n", name,
 			    (int)tsize(sp->stype, sp->sdf, sp->sap)/SZCHAR);
 		else
-			printf("\t.size " LABFMT ",%d\n", sp->soffset,
+			printf(PRTPREF "\t.size " LABFMT ",%d\n", sp->soffset,
 			    (int)tsize(sp->stype, sp->sdf, sp->sap)/SZCHAR);
 	}
 #endif
 	if (sp->slevel == 0)
-		printf("%s:\n", name);
+		printf(PRTPREF "%s:\n", name);
 	else
-		printf(LABFMT ":\n", sp->soffset);
+		printf(PRTPREF LABFMT ":\n", sp->soffset);
 }
 
 int structrettemp;
@@ -397,24 +405,24 @@ ejobcode(int flag)
 		struct stub *p;
 
 		DLIST_FOREACH(p, &stublist, link) {
-			printf("\t.section __IMPORT,__jump_table,symbol_stubs,self_modifying_code+pure_instructions,5\n");
-			printf("L%s$stub:\n", p->name);
-			printf("\t.indirect_symbol %s\n", p->name);
-			printf("\thlt ; hlt ; hlt ; hlt ; hlt\n");
-			printf("\t.subsections_via_symbols\n");
+			printf(PRTPREF "\t.section __IMPORT,__jump_table,symbol_stubs,self_modifying_code+pure_instructions,5\n");
+			printf(PRTPREF "L%s$stub:\n", p->name);
+			printf(PRTPREF "\t.indirect_symbol %s\n", p->name);
+			printf(PRTPREF "\thlt ; hlt ; hlt ; hlt ; hlt\n");
+			printf(PRTPREF "\t.subsections_via_symbols\n");
 		}
 
-		printf("\t.section __IMPORT,__pointers,non_lazy_symbol_pointers\n");
+		printf(PRTPREF "\t.section __IMPORT,__pointers,non_lazy_symbol_pointers\n");
 		DLIST_FOREACH(p, &nlplist, link) {
-			printf("L%s$non_lazy_ptr:\n", p->name);
-			printf("\t.indirect_symbol %s\n", p->name);
-			printf("\t.long 0\n");
+			printf(PRTPREF "L%s$non_lazy_ptr:\n", p->name);
+			printf(PRTPREF "\t.indirect_symbol %s\n", p->name);
+			printf(PRTPREF "\t.long 0\n");
 	        }
 
 	}
 #endif
 
-	printf("\t.ident \"PCC: %s\"\n", VERSSTR);
+	printf(PRTPREF "\t.ident \"PCC: %s\"\n", VERSSTR);
 }
 
 void
@@ -560,7 +568,7 @@ funcode(NODE *p)
 
 	regcvt = 0;
 	if (rparg)
-		listf(p->n_right, addreg);
+		p1listf(p->n_right, addreg);
 
 	if (kflag == 0)
 		return p;
@@ -607,7 +615,7 @@ builtin_return_address(const struct bitable *bt, NODE *a)
 
 	nframes = (int)a->n_lval;
   
-	tfree(a);	
+	p1tfree(a);	
 			
 	f = block(REG, NIL, NIL, PTR+VOID, 0, 0);
 	regno(f) = FPREG;
@@ -635,7 +643,7 @@ builtin_frame_address(const struct bitable *bt, NODE *a)
 
 	nframes = (int)a->n_lval;
 
-	tfree(a);
+	p1tfree(a);
 
 	f = block(REG, NIL, NIL, PTR+VOID, 0, 0);
 	regno(f) = FPREG;

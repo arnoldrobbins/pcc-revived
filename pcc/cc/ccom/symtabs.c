@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.30 2015/07/20 15:05:16 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.34 2015/08/13 11:56:03 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -31,6 +31,9 @@
 #include "unicode.h"
 #include <stdlib.h>
 
+#define	NODE P1ND
+#define	fwalk p1fwalk
+
 /*
  * These definitions are used in the patricia tree that stores
  * the strings.
@@ -47,12 +50,14 @@ struct tree {
 	struct tree *lr[2];
 };
 
+extern int dimfuncnt;
 static struct tree *firstname;
 int nametabs, namestrlen;
 static struct tree *firststr;
-int strtabs, strstrlen;
+int strtabs, strstrlen, symtreecnt;
 static char *symtab_add(char *key, struct tree **, int *, int *);
 int lastloc = NOSEG;
+int treestrsz = sizeof(struct tree);
 
 #define	P_BIT(key, bit) (key[bit >> 3] >> (bit & 7)) & 1
 #define	getree() permalloc(sizeof(struct tree))
@@ -268,7 +273,7 @@ lookup(char *key, int stype)
 		;
 
 	new = stype & STEMP ? tmpalloc(sizeof(struct tree)) :
-	    permalloc(sizeof(struct tree));
+	    (symtreecnt++, permalloc(sizeof(struct tree)));
 	bit = (code >> cix) & 1;
 	new->bitno = cix | (bit ? RIGHT_IS_LEAF : LEFT_IS_LEAF);
 	new->lr[bit] = (struct tree *)getsymtab(key, stype);
@@ -429,7 +434,7 @@ defalign(int al)
 #define	P2ALIGN(x)	(x)
 #endif
 	if (al != ALCHAR)
-		printf("\t.align %d\n", P2ALIGN(al/ALCHAR));
+		printf(PRTPREF "\t.align %d\n", P2ALIGN(al/ALCHAR));
 }
 #endif
 
@@ -447,13 +452,13 @@ symdirec(struct symtab *sp)
 	if ((name = sp->soname) == NULL)
 		name = exname(sp->sname);
 	if ((ga = attr_find(sp->sap, GCC_ATYP_WEAK)) != NULL)
-		printf("\t.weak %s\n", name);
+		printf(PRTPREF "\t.weak %s\n", name);
 	if ((ga = attr_find(sp->sap, GCC_ATYP_VISIBILITY)) &&
 	    strcmp(ga->sarg(0), "default"))
-		printf("\t.%s %s\n", ga->sarg(0), name);
+		printf(PRTPREF "\t.%s %s\n", ga->sarg(0), name);
 	if ((ga = attr_find(sp->sap, GCC_ATYP_ALIASWEAK))) {
-		printf("\t.weak %s\n", ga->sarg(0));
-		printf("\t.set %s,%s\n", ga->sarg(0), name);
+		printf(PRTPREF "\t.weak %s\n", ga->sarg(0));
+		printf(PRTPREF "\t.set %s,%s\n", ga->sarg(0), name);
 	}
 #endif
 }
@@ -461,7 +466,9 @@ symdirec(struct symtab *sp)
 
 static char *csbuf;
 static int csbufp, cssz, strtype;
+#ifndef NO_STRING_SAVE
 static struct symtab *strpole;
+#endif
 #define	STCHNK	128
 
 static void
@@ -566,6 +573,7 @@ strst(struct symtab *sp, TWORD t)
 	sp->soffset = getlab();
 	sp->squal = (CON >> TSHIFT);
 	sp->sdf = permalloc(sizeof(union dimfun));
+	dimfuncnt++;
 	sp->stype = t;
 
 	for (wr = sp->sname, i = 1; *wr; i++) {
@@ -577,8 +585,10 @@ strst(struct symtab *sp, TWORD t)
 			wr++;
 	}
 	sp->sdf->ddim = i;
+#ifndef NO_STRING_SAVE
 	sp->snext = strpole;
 	strpole = sp;
+#endif
 }
 
 /*
@@ -591,8 +601,12 @@ strend(char *s, TWORD t)
 	struct symtab *sp, *sp2;
 	NODE *p;
 
+#ifdef NO_STRING_SAVE
+	sp = getsymtab(s, SSTRING|STEMP);
+#else
 	s = addstring(s);
 	sp = lookup(s, SSTRING);
+#endif
 
 	if (sp->soffset && sp->stype != t) {
 		/* same string stored but different type */
@@ -608,11 +622,15 @@ strend(char *s, TWORD t)
 		cssz = STCHNK;
 		csbuf = realloc(csbuf, cssz);
 	}
+#ifdef NO_STRING_SAVE
+	instring(sp);
+#endif
 	p = block(NAME, NIL, NIL, sp->stype, sp->sdf, sp->sap);
 	p->n_sp = sp;
 	return(clocal(p));
 }
 
+#ifndef NO_STRING_SAVE
 /*
  * Print out strings that have been referenced.
  */
@@ -627,3 +645,4 @@ strprint(void)
 		instring(sp);
 	}
 }
+#endif

@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.407 2015/07/21 21:04:02 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.411 2015/08/13 11:56:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -68,9 +68,17 @@
 
 #include "cgram.h"
 
+#define	NODE P1ND
+#define	tfree p1tfree
+#define	nfree p1nfree
+#define	ccopy p1tcopy
+#define	flist p1flist
+#define	fwalk p1fwalk
+
 struct symtab *cftnsp;
 int arglistcnt, dimfuncnt;	/* statistics */
 int symtabcnt, suedefcnt;	/* statistics */
+int lcommsz, blkalloccnt, inlalloccnt;
 int autooff,		/* the next unused automatic offset */
     maxautooff,		/* highest used automatic offset in function */
     argoff;		/* the next unused argument offset */
@@ -83,7 +91,7 @@ int reached, prolab;
 
 struct params;
 
-#define MKTY(p, t, d, s) r = talloc(); *r = *p; \
+#define MKTY(p, t, d, s) r = p1alloc(); *r = *p; \
 	r = argcast(r, t, d, s); *p = *r; nfree(r);
 
 /*
@@ -287,7 +295,7 @@ defid2(NODE *q, int class, char *astr)
 		if (p->slevel == blevel) {
 			for (ap = q->n_ap; ap; ap = ap->next) {
 				if (ap->atype > ATTR_MAX)
-					p->sap = attr_add(p->sap, attr_dup(ap, 3));
+					p->sap = attr_add(p->sap, attr_dup(ap));
 			}
 		} else
 			p->sap = q->n_ap;
@@ -1282,7 +1290,7 @@ instring(struct symtab *sp)
 		inval(0, SZINT < 32 ? SZLONG : SZINT, p);
 		nfree(p);
 	} else if (t == CHAR || t == UCHAR) {
-		printf("\t.ascii \"");
+		printf(PRTPREF "\t.ascii \"");
 		while (*s) {
 			if (*s == '\\')
 				(void)esccon(&s);
@@ -1291,7 +1299,7 @@ instring(struct symtab *sp)
 	
 			if (s - str > 60) {
 				fwrite(str, 1, s - str, stdout);
-				printf("\"\n\t.ascii \"");
+				printf("\"\n" PRTPREF "\t.ascii \"");
 				str = s;
 			}
 		}
@@ -1646,6 +1654,7 @@ lcommadd(struct symtab *sp)
 	}
 	if (lcp == NULL) {
 		lc = permalloc(sizeof(struct lcd));
+		lcommsz += sizeof(struct lcd);
 		lc->sp = sp;
 		SLIST_INSERT_LAST(&lhead, lc, next);
 	} else
@@ -2192,7 +2201,7 @@ tymerge(NODE *typ, NODE *idp)
 static NODE *
 argcast(NODE *p, TWORD t, union dimfun *d, struct attr *ap)
 {
-	NODE *u, *r = talloc();
+	NODE *u, *r = p1alloc();
 
 	r->n_op = NAME;
 	r->n_type = t;
@@ -2441,7 +2450,7 @@ incomp:					uerror("incompatible types for arg %d",
 				if (strmemb(apole->node->n_ap)->stype !=
 				    strmemb(al[1].sap)->stype) {
 					/* must convert to correct type */
-					w = talloc();
+					w = p1alloc();
 					*w = *apole->node;
 					w = mkcmplx(w,
 					    strmemb(al[1].sap)->stype);
@@ -2950,7 +2959,8 @@ sspend(void)
 void *
 blkalloc(int size)
 {
-	return isinlining || blevel < 2 ?  permalloc(size) : tmpalloc(size);
+	return (isinlining || blevel < 2) ? 
+	    (blkalloccnt += size, permalloc(size)) : tmpalloc(size);
 }
 
 /*
@@ -2959,7 +2969,8 @@ blkalloc(int size)
 void *
 inlalloc(int size)
 {
-	return isinlining ?  permalloc(size) : tmpalloc(size);
+	return isinlining ?
+	    (inlalloccnt += size, permalloc(size)) : tmpalloc(size);
 }
 
 /*
@@ -3019,6 +3030,7 @@ complinit(void)
 		p->n_df = cxsp[i]->sdf;
 		defid2(p, EXTERN, 0);
 		cxmul[i]->sdf = permalloc(sizeof(union dimfun));
+		dimfuncnt++;
 		cxmul[i]->sdf->dfun = NULL;
 		cxndiv[i] = addname(cxndiv[i]);
 		p->n_sp = cxdiv[i] = lookup(cxndiv[i], 0);
@@ -3027,6 +3039,7 @@ complinit(void)
 		p->n_df = cxsp[i]->sdf;
 		defid2(p, EXTERN, 0);
 		cxdiv[i]->sdf = permalloc(sizeof(union dimfun));
+		dimfuncnt++;
 		cxdiv[i]->sdf->dfun = NULL;
 	}
 	nfree(p);
@@ -3423,7 +3436,7 @@ cxargfixup(NODE *a, TWORD dt, struct attr *ap)
 	NODE *p;
 	TWORD t;
 
-	p = talloc();
+	p = p1alloc();
 	*p = *a;
 	if (dt == STRTY) {
 		/* dest complex */

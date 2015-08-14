@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.33 2015/02/07 08:47:54 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.34 2015/08/13 12:20:55 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -278,14 +278,18 @@ int numconv(void *ip, void *p, void *q);
 	{ "__builtin_va_end", amd64_builtin_va_end, 0, 1, 0, VOID },	\
 	{ "__builtin_va_copy", amd64_builtin_va_copy, 0, 2, 0, VOID },
 
-#define NODE struct node
+#ifdef LANG_CXX
+#define P1ND struct node
+#else
+#define P1ND struct p1node
+#endif
 struct node;
 struct bitable;
-NODE *amd64_builtin_stdarg_start(const struct bitable *, NODE *a);
-NODE *amd64_builtin_va_arg(const struct bitable *, NODE *a);
-NODE *amd64_builtin_va_end(const struct bitable *, NODE *a);
-NODE *amd64_builtin_va_copy(const struct bitable *, NODE *a);
-#undef NODE
+P1ND *amd64_builtin_stdarg_start(const struct bitable *, P1ND *a);
+P1ND *amd64_builtin_va_arg(const struct bitable *, P1ND *a);
+P1ND *amd64_builtin_va_end(const struct bitable *, P1ND *a);
+P1ND *amd64_builtin_va_copy(const struct bitable *, P1ND *a);
+#undef P1ND
 
 /* target specific attributes */
 #define ATTR_MI_TARGET  ATTR_AMD64_CMPLRET, ATTR_AMD64_XORLBL

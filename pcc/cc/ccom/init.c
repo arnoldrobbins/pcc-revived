@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.94 2015/07/20 07:32:57 ragge Exp $	*/
+/*	$Id: init.c,v 1.96 2015/08/13 11:56:02 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -64,6 +64,11 @@
 #include "pass1.h"
 #include "unicode.h"
 #include <string.h>
+
+#define	NODE P1ND
+#define	tfree p1tfree
+#define	nfree p1nfree
+#define	fwalk p1fwalk
 
 /*
  * The following machine-dependent routines may be called during
@@ -252,7 +257,7 @@ inval(CONSZ off, int fsz, NODE *p)
 	val = (CONSZ)(p->n_lval & SZMASK(sztable[t]));
 	if (t <= ULONGLONG) {
 		sp = p->n_sp;
-		printf("%s ",astypnames[t]);
+		printf(PRTPREF "%s ",astypnames[t]);
 		if (val || sp == NULL)
 			printf(CONFMT, val);
 		if (val && sp != NULL)
@@ -292,7 +297,7 @@ infld(CONSZ off, int fsz, CONSZ val)
 	while (fsz + inbits >= SZCHAR) {
 		int shsz = SZCHAR-inbits;
 		xinval = (xinval << shsz) | (val >> (fsz - shsz));
-		printf("%s " CONFMT "\n",
+		printf(PRTPREF "%s " CONFMT "\n",
 		    astypnames[CHAR], xinval & SZMASK(SZCHAR));
 		fsz -= shsz;
 		val &= SZMASK(fsz);
@@ -306,7 +311,7 @@ infld(CONSZ off, int fsz, CONSZ val)
 	while (fsz + inbits >= SZCHAR) {
 		int shsz = SZCHAR-inbits;
 		xinval |= (val << inbits);
-		printf("%s " CONFMT "\n",
+		printf(PRTPREF "%s " CONFMT "\n",
 		    astypnames[CHAR], (CONSZ)(xinval & SZMASK(SZCHAR)));
 		fsz -= shsz;
 		val >>= shsz;
@@ -343,7 +348,7 @@ zbits(OFFSZ off, int fsz)
 		} else {
 			fsz -= m;
 			xinval <<= m;
-			printf("%s " CONFMT "\n", 
+			printf(PRTPREF "%s " CONFMT "\n", 
 			    astypnames[CHAR], xinval & SZMASK(SZCHAR));
 			xinval = inbits = 0;
 		}
@@ -356,14 +361,14 @@ zbits(OFFSZ off, int fsz)
 			return;
 		} else {
 			fsz -= m;
-			printf("%s " CONFMT "\n", 
+			printf(PRTPREF "%s " CONFMT "\n", 
 			    astypnames[CHAR], (CONSZ)(xinval & SZMASK(SZCHAR)));
 			xinval = inbits = 0;
 		}
 	}
 #endif
 	if (fsz >= SZCHAR) {
-		printf("%s %d\n", asspace, fsz/SZCHAR);
+		printf(PRTPREF "%s %d\n", asspace, fsz/SZCHAR);
 		fsz -= (fsz/SZCHAR) * SZCHAR;
 	}
 	if (fsz) {

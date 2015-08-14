@@ -1,4 +1,4 @@
-/*	$Id: pass2.h,v 1.140 2015/01/04 12:57:52 ragge Exp $	*/
+/*	$Id: pass2.h,v 1.142 2015/08/13 11:56:03 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -308,9 +308,9 @@ int tlen(NODE *p);
 int setbin(NODE *);
 int notoff(TWORD, int, CONSZ, char *);
 int fldexpand(NODE *, int, char **);
-void p2tree(NODE *p); 
 int flshape(NODE *p);
 int ncnt(int needs);
+void mainp2(void);
 
 extern	char *rnames[];
 

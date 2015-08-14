@@ -1,4 +1,4 @@
-/*	$Id: optim.c,v 1.57 2014/04/08 19:54:56 ragge Exp $	*/
+/*	$Id: optim.c,v 1.58 2015/08/13 11:56:02 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -34,6 +34,10 @@
  */
 
 # include "pass1.h"
+
+#define	NODE P1ND
+#define	nfree p1nfree
+#define	tfree p1tfree
 
 # define SWAP(p,q) {sp=p; p=q; q=sp;}
 # define RCON(p) (p->n_right->n_op==ICON)
