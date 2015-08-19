@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.92 2015/08/13 11:56:02 ragge Exp $	*/
+/*	$Id: code.c,v 1.93 2015/08/18 10:07:01 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -215,7 +215,7 @@ bfcode(struct symtab **sp, int cnt)
 	/* Take care of PIC stuff first */
         if (kflag) {
 #define STL     200
-                char *str = inlalloc(STL);
+                char *str = xmalloc(STL);
 #if !defined(MACHOABI)
                 int l = getlab();
 #else
@@ -242,8 +242,9 @@ bfcode(struct symtab **sp, int cnt)
                     l, l, l) >= STL)
                         cerror("bfcode");
 #endif
-                p->n_name = str;
+                p->n_name = addstring(str);
                 p->n_right->n_type = STRTY;
+		free(str);
                 ecomp(p);
         }
 

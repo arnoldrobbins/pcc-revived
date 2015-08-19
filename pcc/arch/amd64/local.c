@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.88 2015/08/13 12:20:55 ragge Exp $	*/
+/*	$Id: local.c,v 1.89 2015/08/18 10:15:08 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -151,7 +151,7 @@ mk3str(char *s1, char *s2, char *s3)
 	int len = strlen(s1) + strlen(s2) + strlen(s3) + 1;
 	char *sd;
 
-	sd = inlalloc(len);
+	sd = tmpalloc(len);
 	strlcpy(sd, s1, len);
 	strlcat(sd, s2, len);
 	strlcat(sd, s3, len);
@@ -197,7 +197,7 @@ tlspic(NODE *p)
 	    "\t.word 0x6666\n\trex64\n\tcall __tls_get_addr@PLT";
 	if (p->n_sp->soname == NULL)
 		p->n_sp->soname = p->n_sp->sname;
-	r->n_name = mk3str(s1, p->n_sp->soname, s2);
+	r->n_name = addstring(mk3str(s1, p->n_sp->soname, s2));
 
 	r = block(COMOP, r, s, INCREF(p->n_type), p->n_df, p->n_ap);
 	r = buildtree(UMUL, r, NIL);

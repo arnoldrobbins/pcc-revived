@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.21 2011/09/23 18:17:51 plunky Exp $	*/
+/*	$Id: local.c,v 1.22 2015/08/18 10:15:08 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -411,7 +411,7 @@ myp2tree(NODE *p)
 
 	case FCON:
 		/* Write float constants to memory */
-		sp = inlalloc(sizeof(struct symtab));
+		sp = tmpalloc(sizeof(struct symtab));
 		sp->sclass = STATIC;
 		sp->ssue = 0;
 		sp->slevel = 1; /* fake numeric label */

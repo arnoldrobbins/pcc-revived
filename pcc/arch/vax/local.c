@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.28 2012/12/13 16:01:25 ragge Exp $	*/
+/*	$Id: local.c,v 1.29 2015/08/18 10:15:08 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -190,7 +190,7 @@ myp2tree(NODE *p)
 	if (p->n_op != FCON) 
 		return;
 
-	sp = inlalloc(sizeof(struct symtab));
+	sp = tmpalloc(sizeof(struct symtab));
 	sp->sclass = STATIC;
 	sp->sap = 0;
 	sp->slevel = 1; /* fake numeric label */

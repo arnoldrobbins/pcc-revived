@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.120 2015/08/11 20:08:22 ragge Exp $	*/
+/*	$Id: common.c,v 1.121 2015/08/18 08:52:47 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -383,10 +383,10 @@ tcopy(NODE *p)
 void
 tcheck(void)
 {
-#ifdef PASS2
-#define	inlnodecnt 0
-#else
+#ifdef LANG_CXX
 	extern int inlnodecnt;
+#else
+#define	inlnodecnt 0
 #endif
 
 	if (nerrors)

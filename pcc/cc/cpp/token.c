@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.151 2015/07/21 08:13:52 ragge Exp $	*/
+/*	$Id: token.c,v 1.152 2015/08/19 12:06:12 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -1316,19 +1316,19 @@ static struct {
 	{ "ifndef", ifndefstmt, DIR_FLSINC },
 	{ "ifdef", ifdefstmt, DIR_FLSINC },
 	{ "if", ifstmt, DIR_FLSINC },
-	{ "include", include },
+	{ "include", include, 0 },
 	{ "else", elsestmt, DIR_FLSLVL },
 	{ "endif", endifstmt, DIR_FLSLVL },
-	{ "error", cpperror },
-	{ "warning", cppwarning },
-	{ "define", define },
-	{ "undef", undefstmt },
-	{ "line", line },
-	{ "pragma", pragmastmt },
+	{ "error", cpperror, 0 },
+	{ "warning", cppwarning, 0 },
+	{ "define", define, 0 },
+	{ "undef", undefstmt, 0 },
+	{ "line", line, 0 },
+	{ "pragma", pragmastmt, 0 },
 	{ "elif", elifstmt, DIR_FLSLVL },
-	{ "ident", identstmt },
+	{ "ident", identstmt, 0 },
 #ifdef GCC_COMPAT
-	{ "include_next", include_next },
+	{ "include_next", include_next, 0 },
 #endif
 };
 #define	NPPD	(int)(sizeof(ppd) / sizeof(ppd[0]))

@@ -1,4 +1,4 @@
-/*	$Id: inline.c,v 1.56 2015/08/13 11:56:02 ragge Exp $	*/
+/*	$Id: inline.c,v 1.59 2015/08/18 10:07:01 ragge Exp $	*/
 /*
  * Copyright (c) 2003, 2008 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -73,7 +73,7 @@ static int nlabs, svclass;
 #endif
 
 int isinlining;
-int inlnodecnt, inlstatcnt;
+int inlstatcnt;
 
 #define	SZSI	sizeof(struct istat)
 int istatsz = SZSI;
@@ -92,20 +92,6 @@ getprol(struct istat *is, int type)
 			return (struct interpass_prolog *)ip;
 	cerror("getprol: %d not found", type);
 	return 0; /* XXX */
-}
-
-
-static void
-tcnt(NODE *p, void *arg)
-{
-	inlnodecnt++;
-	if (nlabs > 1 && (p->n_op == REG || p->n_op == OREG) &&
-	    regno(p) == FPREG)
-		SLIST_FIRST(&ipole)->flags &= ~CANINL; /* no stack refs */
-	if (p->n_op == NAME || p->n_op == ICON)
-		p->n_sp = NULL; /* let symtabs be freed for inline funcs */
-	if (ndebug)
-		printf("locking node %p\n", p);
 }
 
 static struct istat *
@@ -132,17 +118,72 @@ refnode(struct symtab *sp)
 	inline_addarg(ip);
 }
 
+/*
+ * Save attributes permanent.
+ */
+static struct attr *
+inapcopy(struct attr *ap)
+{
+	struct attr *nap = attr_dup(ap);
+
+	if (nap->next)
+		nap->next = inapcopy(nap->next);
+	return nap;
+}
+
+/*
+ * Copy a tree onto the permanent heap to save for inline.
+ */
+static NODE *
+intcopy(NODE *p)
+{
+	NODE *q = permalloc(sizeof(NODE));
+	int o = coptype(p->n_op); /* XXX pass2 optype? */
+
+	*q = *p;
+	if (nlabs > 1 && (p->n_op == REG || p->n_op == OREG) &&
+	    regno(p) == FPREG)
+		SLIST_FIRST(&ipole)->flags &= ~CANINL; /* no stack refs */
+	if (q->n_ap)
+		q->n_ap = inapcopy(q->n_ap);
+	if ((q->n_op == NAME || q->n_op == ICON) && *q->n_name)
+		q->n_name = xstrdup(q->n_name); /* XXX permstrdup */
+	if (o == BITYPE)
+		q->n_right = intcopy(q->n_right);
+	if (o != LTYPE)
+		q->n_left = intcopy(q->n_left);
+	return q;
+}
+
 void
 inline_addarg(struct interpass *ip)
 {
-	extern NODE *cftnod;
+	struct interpass_prolog *ipp;
+	NODE *q;
+	static int g = 0;
+	extern P1ND *cftnod;
 
 	SDEBUG(("inline_addarg(%p)\n", ip));
 	DLIST_INSERT_BEFORE(&cifun->shead, ip, qelem);
-	if (ip->type == IP_DEFLAB)
+	switch (ip->type) {
+	case IP_ASM:
+		ip->ip_asm = xstrdup(ip->ip_asm);
+		break;
+	case IP_DEFLAB:
 		nlabs++;
-	if (ip->type == IP_NODE)
-		walkf(ip->ip_node, tcnt, 0); /* Count as saved */
+		break;
+	case IP_NODE:
+		q = ip->ip_node;
+		ip->ip_node = intcopy(ip->ip_node);
+		tfree(q);
+		break;
+	case IP_EPILOG:
+		ipp = (struct interpass_prolog *)ip;
+		if (ipp->ip_labels[0])
+			uerror("no computed goto in inlined functions");
+		ipp->ip_labels = &g;
+		break;
+	}
 	if (cftnod)
 		cifun->retval = regno(cftnod);
 }
@@ -353,8 +394,9 @@ printip(struct interpass *pole)
 		switch (ip->type) {
 		case IP_NODE: printf("\n");
 #ifdef PCC_DEBUG
-#ifdef notyet
-			fwalk(ip->ip_node, e2print, 0); break;
+#ifndef TWOPASS
+			{ extern void e2print(NODE *p, int down, int *a, int *b);
+			fwalk(ip->ip_node, e2print, 0); break; }
 #endif
 #endif
 		case IP_PROLOG:
@@ -518,11 +560,12 @@ inlinetree(struct symtab *sp, P1ND *f, P1ND *ap)
 				pp->n_right->n_lval += lmin;
 			walkf(pp, rtmps, 0);
 #ifdef PCC_DEBUG
-#ifdef notyet
+#ifndef TWOPASS
 			if (sdebug) {
+				extern void e2print(NODE *p, int down, int *a, int *b);
 				printf("converted node\n");
-				fwalk(ip->ip_node, eprint, 0);
-				fwalk(pp, eprint, 0);
+				fwalk(ip->ip_node, e2print, 0);
+				fwalk(pp, e2print, 0);
 			}
 #endif
 #endif

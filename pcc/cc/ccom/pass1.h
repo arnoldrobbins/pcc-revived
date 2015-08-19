@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.278 2015/08/13 20:03:17 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.283 2015/08/19 18:52:48 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -41,6 +41,7 @@
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
+#include <stdlib.h>
 
 #ifndef MKEXT
 #include "external.h"
@@ -90,10 +91,12 @@ extern	char *scnames(int);
 
 #define	STLS		00010	/* Thread Local Support variable */
 #define SINSYS		00020	/* Declared in system header */
+#define	SSTMT		SINSYS	/* Allocate symtab on statement stack */
 #define SNOCREAT	00040	/* don't create a symbol in lookup() */
 #define STEMP		00100	/* Allocate symtab from temp or perm mem */
 #define	SDYNARRAY	00200	/* symbol is dynamic array on stack */
 #define	SINLINE		00400	/* function is of type inline */
+#define	SBLK		SINLINE	/* Allocate symtab from blk mem */
 #define	STNODE		01000	/* symbol shall be a temporary node */
 #define	SBUILTIN	02000	/* this is a builtin function */
 #define	SASG		04000	/* symbol is assigned to already */
@@ -375,8 +378,6 @@ int fldchk(int);
 int nncon(P1ND *);
 void cunput(char);
 P1ND *nametree(struct symtab *sp);
-void *inlalloc(int size);
-void *blkalloc(int size);
 void pass1_lastchance(struct interpass *);
 void fldty(struct symtab *p);
 struct suedef *sueget(struct suedef *p);
@@ -422,6 +423,10 @@ P1ND *rmpconv(P1ND *);
 P1ND *optloop(P1ND *);
 P1ND *nlabel(int label);
 TWORD styp(void);
+void *stmtalloc(size_t);
+void *blkalloc(size_t);
+void stmtfree(void);
+void blkfree(void);
 
 void p1walkf(P1ND *, void (*f)(P1ND *, void *), void *);
 void p1fwalk(P1ND *t, void (*f)(P1ND *, int, int *, int *), int down);

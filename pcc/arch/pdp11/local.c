@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.13 2015/06/29 18:49:36 ragge Exp $	*/
+/*	$Id: local.c,v 1.14 2015/08/18 10:15:08 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -136,7 +136,7 @@ myp2tree(NODE *p)
 	if (p->n_op != FCON)
 		return;
 
-	sp = inlalloc(sizeof(struct symtab));
+	sp = tmpalloc(sizeof(struct symtab));
 	sp->sclass = STATIC;
 	sp->sap = 0;
 	sp->slevel = 1; /* fake numeric label */

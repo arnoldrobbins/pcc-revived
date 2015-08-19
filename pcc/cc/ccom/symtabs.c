@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.34 2015/08/13 11:56:03 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.36 2015/08/19 18:52:48 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -208,7 +208,9 @@ lookup(char *key, int stype)
 		if (stype & SNOCREAT)
 			return NULL;
 		if (uselvl) {
-			sym = getsymtab(key, stype|STEMP);
+			if (type == SNORMAL)
+				stype |= SBLK;
+			sym = getsymtab(key, stype);
 			sym->snext = tmpsyms[type];
 			tmpsyms[type] = sym;
 			return sym;
@@ -602,7 +604,7 @@ strend(char *s, TWORD t)
 	NODE *p;
 
 #ifdef NO_STRING_SAVE
-	sp = getsymtab(s, SSTRING|STEMP);
+	sp = getsymtab(s, SSTRING|SSTMT);
 #else
 	s = addstring(s);
 	sp = lookup(s, SSTRING);

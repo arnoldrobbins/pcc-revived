@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.400 2015/08/13 11:56:02 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.404 2015/08/19 18:52:48 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -211,6 +211,16 @@ extern int *mkclabs(void);
 	P1ND *pp = inp; \
 	inp = tymerge(pp->n_left, pp->n_right); \
 	p1nfree(pp->n_left); p1nfree(pp); }
+
+struct xalloc;
+extern struct xalloc *bkpole, *sapole;
+extern int cbkp, cstp;
+extern int usdnodes;
+struct bks {
+	struct xalloc *ptr;
+	int off;
+};
+
 /*
  * State for saving current switch state (when nested switches).
  */
@@ -220,6 +230,11 @@ struct savbc {
 	int contlab;
 	int flostat;
 	int swx;
+	struct xalloc *bkptr;
+	int bkoff;
+	struct xalloc *stptr;
+	int stoff;
+	int numnode;
 } *savbc, *savctx;
 
 %}
@@ -230,6 +245,7 @@ struct savbc {
 	struct symtab *symp;
 	struct rstack *rp;
 	char *strp;
+	struct bks *bkp;
 }
 
 	/* define types */
@@ -543,7 +559,7 @@ block_item_list:   block_item
 		;
 
 block_item:	   declaration
-		|  statement
+		|  statement { stmtfree(); }
 		;
 
 /*
@@ -822,6 +838,14 @@ begin:		  '{' {
 			oldstyle = 0;
 			bc->contlab = autooff;
 			bc->next = savctx;
+			bc->bkptr = bkpole;
+			bc->bkoff = cbkp;
+			bc->stptr = sapole;
+			bc->stoff = cstp;
+			bc->numnode = usdnodes;
+			usdnodes = 0;
+			bkpole = sapole = NULL;
+			cbkp = cstp = 0;
 			savctx = bc;
 			if (!isinlining && sspflag && blevel == 2)
 				sspstart();
@@ -925,9 +949,13 @@ statement:	   e ';' { ecomp(eve($1)); symclear(blevel); }
 			if (p->n_type == VOID) {
 				ecomp(p->n_right);
 			} else {
-				if (cftnod == NULL)
-					cftnod = tempnode(0, p->n_type,
+				if (cftnod == NULL) {
+					P1ND *r = tempnode(0, p->n_type,
 					    p->n_df, p->n_ap);
+					cftnod = tmpalloc(sizeof(P1ND));
+					*cftnod = *r;
+					p1tfree(r);
+				}
 				ecomp(buildtree(ASSIGN,
 				    p1tcopy(cftnod), p->n_right));
 			}
@@ -1118,7 +1146,8 @@ e:		   e ',' e { $$ = biop(COMOP, $1, $3); }
 
 xbegin:		   begin {
 			$$ = getlab(); getlab(); getlab();
-			branch($$); plabel(($$)+1); }
+			branch($$); plabel(($$)+1);
+		}
 		;
 
 term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
@@ -1185,7 +1214,7 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 		|  C_ICON { $$ = $1; }
 		|  C_FCON { $$ = $1; }
 		|  svstr { $$ = bdty(STRING, $1, styp()); }
-		|   '('  e  ')' { $$=$2; }
+		|  '(' e ')' { $$=$2; }
 		|  '(' xbegin e ';' '}' ')' { $$ = gccexpr($2, eve($3)); }
 		|  '(' xbegin block_item_list e ';' '}' ')' {
 			$$ = gccexpr($2, eve($4));
@@ -1194,7 +1223,7 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 			$$ = gccexpr($2, voidcon());
 		}
 		| C_ANDAND C_NAME {
-			struct symtab *s = lookup($2, SLBLNAME);
+			struct symtab *s = lookup($2, SLBLNAME|STEMP);
 			if (s->soffset == 0) {
 				s->soffset = -getlab();
 				s->sclass = STATIC;
@@ -1312,20 +1341,69 @@ flend(void)
 	if (autooff > maxautooff)
 		maxautooff = autooff;
 	autooff = savctx->contlab;
+	blkfree();
+	stmtfree();
+	bkpole = savctx->bkptr;
+	cbkp = savctx->bkoff;
+	sapole = savctx->stptr;
+	cstp = savctx->stoff;
+	usdnodes = savctx->numnode;
 	sc = savctx->next;
 	free(savctx);
 	savctx = sc;
 }
 
+/*
+ * XXX workaround routines for block level cleansing in gcc compat mode.
+ * Temporary should be re reserved for this value before.
+ */
+static P1ND *
+p1mcopy(P1ND *p)
+{
+	P1ND *q;
+
+	q = xmalloc(sizeof(P1ND));
+	*q = *p;
+
+	switch (coptype(q->n_op)) {
+	case BITYPE:
+		q->n_right = p1mcopy(p->n_right);
+		/* FALLTHROUGH */
+	case UTYPE: 
+		q->n_left = p1mcopy(p->n_left);
+	}
+
+	return(q);
+}
+
+static void
+p1mfree(P1ND *p)
+{
+	int o = coptype(p->n_op);
+	if (o == BITYPE)
+		p1mfree(p->n_right);
+	if (o != LTYPE)
+		p1mfree(p->n_left);
+	free(p);
+}
+
+
 static P1ND *
 gccexpr(int bn, P1ND *q)
 {
-	P1ND *r, *p;
+	P1ND *r, *p, *s;
 
 	branch(bn+2);
 	plabel(bn);
 	r = buildtree(COMOP, biop(GOTO, bcon(bn+1), NULL), q);
+	/* XXX hack to survive flend() */
+	s = p1mcopy(r);
+	p1tfree(r);
 	flend();
+	r = p1tcopy(s);
+	p1mfree(s);
+	q = r->n_right;
+	/* XXX end hack */
 	if (q->n_op != ICON && q->n_type != STRTY) {
 		p = tempnode(0, q->n_type, q->n_df, q->n_ap);
 		r = buildtree(ASSIGN, p1tcopy(p), r);
@@ -1837,7 +1915,7 @@ mkpstr(char *str)
 	char *os, *s;
 	int l = strlen(str) + 3; /* \t + \n + \0 */
 
-	os = s = inlalloc(l);
+	os = s = stmtalloc(l);
 	*s++ = '\t';
 	while (*str) {
 		if (*str == '\\')
@@ -2032,7 +2110,7 @@ eve(P1ND *p)
 	switch (p->n_op) {
 	case NAME:
 		sp = lookup((char *)p->n_sp,
-		    attr_find(p->n_ap, ATTR_P1LABELS) ? SLBLNAME : 0);
+		    attr_find(p->n_ap, ATTR_P1LABELS) ? SLBLNAME|STEMP : 0);
 		if (sp->sflags & SINLINE)
 			inline_ref(sp);
 		r = nametree(sp);
@@ -2426,7 +2504,7 @@ mkclabs(void)
 
 	for (i = 0, l = labp; l; l = l->next, i++)
 		;
-	rv = inlalloc((i+1)*sizeof(int));
+	rv = tmpalloc((i+1)*sizeof(int));	/* uncommon */
 	for (i = 0, l = labp; l; l = l->next, i++)
 		rv[i] = l->lab;
 	rv[i] = 0;

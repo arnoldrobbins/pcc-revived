@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.411 2015/08/13 11:56:02 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.416 2015/08/19 18:52:48 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -66,6 +66,9 @@
 # include "pass1.h"
 #include "unicode.h"
 
+#include <stddef.h>
+#include <stdlib.h>
+
 #include "cgram.h"
 
 #define	NODE P1ND
@@ -78,7 +81,7 @@
 struct symtab *cftnsp;
 int arglistcnt, dimfuncnt;	/* statistics */
 int symtabcnt, suedefcnt;	/* statistics */
-int lcommsz, blkalloccnt, inlalloccnt;
+int lcommsz, blkalloccnt;
 int autooff,		/* the next unused automatic offset */
     maxautooff,		/* highest used automatic offset in function */
     argoff;		/* the next unused argument offset */
@@ -531,7 +534,7 @@ ftnend(void)
 	if (retlab != NOLAB && nerrors == 0) { /* inside a real function */
 		plabel(retlab);
 		if (cftnod)
-			ecomp(buildtree(FORCE, cftnod, NIL));
+			ecomp(buildtree(FORCE, p1tcopy(cftnod), NIL));
 		efcode(); /* struct return handled here */
 		if ((c = cftnsp->soname) == NULL)
 			c = addname(exname(cftnsp->sname));
@@ -2757,7 +2760,7 @@ fixclass(int class, TWORD type)
 void
 gotolabel(char *name)
 {
-	struct symtab *s = lookup(name, SLBLNAME);
+	struct symtab *s = lookup(name, SLBLNAME|STEMP);
 
 	if (s->soffset == 0) {
 		s->soffset = -getlab();
@@ -2772,7 +2775,7 @@ gotolabel(char *name)
 void
 deflabel(char *name, NODE *p)
 {
-	struct symtab *s = lookup(name, SLBLNAME);
+	struct symtab *s = lookup(name, SLBLNAME|STEMP);
 
 #ifdef GCC_COMPAT
 	s->sap = gcc_attr_parse(p);
@@ -2793,7 +2796,11 @@ getsymtab(char *name, int flags)
 {
 	struct symtab *s;
 
-	if (flags & STEMP) {
+	if (flags & SSTMT) {
+		s = stmtalloc(sizeof(struct symtab));
+	} else if (flags & SBLK) {
+		s = blkalloc(sizeof(struct symtab));
+	} else if (flags & STEMP) {
 		s = tmpalloc(sizeof(struct symtab));
 	} else {
 		s = permalloc(sizeof(struct symtab));
@@ -2951,26 +2958,6 @@ sspend(void)
 	ecomp(buildtree(CALL, p, q));
 
 	plabel(lab);
-}
-
-/*
- * Allocate on the permanent heap for inlines, otherwise temporary heap.
- */
-void *
-blkalloc(int size)
-{
-	return (isinlining || blevel < 2) ? 
-	    (blkalloccnt += size, permalloc(size)) : tmpalloc(size);
-}
-
-/*
- * Allocate on the permanent heap for inlines, otherwise temporary heap.
- */
-void *
-inlalloc(int size)
-{
-	return isinlining ?
-	    (inlalloccnt += size, permalloc(size)) : tmpalloc(size);
 }
 
 /*
@@ -3450,3 +3437,112 @@ cxargfixup(NODE *a, TWORD dt, struct attr *ap)
 	nfree(p);
 }
 #endif
+
+/*
+ * Allocations:
+ *	permalloc() Never freed. in pass2.
+ *	tmpalloc() during a function lifetime, then freed. in pass2.
+ *	blkalloc() during a block lifetime.  Variables etc.  In pass1.
+ *	stmtalloc() during a statement lifetime.  Expression trees.  In pass1.
+ */
+
+/*
+ * Short-time allocations during statements.
+ */
+#define MEMCHUNKSZ 8192 /* 8k per allocation */
+struct balloc {
+        char a1;
+        union {
+                long long l;
+                long double d;
+        } a2;
+};
+#define ALIGNMENT offsetof(struct balloc, a2)
+#define ROUNDUP(x) (((x) + ((ALIGNMENT)-1)) & ~((ALIGNMENT)-1))
+
+#define	MAXSZ	MEMCHUNKSZ-sizeof(struct xalloc *)
+struct xalloc {
+	struct xalloc *next;
+	union {
+		long long b; /* for initial alignment */
+		long double d;
+		char elm[MAXSZ];
+	};
+} *sapole, *bkpole;
+int cstp, cbkp;
+
+void *
+stmtalloc(size_t size)
+{
+	struct xalloc *xp;
+	void *rv;
+
+	size = ROUNDUP(size);
+	if (size > MAXSZ)
+		cerror("stmtalloc");
+	if (sapole == 0 || (size + cstp) > MAXSZ) {
+		xp = xmalloc(sizeof(struct xalloc));
+		xp->next = sapole;
+		sapole = xp;
+		cstp = 0;
+	}
+	rv = &sapole->elm[cstp];
+	cstp += size;
+	return rv;
+}
+
+void
+stmtfree(void)
+{
+	extern P1ND *frelink;
+	extern int usdnodes;
+	struct xalloc *x1;
+
+	if (usdnodes != 0)
+		cerror("stmtfree: usdnodes %d", usdnodes);
+	frelink = NULL;
+
+	while (sapole) {
+		x1 = sapole->next;
+		free(sapole);
+		sapole = x1;
+	}
+	cstp = 0;
+}
+
+void *
+blkalloc(size_t size)
+{
+	struct xalloc *xp;
+	void *rv;
+
+	if (blevel < 2)
+		return permalloc(size);
+
+	size = ROUNDUP(size);
+	if (size > MAXSZ)
+		cerror("blkalloc");
+	if (bkpole == 0 || (size + cbkp) > MAXSZ) {
+		xp = xmalloc(sizeof(struct xalloc));
+		xp->next = bkpole;
+		bkpole = xp;
+		cbkp = 0;
+	}
+	rv = &bkpole->elm[cbkp];
+	cbkp += size;
+	return rv;
+}
+
+void
+blkfree(void)
+{
+	struct xalloc *x1;
+
+	while (bkpole) {
+		x1 = bkpole->next;
+		free(bkpole);
+		bkpole = x1;
+	}
+	cbkp = 0;
+}
+

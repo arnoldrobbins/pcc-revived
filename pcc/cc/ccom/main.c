@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.129 2015/08/13 11:56:02 ragge Exp $	*/
+/*	$Id: main.c,v 1.131 2015/08/18 10:15:08 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -369,9 +369,9 @@ prtstats(void)
 {
 #ifndef PASS2
 	extern int nametabs, namestrlen, treestrsz;
-	extern int arglistcnt, dimfuncnt, inlnodecnt, inlstatcnt;
+	extern int arglistcnt, dimfuncnt, inlstatcnt;
 	extern int symtabcnt, suedefcnt, strtabs, strstrlen;
-	extern int blkalloccnt, inlalloccnt, lcommsz, istatsz;
+	extern int blkalloccnt, lcommsz, istatsz;
 	extern int savstringsz, newattrsz, nodesszcnt, symtreecnt;
 #endif
 	extern size_t permallocsize, tmpallocsize, lostmem;
@@ -388,7 +388,6 @@ prtstats(void)
 	fprintf(stderr, "Argument list unions:		%d pcs\n", arglistcnt);
 	fprintf(stderr, "Dimension/function unions:	%d pcs\n", dimfuncnt);
 	fprintf(stderr, "Struct/union/enum blocks:	%d pcs\n", suedefcnt);
-	fprintf(stderr, "Inline node count:		%d pcs\n", inlnodecnt);
 	fprintf(stderr, "Inline control blocks:		%d pcs\n", inlstatcnt);
 	fprintf(stderr, "Permanent symtab entries:	%d pcs\n", symtabcnt);
 	fprintf(stderr, "\n");
@@ -410,7 +409,6 @@ prtstats(void)
 	    symtreecnt * treestrsz);
 	fprintf(stderr, "lcomm struct size:		%d B\n", lcommsz);
 	fprintf(stderr, "blkalloc size:			%d B\n", blkalloccnt);
-	fprintf(stderr, "inlalloc size:			%d B\n", inlalloccnt);
 	fprintf(stderr, "(saved strings size):		%d B\n", savstringsz);
 	fprintf(stderr, "attribute size:			%d B\n", newattrsz);
 	fprintf(stderr, "nodes size:			%d B\n", nodesszcnt);
@@ -420,6 +418,6 @@ prtstats(void)
 	    (arglistcnt * sizeof(union arglist))-(strtabs * treestrsz)-
 	    (dimfuncnt * sizeof(union dimfun))-(inlstatcnt * istatsz)-
 	    (symtabcnt * sizeof(struct symtab))-(symtreecnt * treestrsz)-
-	    lcommsz-blkalloccnt-inlalloccnt-newattrsz-nodesszcnt);
+	    lcommsz-blkalloccnt-newattrsz-nodesszcnt);
 #endif
 }

@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.354 2015/08/13 20:03:17 ragge Exp $	*/
+/*	$Id: trees.c,v 1.357 2015/08/18 18:22:38 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2209,7 +2209,7 @@ cstknode(TWORD t, union dimfun *df, struct attr *ap)
 	struct symtab *sp;
 
 	/* create a symtab entry suitable for this type */
-	sp = getsymtab("0hej", STEMP);
+	sp = getsymtab("0hej", SSTMT);
 	sp->stype = t;
 	sp->sdf = df;
 	sp->sap = ap;
@@ -2651,8 +2651,10 @@ ecomp(P1ND *p)
 {
 
 #ifdef PCC_DEBUG
-	if (edebug)
+	if (edebug) {
+		printf("ecomp\n");
 		p1fwalk(p, eprint, 0);
+	}
 #endif
 	if (!reached) {
 		warner(Wunreachable_code);
@@ -2772,7 +2774,7 @@ pass2_compile(struct interpass *ip)
 static char *
 sptostr(struct symtab *sp)
 {
-	char *cp = inlalloc(32);
+	char *cp = tmpalloc(32);
 	int n = sp->soffset;
 	if (n < 0)
 		n = -n;
@@ -3109,6 +3111,7 @@ ecode(P1ND *p)
 	}
 #endif
 	r = p2tree(p);
+	p1tfree(p);
 	send_passt(IP_NODE, r);
 }
 
@@ -3138,11 +3141,7 @@ send_passt(int type, ...)
 	else
 		sz = sizeof(struct interpass);
 
-#ifdef PASS1
 	ip = xmalloc(sz);
-#else
-	ip = inlalloc(sz); /* XXX should use only malloc */
-#endif
 	ip->type = type;
 	ip->lineno = lineno;
 	switch (type) {
@@ -3337,7 +3336,7 @@ p1tcopy(P1ND *p)
 	return(q);
 }
 
-static P1ND *frelink;
+P1ND *frelink;
 int usdnodes;
 /*
  * Free a node, and return its left descendant.
@@ -3392,7 +3391,7 @@ p1alloc(void)
 		return p;
 	}
 
-	p = permalloc(sizeof(P1ND));
+	p = stmtalloc(sizeof(P1ND));
 	p->n_op = FREE;
 	if (ndebug)
 		printf("alloc p1node %p from memory\n", p);
