@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.404 2015/08/19 18:52:48 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.405 2015/08/23 17:31:42 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1146,7 +1146,7 @@ e:		   e ',' e { $$ = biop(COMOP, $1, $3); }
 
 xbegin:		   begin {
 			$$ = getlab(); getlab(); getlab();
-			branch($$); plabel(($$)+1);
+			branch($$); plabel(($$)+2);
 		}
 		;
 
@@ -1393,9 +1393,9 @@ gccexpr(int bn, P1ND *q)
 {
 	P1ND *r, *p, *s;
 
-	branch(bn+2);
+	branch(bn+4);
 	plabel(bn);
-	r = buildtree(COMOP, biop(GOTO, bcon(bn+1), NULL), q);
+	r = buildtree(COMOP, biop(GOTO, bcon(bn+2), NULL), q);
 	/* XXX hack to survive flend() */
 	s = p1mcopy(r);
 	p1tfree(r);

@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.36 2015/08/19 18:52:48 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.37 2015/08/22 14:33:02 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -274,8 +274,7 @@ lookup(char *key, int stype)
 	for (cix = 0; (ix & 1) == 0; ix >>= 1, cix++)
 		;
 
-	new = stype & STEMP ? tmpalloc(sizeof(struct tree)) :
-	    (symtreecnt++, permalloc(sizeof(struct tree)));
+	new = (symtreecnt++, permalloc(sizeof(struct tree)));
 	bit = (code >> cix) & 1;
 	new->bitno = cix | (bit ? RIGHT_IS_LEAF : LEFT_IS_LEAF);
 	new->lr[bit] = (struct tree *)getsymtab(key, stype);
@@ -574,7 +573,11 @@ strst(struct symtab *sp, TWORD t)
 	sp->slevel = 1;
 	sp->soffset = getlab();
 	sp->squal = (CON >> TSHIFT);
+#ifndef NO_STRING_SAVE
 	sp->sdf = permalloc(sizeof(union dimfun));
+#else
+	sp->sdf = stmtalloc(sizeof(union dimfun));
+#endif
 	dimfuncnt++;
 	sp->stype = t;
 
