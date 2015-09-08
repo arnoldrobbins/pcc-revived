@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.359 2015/08/23 18:40:31 ragge Exp $	*/
+/*	$Id: trees.c,v 1.362 2015/09/01 18:45:26 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -703,7 +703,7 @@ void
 putjops(P1ND *p, void *arg)
 {
 	if (p->n_op == COMOP && p->n_left->n_op == GOTO)
-		plabel((int)p->n_left->n_left->n_lval+1);
+		plabel((int)p->n_left->n_left->n_lval+2);
 }
 
 /*
@@ -2878,7 +2878,7 @@ p2tree(P1ND *p)
 
 	case XARG:
 	case XASM:
-		np->n_name = p->n_name;
+		np->n_name = tmpstrdup(p->n_name);
 		break;
 
 	default:
@@ -3126,6 +3126,11 @@ ecode(P1ND *p)
 		p1fwalk(p, eprint, 0); 
 	}
 #endif
+	if (p->n_op == LABEL) {
+		plabel(p->n_left->n_lval);
+		p1tfree(p);
+		return;
+	}
 	r = p2tree(p);
 	p1tfree(p);
 	send_passt(IP_NODE, r);
@@ -3163,12 +3168,6 @@ send_passt(int type, ...)
 	switch (type) {
 	case IP_NODE:
 		ip->ip_node = va_arg(ap, NODE *);
-		if (ip->ip_node->n_op == LABEL) {
-			P1ND *p = (P1ND *)ip->ip_node;
-			ip->ip_lbl = (int)p->n_left->n_lval;
-			ip->type = IP_DEFLAB;
-			p1nfree(p1nfree(p));
-		}
 		break;
 	case IP_EPILOG:
 		if (!isinlining) {
@@ -3190,7 +3189,7 @@ send_passt(int type, ...)
 		ipp->ip_lblnum = crslab;
 		ipp->ip_labels = va_arg(ap, int *);;
 		if (type == IP_PROLOG)
-			ipp->ip_lblnum--;
+			ipp->ip_lblnum-=2;
 		break;
 	case IP_DEFLAB:
 		ip->ip_lbl = va_arg(ap, int);
@@ -3203,6 +3202,7 @@ send_passt(int type, ...)
 			return;
 		}
 		ip->ip_asm = va_arg(ap, char *);
+		ip->ip_asm = tmpstrdup(ip->ip_asm);
 		break;
 	default:
 		cerror("bad send_passt type %d", type);
@@ -3508,7 +3508,7 @@ void
 plabel(int label)
 {
 	reached = 1; /* Will this always be correct? */
-	send_passt(IP_NODE, nlabel(label));
+	send_passt(IP_DEFLAB, label);
 }
 
 /*
@@ -3542,13 +3542,14 @@ cqual(TWORD t, TWORD q)
 	return q & (CON|VOL);
 }
 
-int crslab = 10;
+int crslab = 11;
 /*
  * Return a number for internal labels.
  */
 int
 getlab(void)
 {
+	int l2 = crslab++;
 	crslab++;
-	return crslab++;
+	return l2;
 }

@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.283 2015/08/19 18:52:48 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.284 2015/08/28 13:59:34 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -578,7 +578,7 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 #define	strattr(x)	(attr_find(x, ATTR_STRUCT))
 
 void gcc_init(void);
-int gcc_keyword(char *, P1ND **);
+int gcc_keyword(char *);
 struct attr *gcc_attr_parse(P1ND *);
 void gcc_tcattrfix(P1ND *);
 struct gcc_attrib *gcc_get_attr(struct suedef *, int);

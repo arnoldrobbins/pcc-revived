@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.61 2015/08/26 20:00:23 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.62 2015/08/28 15:32:11 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -361,6 +361,7 @@ builtin_ffsll(const struct bitable *bt, P1ND *a)
 static P1ND *
 builtin_object_size(const struct bitable *bt, P1ND *a)
 {
+	extern void putjops(P1ND *, void *);
 	CONSZ v = icons(a->n_right);
 	int r;
 
@@ -376,6 +377,7 @@ builtin_object_size(const struct bitable *bt, P1ND *a)
 		a = doszof(a);
 	}
 #else
+	p1walkf(a, putjops, 0); /* if ?: exists */
 	p1tfree(a);
 #endif
 	return xbcon(r, NULL, bt->rt);

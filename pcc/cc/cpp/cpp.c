@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.231 2015/08/19 12:04:11 plunky Exp $	*/
+/*	$Id: cpp.c,v 1.233 2015/09/04 05:50:22 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -703,7 +703,7 @@ include(void)
 			nm = xstrdup(ob->buf);
 			bufree(ob);
 			if (pushfile(nm, nm, 0, NULL) == 0) {
-				free(fn);
+				free(fn-1);
 				goto okret;
 			}
 		}
@@ -1868,11 +1868,19 @@ readargs2(usch **inp, struct symtab *sp, const usch **args)
 		for (;;) {
 			if (plev == 0 && c == ')')
 				break;
-			if (c == '(')
-				plev++;
-			if (c == ')')
-				plev--;
-			savch(c);
+			if (c == '(') plev++;
+			if (c == ')') plev--;
+			if (c == '\"' || c == '\'') {
+				if (raptr) {
+					struct iobuf *xob = getobuf();
+					raptr = fstrstr(raptr-1, xob);
+					*xob->cptr = 0;
+					savstr(xob->buf);
+					bufree(xob);
+				} else
+					faststr(c, savch);
+			} else
+				savch(c);
 			c = raread();
 		}
 		while (args[i] < stringbuf && ISWSNL(stringbuf[-1]))

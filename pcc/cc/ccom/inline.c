@@ -1,4 +1,4 @@
-/*	$Id: inline.c,v 1.59 2015/08/18 10:07:01 ragge Exp $	*/
+/*	$Id: inline.c,v 1.63 2015/09/08 18:25:05 ragge Exp $	*/
 /*
  * Copyright (c) 2003, 2008 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -146,8 +146,13 @@ intcopy(NODE *p)
 		SLIST_FIRST(&ipole)->flags &= ~CANINL; /* no stack refs */
 	if (q->n_ap)
 		q->n_ap = inapcopy(q->n_ap);
-	if ((q->n_op == NAME || q->n_op == ICON) && *q->n_name)
-		q->n_name = xstrdup(q->n_name); /* XXX permstrdup */
+	if (q->n_op == NAME || q->n_op == ICON ||
+	    q->n_op == XASM || q->n_op == XARG) {
+		if (*q->n_name)
+			q->n_name = xstrdup(q->n_name); /* XXX permstrdup */
+		else
+			q->n_name = "";
+	}
 	if (o == BITYPE)
 		q->n_right = intcopy(q->n_right);
 	if (o != LTYPE)
@@ -526,7 +531,7 @@ inlinetree(struct symtab *sp, P1ND *f, P1ND *ap)
 
 	SDEBUG(("pre-offsets crslab %d tvaloff %d\n", crslab, tvaloff));
 	lmin = crslab - ipp->ip_lblnum;
-	crslab += (ipe->ip_lblnum - ipp->ip_lblnum) + 1;
+	crslab += (ipe->ip_lblnum - ipp->ip_lblnum) + 2;
 	toff = tvaloff - ipp->ip_tmpnum;
 	tvaloff += (ipe->ip_tmpnum - ipp->ip_tmpnum) + 1;
 	SDEBUG(("offsets crslab %d lmin %d tvaloff %d toff %d\n",
@@ -602,7 +607,7 @@ inlinetree(struct symtab *sp, P1ND *f, P1ND *ap)
 		p = tempnode(is->retval + toff, DECREF(sp->stype),
 		    sp->sdf, sp->sap);
 	else
-		p = bcon(0);
+		p = xbcon(0, NULL, DECREF(sp->stype));
 	rp = buildtree(COMOP, rp, p);
 
 	if (is->nargs) {
