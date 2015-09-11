@@ -1,4 +1,4 @@
-/*	$Id: inline.c,v 1.63 2015/09/08 18:25:05 ragge Exp $	*/
+/*	$Id: inline.c,v 1.64 2015/09/11 07:57:48 ragge Exp $	*/
 /*
  * Copyright (c) 2003, 2008 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -126,8 +126,8 @@ inapcopy(struct attr *ap)
 {
 	struct attr *nap = attr_dup(ap);
 
-	if (nap->next)
-		nap->next = inapcopy(nap->next);
+	if (ap->next)
+		nap->next = inapcopy(ap->next);
 	return nap;
 }
 
