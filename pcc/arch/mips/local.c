@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.33 2012/12/01 08:53:40 ragge Exp $	*/
+/*	$Id: local.c,v 1.34 2015/09/12 07:41:05 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -31,6 +31,15 @@
 
 #include <assert.h>
 #include "pass1.h"
+
+#ifndef LANG_CXX
+#define NODE P1ND
+#define ccopy p1tcopy
+#define tfree p1tfree
+#define nfree p1nfree
+#define fwalk p1fwalk
+#define talloc p1alloc
+#endif
 
 #define IALLOC(sz) (isinlining ? permalloc(sz) : tmpalloc(sz))
 

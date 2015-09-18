@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.94 2015/08/23 17:31:42 ragge Exp $	*/
+/*	$Id: code.c,v 1.95 2015/09/15 20:01:10 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -99,8 +99,7 @@ defloc(struct symtab *sp)
 {
 	char *name;
 
-	if ((name = sp->soname) == NULL)
-		name = exname(sp->sname);
+	name = getexname(sp);
 	if (sp->sclass == EXTDEF) {
 		printf(PRTPREF "	.globl %s\n", name);
 #if defined(ELFABI)

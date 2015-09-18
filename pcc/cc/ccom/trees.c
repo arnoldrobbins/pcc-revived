@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.362 2015/09/01 18:45:26 ragge Exp $	*/
+/*	$Id: trees.c,v 1.363 2015/09/15 20:01:10 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2842,10 +2842,8 @@ p2tree(P1ND *p)
 				np->n_name = sptostr(q);
 				if ((q->sflags & SMASK) == SSTRING)
 					q->sflags |= SASG;
-			} else {
-				if ((np->n_name = q->soname) == NULL)
-					np->n_name = addname(exname(q->sname));
-			}
+			} else
+				np->n_name = getexname(q);
 		} else
 			np->n_name = "";
 		break;

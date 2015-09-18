@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.96 2015/08/13 11:56:02 ragge Exp $	*/
+/*	$Id: init.c,v 1.97 2015/09/15 20:01:10 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -268,8 +268,7 @@ inval(CONSZ off, int fsz, NODE *p)
 				int o = sp->soffset;
 				printf(LABFMT, o < 0 ? -o : o);
 			} else
-				printf("%s", sp->soname ?
-				    sp->soname : exname(sp->sname));
+				printf("%s", getexname(sp));
 		}
 		printf("\n");
 	} else

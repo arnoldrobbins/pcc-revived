@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.297 2015/08/23 18:40:31 ragge Exp $	*/
+/*	$Id: reader.c,v 1.298 2015/09/12 15:58:54 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -97,9 +97,11 @@ int
 getlab2(void)
 {
         crslab2++;
-	if (crslab2 < p2env.ipp->ip_lblnum || crslab2 >= p2env.epp->ip_lblnum)
+	if (crslab2 < p2env.ipp->ip_lblnum)
 		comperr("getlab2 %d outside boundaries %d-%d",
 		    crslab2, p2env.ipp->ip_lblnum, p2env.epp->ip_lblnum);
+	if (crslab2 >= p2env.epp->ip_lblnum)
+		p2env.epp->ip_lblnum = crslab2+1;
         return crslab2++;
 }
 
@@ -507,7 +509,6 @@ mainp2()
 			memset(ipp->ipp_regs, -1, sizeof(ipp->ipp_regs));
 			ipp->ipp_autos = -1;
 			ipp->ip_labels = foo;
-			crslab2 = ipp->ip_lblnum;
 #ifdef TARGET_IPP_MEMBERS
 			if (*(p = rdline()) != '(')
 				comperr("target member error");
@@ -578,7 +579,8 @@ pass2_compile(struct interpass *ip)
 	if (ip->type == IP_PROLOG) {
 		memset(p2e, 0, sizeof(struct p2env));
 		p2e->ipp = (struct interpass_prolog *)ip;
-		crslab2 = p2e->ipp->ip_lblnum;
+		if (crslab2 < p2e->ipp->ip_lblnum)
+			crslab2 = p2e->ipp->ip_lblnum;
 		DLIST_INIT(&p2e->ipole, qelem);
 	}
 	DLIST_INSERT_BEFORE(&p2e->ipole, ip, qelem);

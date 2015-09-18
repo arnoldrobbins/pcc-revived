@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.406 2015/08/27 19:59:08 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.407 2015/09/15 20:01:10 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1773,7 +1773,6 @@ fundef(P1ND *tp, P1ND *p)
 	struct symtab *s;
 	P1ND *q, *typ;
 	int class = tp->n_lval, oclass, ctval;
-	char *c;
 
 	/*
 	 * We discard all names except for those needed for
@@ -1835,9 +1834,7 @@ fundef(P1ND *tp, P1ND *p)
 	}
 #endif
 	prolab = getlab();
-	if ((c = cftnsp->soname) == NULL)
-		c = addname(exname(cftnsp->sname));
-	send_passt(IP_PROLOG, -1, c, cftnsp->stype,
+	send_passt(IP_PROLOG, -1, getexname(cftnsp), cftnsp->stype,
 	    cftnsp->sclass == EXTDEF, prolab, ctval);
 	blevel++;
 #ifdef STABS

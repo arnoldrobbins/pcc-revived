@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.284 2015/08/28 13:59:34 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.285 2015/09/15 20:01:10 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -150,7 +150,6 @@ struct	symtab {
 	char	slevel;		/* scope level */
 	short	sflags;		/* flags, see below */
 	char	*sname;		/* Symbol name */
-	char	*soname;	/* Written-out name */
 	TWORD	stype;		/* type word */
 	TWORD	squal;		/* qualifier word */
 	union	dimfun *sdf;	/* ptr to the dimension/prototype array */
@@ -427,6 +426,7 @@ void *stmtalloc(size_t);
 void *blkalloc(size_t);
 void stmtfree(void);
 void blkfree(void);
+char *getexname(struct symtab *sp);
 
 void p1walkf(P1ND *, void (*f)(P1ND *, void *), void *);
 void p1fwalk(P1ND *t, void (*f)(P1ND *, int, int *, int *), int down);
@@ -496,6 +496,7 @@ enum {	ATTR_FIRST = ATTR_MI_MAX + 1,
 #define ATTR_MAX ATTR_STRUCT
 
 	ATTR_P1LABELS,	/* used to store stuff while parsing */
+	ATTR_SONAME,	/* output name of symbol */
 
 #ifdef GCC_COMPAT
 	/* type attributes */
