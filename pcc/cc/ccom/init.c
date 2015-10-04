@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.97 2015/09/15 20:01:10 ragge Exp $	*/
+/*	$Id: init.c,v 1.98 2015/09/22 20:05:13 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -267,6 +267,8 @@ inval(CONSZ off, int fsz, NODE *p)
 				/* fix problem with &&label not defined yet */
 				int o = sp->soffset;
 				printf(LABFMT, o < 0 ? -o : o);
+				if ((sp->sflags & SMASK) == SSTRING)
+					sp->sflags |= SASG;
 			} else
 				printf("%s", getexname(sp));
 		}

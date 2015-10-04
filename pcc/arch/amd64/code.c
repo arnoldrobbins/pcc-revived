@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.83 2015/09/15 20:13:16 ragge Exp $	*/
+/*	$Id: code.c,v 1.84 2015/09/20 08:35:56 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -794,6 +794,7 @@ classifystruct(struct symtab *sp, int off)
 				sps[i].sdf = df;
 				sps[i].snext = &sps[i+1];
 				sps[i].soffset = i * tsize(t, df, sp->sap);
+				sps[i].soffset += sp->soffset;
 			}
 			sps[i-1].snext = sp->snext;
 			sp = &sps[0];

@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.194 2015/09/15 20:01:10 ragge Exp $	*/
+/*	$Id: local.c,v 1.196 2015/09/28 15:29:00 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -184,7 +184,7 @@ picext(P1ND *p)
 		p->n_sp->sflags |= SSTDCALL;
 #endif
 	sp->sflags = p->n_sp->sflags & SSTDCALL;
-	sp->sap = attr_add(sp->sap, p->n_sp->sap);
+	sp->sap = attr_add(p->n_sp->sap, sp->sap);
 	r = xbcon(0, sp, INT);
 	q = buildtree(PLUS, q, r);
 	q = block(UMUL, q, 0, PTR|VOID, 0, 0);
@@ -765,7 +765,7 @@ fixnames(P1ND *p, void *arg)
 #if defined(ELFABI) || defined(MACHOABI)
 
 	struct symtab *sp;
-	struct attr *ap;
+	struct attr *ap, *ap2;
 	P1ND *q;
 	char *c;
 	int isu;
@@ -793,9 +793,9 @@ fixnames(P1ND *p, void *arg)
 		c = NULL;
 #if defined(ELFABI)
 
-		if ((ap = attr_find(sp->sap, ATTR_SONAME)) == NULL ||
-		    (c = strstr(ap->sarg(0), "@GOT")) == NULL)
-			cerror("fixnames2: %p %s", ap, c);
+		if ((ap2 = attr_find(sp->sap, ATTR_SONAME)) == NULL ||
+		    (c = strstr(ap2->sarg(0), "@GOT")) == NULL)
+			cerror("fixnames2: %p %s", ap2, c);
 		if (isu) {
 			memcpy(c, "@PLT", sizeof("@PLT"));
 		} else

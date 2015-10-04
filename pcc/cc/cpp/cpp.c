@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.233 2015/09/04 05:50:22 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.238 2015/09/30 19:38:35 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -474,7 +474,7 @@ addidir(char *idir, struct incs **ww)
 void
 line(void)
 {
-	int c, n;
+	int c, n, ln;
 
 	if (!ISDIGIT(c = skipws(0)))
 		goto bad;
@@ -487,11 +487,16 @@ line(void)
 	if (n < 1 || n > 2147483647)
 		goto bad;
 
-	ifiles->lineno = n;
+	ln = n;
 	ifiles->escln = 0;
 	if ((c = skipws(NULL)) != '\n') {
-		if (c == 'L')
-			c = cinput();
+		if (c == 'L' || c == 'U' || c == 'u') {
+			n = c, c = cinput();
+			if (n == 'u' && c == '8')
+				c = cinput();
+			if (c == '\"')
+				warning("#line only allows character literals");
+		}
 		if (c != '\"')
 			goto bad;
 		/* loses space on heap... does it matter? */
@@ -506,6 +511,7 @@ line(void)
 		goto bad;
 
 	prtline(0);
+	ifiles->lineno = ln;
 	cunput('\n');
 	return;
 
@@ -690,6 +696,9 @@ include(void)
 
 	fn = xstrdup(ob->buf) + 1;	/* Save on string heap? */
 	bufree(ob);
+	/* test absolute path first */
+	if (fn[0] == '/' && pushfile(fn, fn, 0, NULL) == 0)
+		goto okret;
 	if (fn[-1] == '\"') {
 		/* local includes. first try directly. */
 		if (pushfile(fn, fn, 0, NULL) == 0)
@@ -1359,9 +1368,14 @@ loopover(struct iobuf *ib)
 			xb->cptr = xb->buf;
 			ib->cptr = fstrstr(ib->cptr,xb);
 			*xb->cptr = 0;
-			for (xb->cptr = xb->buf; *xb->cptr; xb->cptr++)
-				if (*xb->cptr > 6)
-					savch(*xb->cptr);
+			for (cp = xb->buf; *cp; cp++) {
+				if (*cp <= BLKID) {
+					if (*cp == BLKID)
+						cp++;
+					continue;
+				}
+				savch(*cp);
+			}
 			continue;
 		case BLKID:
 			l = ib->cptr[1];
@@ -1391,12 +1405,14 @@ sstr:				for (; cp < ib->cptr; cp++)
 				goto sstr;
 			} else {
 				if (*sp->value != OBJCT) {
+					cp = ib->cptr;
 					while (ISWS(*ib->cptr))
 						ib->cptr++;
 					if (*ib->cptr == 0) {
 						bufree(xb);
 						return sp;
 					}
+					ib->cptr = cp;
 				}
 newmac:				if ((xob = submac(sp, 1, ib, NULL)) == NULL) {
 					savstr(sp->namep);
@@ -1430,6 +1446,7 @@ newmac:				if ((xob = submac(sp, 1, ib, NULL)) == NULL) {
 int
 kfind(struct symtab *sp)
 {
+	extern int inexpr;
 	struct blocker *bl;
 	struct iobuf *ib, *ob;
 	const usch *argary[MAXARGS+1], *sbp;
@@ -1466,7 +1483,8 @@ kfind(struct symtab *sp)
 			if (c == '\n')
 				n++;
 		if (c != '(') {
-			putstr(sp->namep);
+			if (inexpr == 0)
+				putstr(sp->namep);
 			if (n == 0)
 				putch(' ');
 			else for (ifiles->lineno += n; n; n--)
@@ -1554,10 +1572,13 @@ submac(struct symtab *sp, int lvl, struct iobuf *ib, struct blocker *obl)
 		DPRINT(("%d:submac: return exparg\n", lvl));
 		break;
 	default:
+		cp = ib->cptr;
 		while (ISWSNL(*ib->cptr))
 			ib->cptr++;
-		if (*ib->cptr != '(')
+		if (*ib->cptr != '(') {
+			ib->cptr = cp;
 			return 0;
+		}
 		cp = ib->cptr++;
 		pr = stringbuf;
 		if (readargs2(&ib->cptr, sp, argary)) {

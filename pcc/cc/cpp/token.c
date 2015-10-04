@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.152 2015/08/19 12:06:12 plunky Exp $	*/
+/*	$Id: token.c,v 1.154 2015/09/30 18:30:43 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -739,7 +739,7 @@ exprline(void)
 	struct symtab *nl;
 	int oCflag = Cflag;
 	usch *cp, *bp = stringbuf;
-	int c, ifdef;
+	int c, d, ifdef;
 
 	Cflag = ifdef = 0;
 
@@ -755,6 +755,11 @@ exprline(void)
 			unch(c);
 			continue;
 		}
+		if (c == 'L' || c == 'u' || c == 'U') {
+			unch(d = inch());
+			if (d == '\'')	/* discard wide designator */
+				continue;
+		}
 		if (ISID0(c)) {
 			cp = heapid(c);
 			stringbuf = cp;
@@ -766,10 +771,12 @@ exprline(void)
 				ifdef = 0;
 			} else if (nl != NULL) {
 				inexpr = 1;
-				kfind(nl);
+				if (kfind(nl)) {
+					while (*stringbuf)
+						stringbuf++;
+				} else
+					savch('0');
 				inexpr = 0;
-				while (*stringbuf)
-					stringbuf++;
 			} else
 				savch('0');
 		} else
