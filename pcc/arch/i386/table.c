@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.143 2014/11/13 19:10:36 ragge Exp $	*/
+/*	$Id: table.c,v 1.144 2015/10/07 11:30:21 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1278,11 +1278,13 @@ struct optab table[] = {
 		0, 	RESCC,
 		"	cmpl AR,AL\n", },
 
+#if 0
 { OPLOG,	FORCC,
 	SCON|SAREG,	TWORD|TPOINT,
 	SAREG|SOREG|SNAME,	TWORD|TPOINT,
 		0, 	RESCC,
 		"	cmpl AR,AL\n", },
+#endif
 
 { OPLOG,	FORCC,
 	SAREG|SOREG|SNAME,	TSHORT|TUSHORT,

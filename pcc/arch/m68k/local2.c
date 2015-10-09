@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.9 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local2.c,v 1.11 2015/10/09 10:45:03 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -183,10 +183,9 @@ starg(NODE *p)
 	
 	/* if more than 4 words, use loop, otherwise output instructions */
 	if (sz > 16) {
-		printf("	move.l #%d,%s\n", sz/4, rnames[cr]);
+		printf("	move.l #%d,%s\n", (sz/4)-1, rnames[cr]);
 		expand(p, INBREG, "1:	move.l (AL)+,(A2)+\n");
-		expand(p, INBREG, "	dec.l A1\n");
-		expand(p, INBREG, "	jne 1b\n");
+		expand(p, INBREG, "	dbra A1,1b\n");
 	} else {
 		if (sz > 12)
 			expand(p, INBREG, "	move.l (AL)+,(A2)+\n"), sz -= 4;

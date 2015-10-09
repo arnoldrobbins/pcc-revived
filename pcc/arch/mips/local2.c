@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.27 2015/01/04 19:17:23 ragge Exp $	 */
+/*	$Id: local2.c,v 1.28 2015/10/08 12:57:35 ragge Exp $	 */
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -921,7 +921,6 @@ upput(NODE * p, int size)
 void
 adrput(FILE * io, NODE * p)
 {
-	int r;
 	/* output an address, with offsets, from p */
 
 	if (p->n_op == FLD)
@@ -937,13 +936,11 @@ adrput(FILE * io, NODE * p)
 		return;
 
 	case OREG:
-		r = p->n_rval;
-
 		if (p->n_lval)
 			fprintf(io, "%d", (int) p->n_lval);
-
 		fprintf(io, "(%s)", rnames[p->n_rval]);
 		return;
+
 	case ICON:
 		/* addressable value of the constant */
 		conput(io, p);
