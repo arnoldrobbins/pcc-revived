@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.11 2015/10/09 10:45:03 ragge Exp $	*/
+/*	$Id: local2.c,v 1.14 2015/10/19 20:08:35 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -344,13 +344,10 @@ conput(FILE *fp, NODE *p)
 
 	switch (p->n_op) {
 	case ICON:
-		if (p->n_name[0] != '\0') {
-			fprintf(fp, "%s", p->n_name);
-			if (val)
-				fprintf(fp, "+%ld", val);
-		} else
-			fprintf(fp, "%ld", val);
-		return;
+		fprintf(fp, "%ld", val);
+		if (p->n_name[0])
+			printf("+%s", p->n_name);
+		break;
 
 	default:
 		comperr("illegal conput, p %p", p);
@@ -399,22 +396,23 @@ adrput(FILE *io, NODE *p)
 	/* output an address, with offsets, from p */
 	switch (p->n_op) {
 	case NAME:
-		if (p->n_name[0] != '\0') {
-			if (p->n_lval != 0)
-				fprintf(io, CONFMT "+", p->n_lval);
-			fprintf(io, "%s", p->n_name);
-		} else {
+		if (p->n_lval)
+			fprintf(io, CONFMT "%s", p->n_lval, 
+			    *p->n_name ? "+" : "");
+		if (p->n_name[0])
+			printf("%s", p->n_name);
+		else
 			comperr("adrput");
-			fprintf(io, CONFMT, p->n_lval);
-		}
 		return;
 
 	case OREG:
 		r = p->n_rval;
-		if (p->n_name[0])
-			printf("%s%s", p->n_name, p->n_lval ? "+" : "");
+		
 		if (p->n_lval)
-			fprintf(io, CONFMT, p->n_lval);
+			fprintf(io, CONFMT "%s", p->n_lval, 
+			    *p->n_name ? "+" : "");
+		if (p->n_name[0])
+			printf("%s", p->n_name);
 		if (R2TEST(r)) {
 			int r1 = R2UPK1(r);
 			int r2 = R2UPK2(r);
@@ -650,7 +648,7 @@ void
 rmove(int s, int d, TWORD t)
 {
 
-	if (t == LONGLONG || t == ULONGLONG) {
+	if (s >= D0D1 && s <= D6D7) {
 		printf("	move.l %s,%s\n",
 		    rnames[s-D0D1], rnames[d-D0D1]);
 		printf("	move.l %s,%s\n",

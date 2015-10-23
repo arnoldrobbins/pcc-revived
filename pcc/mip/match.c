@@ -1,4 +1,4 @@
-/*      $Id: match.c,v 1.102 2015/01/04 12:57:52 ragge Exp $   */
+/*      $Id: match.c,v 1.103 2015/10/19 20:07:05 ragge Exp $   */
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -645,7 +645,7 @@ relops(NODE *p)
 {
 	extern int *qtable[];
 	struct optab *q;
-	int i, shl = 0, shr = 0;
+	int i, shl = 0, shr = 0, sh;
 	NODE *l, *r;
 	int *ixp, idx = 0;
 	int lvl = 10, gol = 0, gor = 0;
@@ -701,10 +701,16 @@ relops(NODE *p)
 
 	(void)shswitch(-1, p->n_right, q->rshape, INREGS,
 	    q->rewrite & RRIGHT, gor);
-	
+
+	sh = 0;
+	if (q->rewrite & RLEFT)
+		sh = ffs(q->lshape & INREGS)-1;
+	else if (q->rewrite & RRIGHT)
+		sh = ffs(q->rshape & INREGS)-1;
+
 	F2DEBUG(("relops: node %p\n", p));
 	p->n_su = MKIDX(idx, 0);
-	SCLASS(p->n_su, 0); /* XXX */
+	SCLASS(p->n_su, sh);
 	return 0;
 }
 

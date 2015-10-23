@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.26 2014/10/12 09:18:18 ragge Exp $	*/
+/*	$Id: code.c,v 1.27 2015/10/12 18:07:13 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -34,6 +34,15 @@
  */
 
 # include "pass1.h"
+
+#ifndef LANG_CXX
+#define	NODE	P1ND
+#undef NIL
+#define	NIL NULL
+#define	tfree p1tfree
+#define	talloc p1alloc
+#define	ccopy p1tcopy
+#endif
 
 /*
  * Print out assembler segment name.
@@ -92,8 +101,7 @@ defloc(struct symtab *sp)
 {
 	char *name;
 
-	if ((name = sp->soname) == NULL)
-		name = exname(sp->sname);
+	name = getexname(sp);
 
 	if (sp->sclass == EXTDEF) {
 		printf("\t.globl %s\n", name);

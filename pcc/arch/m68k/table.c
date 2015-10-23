@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.11 2014/10/07 13:26:57 ragge Exp $	*/
+/*	$Id: table.c,v 1.12 2015/10/19 20:35:11 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.ltu.se).
  * All rights reserved.
@@ -934,7 +934,7 @@ struct optab table[] = {
 		"ZD", },
 #endif
 
-{ OPLOG,	FORCC,
+{ OPLOG,	INCREG|FORCC,
 	SCREG,	TLL,
 	SCREG,	TLL,
 		0,	RESCC|RLEFT, /* trash left nodes */
