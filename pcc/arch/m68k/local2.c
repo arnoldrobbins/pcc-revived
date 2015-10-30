@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.14 2015/10/19 20:08:35 ragge Exp $	*/
+/*	$Id: local2.c,v 1.15 2015/10/28 13:55:31 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -785,4 +785,20 @@ myxasm(struct interpass *ip, NODE *p)
 		break;
 	}
 	return 0;
+}
+
+/*
+ * Handle special characters following % in gcc extended assembler.
+ */
+int
+targarg(char *w, void *arg)
+{
+	switch (w[1]) {
+	case '.': /* Remove dot if not needed */
+		printf(".");
+		break;
+	default:
+		return 0;
+	}
+	return 1;
 }

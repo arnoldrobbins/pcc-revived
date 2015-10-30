@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.240 2015/10/20 20:06:06 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.241 2015/10/29 08:57:58 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -933,6 +933,14 @@ define(void)
 			if (!ISID0(c))
 				goto bad;
 			bp = heapid(c);
+			if (vararg && strcmp((char *)bp, (char *)vararg) == 0) {
+				stringbuf = bp;
+				savch(WARN);
+				savch(VARG);
+				savch(SNUFF);
+				break;
+				
+			}
 			if ((i = findarg(bp, args, narg)) < 0)
 				goto bad;
 			stringbuf = bp;
