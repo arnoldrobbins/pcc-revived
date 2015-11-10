@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.15 2015/10/28 13:55:31 ragge Exp $	*/
+/*	$Id: local2.c,v 1.16 2015/11/07 16:43:48 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -776,13 +776,24 @@ myxasm(struct interpass *ip, NODE *p)
 	int ww;
 	char *w;
 
-	switch (ww = XASMVAL(cw)) {
+	ww = XASMVAL(cw);
+again:	switch (ww) {
 	case 'd': /* Just convert to reg */
 	case 'a':
 		p->n_name = tmpstrdup(p->n_name);
 		w = strchr(p->n_name, XASMVAL(cw));
 		*w = 'r'; /* now reg */
 		break;
+	case 'o': /* offsetable reg */
+		if (p->n_left->n_op == UMUL || p->n_left->n_op == OREG ||
+		    p->n_left->n_op == NAME) {
+			return 1;
+		}
+		if (ww == XASMVAL(cw))
+			ww = XASMVAL1(cw);
+		else
+			ww = XASMVAL2(cw);
+		goto again;
 	}
 	return 0;
 }
