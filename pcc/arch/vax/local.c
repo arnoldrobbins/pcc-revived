@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.30 2015/10/12 18:07:13 ragge Exp $	*/
+/*	$Id: local.c,v 1.31 2015/11/13 11:38:47 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -339,15 +339,15 @@ ninval(CONSZ off, int fsz, NODE *p)
 	switch (p->n_type) {
 	case LDOUBLE:
 		u.i[2] = 0;
-		u.l = (long double)p->n_dcon;
+		u.l = (long double)((union flt *)p->n_dcon)->fp;
 		printf("\t.long\t0x%x,0x%x,0x%x\n", u.i[0], u.i[1], u.i[2]);
 		break;
 	case DOUBLE:
-		u.d = (double)p->n_dcon;
+		u.d = (double)((union flt *)p->n_dcon)->fp;
 		printf("\t.long\t0x%x,0x%x\n", u.i[0], u.i[1]);
 		break;
 	case FLOAT:
-		u.f = (float)p->n_dcon;
+		u.f = (float)((union flt *)p->n_dcon)->fp;
 		printf("\t.long\t0x%x\n", u.i[0]);
 		break;
 	default:

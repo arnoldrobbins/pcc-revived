@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.140 2015/10/07 19:35:55 ragge Exp $	*/
+/*	$Id: scan.l,v 1.142 2015/11/13 12:47:09 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -126,12 +126,12 @@ extern void yyset_lineno (int);
 {UC}'(\\.|[^\\'])*'	{ yylval.nodep = wcharcon(); return(C_ICON); }
 '(\\.|[^\\'])*'		{ yylval.nodep = charcon(); return(C_ICON); }
 
-{D}+{E}{FS}?		{ yylval.nodep = floatcon(yytext); return(C_FCON); }
-{D}*"."{D}+({E})?{FS}?	{ yylval.nodep = floatcon(yytext); return(C_FCON); }
-{D}+"."{D}*({E})?{FS}?	{ yylval.nodep = floatcon(yytext); return(C_FCON); }
-0[xX]{H}*"."{H}+{P}{FS}? { yylval.nodep = fhexcon(yytext); return(C_FCON); }
-0[xX]{H}+"."{P}{FS}?	{ yylval.nodep = fhexcon(yytext); return(C_FCON); }
-0[xX]{H}+{P}{FS}?	{ yylval.nodep = fhexcon(yytext); return(C_FCON); }
+{D}+{E}{FS}?		{ yylval.flt = floatcon(yytext); return(C_FCON); }
+{D}*"."{D}+({E})?{FS}?	{ yylval.flt = floatcon(yytext); return(C_FCON); }
+{D}+"."{D}*({E})?{FS}?	{ yylval.flt = floatcon(yytext); return(C_FCON); }
+0[xX]{H}*"."{H}+{P}{FS}? { yylval.flt = fhexcon(yytext); return(C_FCON); }
+0[xX]{H}+"."{P}{FS}?	{ yylval.flt = fhexcon(yytext); return(C_FCON); }
+0[xX]{H}+{P}{FS}?	{ yylval.flt = fhexcon(yytext); return(C_FCON); }
 
 {US}?\"(\\.|[^\\"])*\"	{ yylval.strp = yytext; return C_STRING; }
 
@@ -367,11 +367,11 @@ typround(long double dc, char *e, TWORD *tw)
  * XXX floatcon() and fhexcon() should be in support libraries for
  * the target floating point.
  */
-static P1ND *
+static union flt *
 f2(char *str)
 {
+	union flt *flt;
 	TWORD tw;
-	P1ND *p;
 	long double dc;
 	char *eptr;
 
@@ -381,12 +381,13 @@ f2(char *str)
 	dc = strtod(str, &eptr); /* XXX - avoid strtod() */
 #endif
 	dc = typround(dc, eptr, &tw);
-	p = block(FCON, NULL, NULL, tw, 0, 0);
-	p->n_dcon = dc;
-	return p;
+	flt = stmtalloc(sizeof(union flt));
+	flt->fp = dc;
+	flt->fa[FP_TOP] = tw;
+	return flt;
 }
 
-P1ND *
+union flt *
 floatcon(char *s)
 {
 	return f2(s);
@@ -429,14 +430,14 @@ fdecl(char *c, char **ep)
 	return val;
 }
 
-P1ND *
+union flt *
 fhexcon(char *c)
 {
+	union flt *flt;
 	TWORD tw;
 	char *ep;
 	long double d;
 	int i, ed;
-	P1ND *p;
 
 	d = 0.0;
 	ed = 0;
@@ -470,9 +471,10 @@ fhexcon(char *c)
 	while (ed < 0)
 		d /= 2, ed++;
 	d = typround(d, ep, &tw);
-	p = block(FCON, NULL, NULL, tw, 0, 0);
-	p->n_dcon = d;
-	return p;
+	flt = stmtalloc(sizeof(union flt));
+	flt->fp = d;
+	flt->fa[FP_TOP] = tw;
+	return flt;
 }
 #endif
 
@@ -519,7 +521,9 @@ cvtdig(int radix)
 	switch (ntype) {
 	case DOUBLE: /* special case */
 		p = block(FCON, NULL, NULL, IMAG, 0, 0);
-		p->n_dcon = FLOAT_CAST(v, DOUBLE);
+		p->n_dcon = stmtalloc(sizeof(union flt));
+		FLOAT_INT2FP(p->n_dcon, v, ULONGLONG);
+		FLOAT_FP2FP(p->n_dcon, DOUBLE);
 		return p;
 
 	case INT:
