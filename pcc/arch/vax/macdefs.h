@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.21 2015/10/12 18:07:13 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.22 2015/11/24 17:35:12 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -264,3 +264,4 @@ P1ND *builtin_ffs(const struct bitable *, P1ND *a);
 P1ND *builtin_ffsl(const struct bitable *, P1ND *a);
 P1ND *builtin_ffsll(const struct bitable *, P1ND *a);
 #undef P1ND
+#define NATIVE_FLOATING_POINT

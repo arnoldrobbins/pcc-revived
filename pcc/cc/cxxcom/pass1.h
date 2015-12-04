@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.18 2015/11/13 11:33:14 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.19 2015/11/24 17:30:20 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -627,6 +627,9 @@ void stabs_struct(struct symtab *, struct attr *);
 #define coptype(o)	(cdope(o)&TYFLG)
 #define clogop(o)	(cdope(o)&LOGFLG)
 #define casgop(o)	(cdope(o)&ASGFLG)
+
+#define	slval	setlval
+#define	glval	getlval
 
 #include <cxxdefs.h>
 

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.19 2015/09/12 07:41:05 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.20 2015/11/24 17:35:11 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -357,3 +357,4 @@ P1ND *mips_builtin_va_arg(const struct bitable *, P1ND *a);
 P1ND *mips_builtin_va_end(const struct bitable *, P1ND *a);
 P1ND *mips_builtin_va_copy(const struct bitable *, P1ND *a);
 #undef P1ND
+#define NATIVE_FLOATING_POINT

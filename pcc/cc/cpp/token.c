@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.155 2015/11/07 09:41:08 ragge Exp $	*/
+/*	$Id: token.c,v 1.156 2015/11/13 15:25:38 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -264,7 +264,7 @@ inc1(void)
 
 	do {
 		ch = inpch();
-	} while (/* ch == '\r' || */ (ch == '\\' && chkucn()));
+	} while (ch == '\r' || (ch == '\\' && chkucn()));
 	if (ch == '?' && (c2 = chktg()))
 		ch = c2;
 	return ch;

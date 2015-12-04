@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.5 2015/11/13 11:33:14 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.6 2015/11/24 17:30:20 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -108,8 +108,8 @@ builtin_abs(const struct bitable *bt, NODE *a)
 		a = cast(a, INT, 0);
 
 	if (a->n_op == ICON) {
-		if (a->n_lval < 0)
-			a->n_lval = -a->n_lval;
+		if (getlval(a) < 0)
+			setlval(a, -getlval(a));
 		p = a;
 	} else {
 		t = tempnode(0, a->n_type, a->n_df, a->n_ap);

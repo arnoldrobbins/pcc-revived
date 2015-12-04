@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.92 2015/08/23 18:40:31 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.93 2015/11/24 17:35:11 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -369,3 +369,4 @@ extern int msettings;
 
 /* target specific attributes */
 #define	ATTR_MI_TARGET	ATTR_I386_FCMPLRET, ATTR_I386_FPPOP
+#define NATIVE_FLOATING_POINT

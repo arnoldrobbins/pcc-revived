@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.91 2015/11/13 11:38:46 ragge Exp $	*/
+/*	$Id: local.c,v 1.92 2015/11/13 15:42:42 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -462,7 +462,8 @@ clocal(NODE *p)
 			case DOUBLE:
 			case FLOAT:
 				l->n_op = FCON;
-				l->n_dcon = val;
+				l->n_dcon = tmpalloc(sizeof(union flt));
+				((union flt *)l->n_dcon)->fp = val;
 				break;
 			default:
 				cerror("unknown type %d", m);
@@ -473,9 +474,10 @@ clocal(NODE *p)
 			return l;
 		} else if (l->n_op == FCON) {
 			if (p->n_type == BOOL)
-				l->n_lval = l->n_dcon != 0.0;
-			else
-				l->n_lval = l->n_dcon;
+				l->n_lval = !FLOAT_ISZERO(((union flt *)l->n_dcon));
+			else {
+				FLOAT_FP2INT(l->n_lval, ((union flt *)l->n_dcon), m);
+			}
 			l->n_sp = NULL;
 			l->n_op = ICON;
 			l->n_type = m;

@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.246 2014/10/12 19:58:29 ragge Exp $	*/
+/*	$Id: regs.c,v 1.247 2015/11/17 19:19:40 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2328,7 +2328,7 @@ paint(NODE *p, void *arg)
 		if (TCLASS(p->n_su) == 0)
 			SCLASS(p->n_su, CLASS(nb));
 		p->n_op = REG;
-		p->n_lval = 0;
+		setlval(p, 0);
 	}
 }
 
@@ -2743,7 +2743,7 @@ temparg(struct interpass *ipole, REGW *w)
 			continue; /* arg in register */
 		if (w != &nblock[regno(p->n_left)])
 			continue;
-		w->r_color = (int)p->n_right->n_lval;
+		w->r_color = (int)getlval(p->n_right);
 		reg = regno(p->n_right);
 		tfree(p);
 		/* Cannot DLIST_REMOVE here, would break basic blocks */

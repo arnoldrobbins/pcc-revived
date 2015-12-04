@@ -1,4 +1,4 @@
-/*	$Id: node.h,v 1.42 2015/11/13 11:33:14 ragge Exp $	*/
+/*	$Id: node.h,v 1.43 2015/11/17 19:19:40 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -84,7 +84,7 @@ typedef struct node {
 		struct {
 			union {
 				struct node *_left;
-				CONSZ _lval;
+				CONSZ _val;
 			} n_l;
 			union {
 				struct node *_right;
@@ -117,12 +117,14 @@ typedef struct node {
 #define	n_label	n_5._label
 
 #define	n_left	n_f.n_u.n_l._left
-#define	n_lval	n_f.n_u.n_l._lval
+#define	n_val	n_f.n_u.n_l._val
 #define	n_slval	n_f.n_u.n_l._slval
 #define	n_right	n_f.n_u.n_r._right
 #define	n_rval	n_f.n_u.n_r._rval
 #define	n_sp	n_f.n_u.n_r._sp
 #define	n_dcon	n_f._dcon
+#define	getlval(p) 	((p)->n_f.n_u.n_l._val)
+#define	setlval(p,v)	((p)->n_f.n_u.n_l._val = (v))
 
 #define	NLOCAL1	010000
 #define	NLOCAL2	020000

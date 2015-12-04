@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.243 2015/11/07 09:49:22 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.249 2015/11/27 01:51:44 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -81,9 +81,10 @@ static void prrep(const usch *s);
 #endif
 
 int Aflag, Cflag, Eflag, Mflag, dMflag, Pflag, MPflag, MMDflag;
-usch *Mfile, *MPfile, *Mxfile;
+char *Mfile, *MPfile;
 struct initar *initar;
-int warnings;
+char *Mxfile;
+int warnings, Mxlen;
 FILE *of;
 
 /* include dirs */
@@ -154,11 +155,13 @@ static int getyp(usch *s);
 static void *xrealloc(void *p, int sz);
 static void *xmalloc(int sz);
 
+usch locs[] =
+	{ FILLOC, LINLOC, PRAGLOC, DEFLOC, 'd','e','f','i','n','e','d',0 };
+
 int
 main(int argc, char **argv)
 {
 	struct initar *it;
-	struct symtab *nl;
 	register int ch;
 	const usch *fn1, *fn2;
 
@@ -242,17 +245,25 @@ main(int argc, char **argv)
 				MPflag++;
 			} else if (strncmp(optarg, "MT,", 3) == 0 ||
 			    strncmp(optarg, "MQ,", 3) == 0) {
-				usch *cp, *fn;
-				fn = stringbuf;
-				for (cp = (usch *)&optarg[3]; *cp; cp++) {
-					if (*cp == '$' && optarg[1] == 'Q')
-						savch('$');
-					savch(*cp);
+				int l = strlen(optarg+3) + 2;
+				char *cp, *up;
+
+				if (optarg[1] == 'Q')
+					for (cp = optarg+3; *cp; cp++)
+						if (*cp == '$')
+							l++;
+				Mxlen += l;
+				Mxfile = cp = realloc(Mxfile, Mxlen);
+				for (up = Mxfile; *up; up++)
+					;
+				if (up != Mxfile)
+					*up++ = ' ';
+				for (cp = optarg+3; *cp; cp++) {
+					*up++ = *cp;
+					if (optarg[1] == 'Q' && *cp == '$')
+						*up++ = *cp;
 				}
-				savstr((const usch *)"");
-				if (Mxfile) { savch(' '); savstr(Mxfile); }
-				savch(0);
-				Mxfile = fn;
+				*up = 0;
 			} else
 				usage();
 			break;
@@ -270,61 +281,26 @@ main(int argc, char **argv)
 	linloc = lookup((const usch *)"__LINE__", ENTER);
 	pragloc = lookup((const usch *)"_Pragma", ENTER);
 	defloc = lookup((const usch *)"defined", ENTER);
-	filloc->value = stringbuf;
-	*stringbuf++ = FILLOC;
-	linloc->value = stringbuf;
-	*stringbuf++ = LINLOC;
-	pragloc->value = stringbuf;
-	*stringbuf++ = PRAGLOC;
-	defloc->value = stringbuf;
-	*stringbuf++ = DEFLOC; savstr((usch *)"defined"); savch(0);
-
-	if (tflag == 0) {
-		time_t t = time(NULL);
-		usch *n = (usch *)ctime(&t);
-
-		/*
-		 * Manually move in the predefined macros.
-		 */
-		nl = lookup((const usch *)"__TIME__", ENTER);
-		nl->value = stringbuf;
-		savch(OBJCT);
-		n[19] = 0;
-		(void)sheap("\"%s\"", n+11); savch(0);
-
-		nl = lookup((const usch *)"__DATE__", ENTER);
-		nl->value = stringbuf;
-		savch(OBJCT);
-		n[24] = n[11] = 0;
-		(void)sheap("\"%s%s\"", n+4, n+20); savch(0);
-
-		nl = lookup((const usch *)"__STDC__", ENTER);
-		nl->value = stringbuf;
-		savch(OBJCT); savch('1');savch(0);
-
-		nl = lookup((const usch *)"__STDC_VERSION__", ENTER);
-		nl->value = stringbuf;
-		savch(OBJCT); savstr((const usch *)"201112L"); savch(0);
-	}
+	filloc->value = locs;
+	linloc->value = locs+1;
+	pragloc->value = locs+2;
+	defloc->value = locs+3;
 
 	if (Mflag && !dMflag) {
-		usch *c;
+		char *c;
 
 		if (argc < 1)
 			error("-M and no infile");
-		if ((c = (usch *)strrchr(argv[0], '/')) == NULL)
-			c = (usch *)argv[0];
+		if ((c = strrchr(argv[0], '/')) == NULL)
+			c = argv[0];
 		else
 			c++;
-		Mfile = stringbuf;
-		savstr(c); savch(0);
-		if (MPflag) {
-			MPfile = stringbuf;
-			savstr(c); savch(0);
-		}
+		Mfile = (char *)xstrdup((usch *)c);
+		if (MPflag)
+			MPfile = (char *)xstrdup((usch *)c);
 		if (Mxfile)
 			Mfile = Mxfile;
-		if ((c = (usch *)strrchr((char *)Mfile, '.')) == NULL)
+		if ((c = strrchr(Mfile, '.')) == NULL)
 			error("-M and no extension: ");
 		c[1] = 'o';
 		c[2] = 0;
@@ -1617,17 +1593,13 @@ submac(struct symtab *sp, int lvl, struct iobuf *ib, struct blocker *obl)
 static int
 isdir(void)
 {
-	usch *bp = stringbuf;
 	usch ch;
 
 	while ((ch = cinput()) == ' ' || ch == '\t')
-		*stringbuf++ = ch;
-	*stringbuf++ = ch;
-	*stringbuf++ = 0;
-	stringbuf = bp;
+		;
 	if (ch == '#')
 		return 1;
-	unpstr(bp);
+	cunput(ch);
 	return 0;
 }
 
@@ -2155,7 +2127,13 @@ sstr:				for (; bp < cp; bp++)
 			stringbuf = sbp;
 			if (expokb(nl, bl) && expok(nl, m)) {
 				if ((nob = submac(nl, lvl+1, ib, bl))) {
+					if (nob->buf[0] == '-' ||
+					    nob->buf[0] == '+')
+						putob(ob, ' ');
 					strtobuf(nob->buf, ob);
+					if (ob->cptr[-1] == '-' ||
+					    ob->cptr[-1] == '+')
+						putob(ob, ' ');
 					bufree(nob);
 				} else {
 					goto sblk;
@@ -2240,28 +2218,6 @@ savstr(const usch *str)
 	} while ((*stringbuf++ = *str++));
 	stringbuf--;
 	return rv;
-}
-
-void
-unpstr(const usch *c)
-{
-	const usch *d = c;
-
-#if 0
-	if (dflag>1) {
-		printf("Xunpstr: '");
-		prline(c);
-		printf("'\n");
-	}
-#endif
-	while (*d) {
-		if (*d == BLKID)
-			d++;
-		d++;
-	}
-	while (d > c) {
-		cunput(*--d);
-	}
 }
 
 void

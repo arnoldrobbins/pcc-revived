@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.288 2015/11/13 12:47:09 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.289 2015/11/17 19:19:40 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -247,7 +247,7 @@ typedef struct p1node {
 		struct {
 			union {
 				struct p1node *_left;
-				CONSZ _lval;
+				CONSZ _val;
 			} n_l;
 			union {
 				struct p1node *_right;
@@ -262,7 +262,9 @@ typedef struct p1node {
 	} n_f;
 } P1ND;
 
-#define	n_ccon	n_f._ccon
+#define glval(p)	((p)->n_f.n_u.n_l._val)
+#define slval(p,v)	((p)->n_f.n_u.n_l._val = (v))
+#define	n_ccon		n_f._ccon
 
 
 /*	mark an offset which is undefined */

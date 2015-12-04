@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.62 2014/08/18 15:07:47 ragge Exp $	*/
+/*	$Id: order.c,v 1.63 2015/11/17 19:19:40 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -66,7 +66,7 @@ offstar(NODE *p, int shape)
 			return;
 		}
 		if (r->n_op == LS && r->n_right->n_op == ICON &&
-		    r->n_right->n_lval == 2 && p->n_op == PLUS) {
+		    getlval(r->n_right) == 2 && p->n_op == PLUS) {
 			if (isreg(p->n_left) == 0)
 				(void)geninsn(p->n_left, INAREG);
 			if (isreg(r->n_left) == 0)
@@ -90,10 +90,10 @@ myormake(NODE *q)
 
 	p = q->n_left;
 	if (p->n_op == PLUS && (r = p->n_right)->n_op == LS &&
-	    r->n_right->n_op == ICON && r->n_right->n_lval == 2 &&
+	    r->n_right->n_op == ICON && getlval(r->n_right) == 2 &&
 	    p->n_left->n_op == REG && r->n_left->n_op == REG) {
 		q->n_op = OREG;
-		q->n_lval = 0;
+		setlval(q, 0);
 		q->n_rval = R2PACK(p->n_left->n_rval, r->n_left->n_rval, 0);
 		tfree(p);
 	}

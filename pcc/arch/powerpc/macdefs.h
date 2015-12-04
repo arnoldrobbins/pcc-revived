@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.16 2014/06/01 11:35:03 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.17 2015/11/24 17:35:12 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -405,3 +405,4 @@ NODE *powerpc_builtin_return_address(NODE *f, NODE *a, unsigned int);
 #else
 #define COM     "       ; "
 #endif
+#define NATIVE_FLOATING_POINT

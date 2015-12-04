@@ -1,4 +1,4 @@
-/*      $Id: gcc_compat.c,v 1.118 2015/09/22 19:52:03 ragge Exp $     */
+/*      $Id: gcc_compat.c,v 1.119 2015/11/13 17:11:40 ragge Exp $     */
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -579,6 +579,8 @@ gcc_tcattrfix(NODE *p)
 	struct attr *ap;
 	int sz, coff, csz, al, oal, mxal;
 
+	if (!ISSOU(p->n_type)) /* only for structs or unions */
+		return;
 	if ((ap = attr_find(p->n_ap, GCC_ATYP_PACKED)) == NULL)
 		return; /* nothing to fix */
 
