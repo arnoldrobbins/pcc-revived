@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.418 2015/11/17 19:19:40 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.419 2015/12/31 16:21:57 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -3159,6 +3159,7 @@ cxop(int op, NODE *l, NODE *r)
 	NODE *ltemp, *rtemp;
 	NODE *real_l, *imag_l;
 	NODE *real_r, *imag_r;
+	real_r = imag_r = NULL; /* bad uninit var warning */
 
 	if (op == ASSIGN)
 		return cxasg(l, r);

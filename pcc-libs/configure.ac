@@ -51,6 +51,13 @@ case "$target_os" in
 	esac
 	;;
 
+     litebsd*)
+ 	targos=litebsd
+ 	case "$target_cpu" in
+ 	    mips*) targmach=mips* ;;
+ 	esac
+ 	;;
+
     midnightbsd*)
 	targos=midnightbsd
 	case "$target_cpu" in
