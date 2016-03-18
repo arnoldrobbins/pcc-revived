@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.8 2011/04/27 09:12:55 gmcgarry Exp $
+#	$Id: Makefile.in,v 1.9 2016/03/13 09:54:49 ragge Exp $
 #
 # Makefile.in for libpccsoftfloat.a
 #
@@ -17,20 +17,19 @@ TARGMACH = @targmach@
 VERSION = @version@
 PCCLIBDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/lib
 
-CPPFLAGS += @CPPFLAGS@ -DSOFTFLOAT_FOR_GCC -I$(srcdir) -I$(srcdir)/arch/$(TARGMACH)
-CPPFLAGS += -isystem $(top_srcdir)/libpcc/include
+CPPFLAGS = @CPPFLAGS@ -DSOFTFLOAT_FOR_GCC -I$(srcdir) \
+	-I$(srcdir)/arch/$(TARGMACH) \
+	-isystem $(top_srcdir)/libpcc/include
 
 LIBS = @LIBS@
 AR = @AR@
 RANLIB = @RANLIB@
 INSTALL = @INSTALL@
 
-OBJS +=		softfloat.o
-
-OBJS +=		fpgetround.o fpsetround.o fpgetmask.o fpsetmask.o \
-		fpgetsticky.o fpsetsticky.o
-
-OBJSS +=	eqsf2.o nesf2.o gtsf2.o gesf2.o ltsf2.o lesf2.o negsf2.o \
+OBJS =		softfloat.o \
+		fpgetround.o fpsetround.o fpgetmask.o fpsetmask.o \
+		fpgetsticky.o fpsetsticky.o \
+		eqsf2.o nesf2.o gtsf2.o gesf2.o ltsf2.o lesf2.o negsf2.o \
 		eqdf2.o nedf2.o gtdf2.o gedf2.o ltdf2.o ledf2.o negdf2.o \
 		nexf2.o gtxf2.o gexf2.o negxf2.o unordsf2.o unorddf2.o
 

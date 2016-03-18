@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.21 2014/07/01 13:01:48 ragge Exp $
+#	$Id: Makefile.in,v 1.23 2016/03/13 16:12:12 ragge Exp $
 #
 # Makefile.in for libpcc.a
 #
@@ -19,30 +19,26 @@ VERSION = @version@
 PCCLIBDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/lib
 PCCINCDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/include
 
-CPPFLAGS += @CPPFLAGS@ -I$(srcdir) @ENDIAN_FLAG@ -Dos_$(TARGOS) \
-	-Dmach_$(TARGMACH)
-CPPFLAGS += -isystem $(top_srcdir)/libpcc/include
+CPPFLAGS = @CPPFLAGS@ -I$(srcdir) @ENDIAN_FLAG@ -Dos_$(TARGOS) \
+	-Dmach_$(TARGMACH) -isystem $(top_srcdir)/libpcc/include
 
 LIBS = @LIBS@
 AR = @AR@
 RANLIB = @RANLIB@
 INSTALL = @INSTALL@
 
-HEADERS +=	float.h limits.h stdarg.h stdbool.h stddef.h \
+HEADERS =	float.h limits.h stdarg.h stdbool.h stddef.h \
 		iso646.h \
 		libpcc_float.h libpcc_limits.h libpcc_stdarg.h \
 		libpcc_stdbool.h libpcc_stddef.h
 
-OBJS +=		cmpdi2.o divdi3.o fixdfdi.o fixsfdi.o fixunsdfdi.o \
+OBJS =		cmpdi2.o divdi3.o fixdfdi.o fixsfdi.o fixunsdfdi.o \
 		fixunssfdi.o floatdidf.o floatdisf.o floatunsdidf.o \
 		moddi3.o muldi3.o negdi2.o qdivrem.o \
-		ucmpdi2.o udivdi3.o umoddi3.o cxmuldiv.o
-
-OBJS +=		ashldi3.o ashrdi3.o lshrdi3.o
-
-OBJS +=		_alloca.o unwind.o
-
-OBJS +=		ssp.o
+		ucmpdi2.o udivdi3.o umoddi3.o cxmuldiv.o \
+		ashldi3.o ashrdi3.o lshrdi3.o \
+		_alloca.o unwind.o \
+		ssp.o
 
 DEST = libpcc.a
 

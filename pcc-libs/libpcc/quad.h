@@ -72,7 +72,7 @@ typedef long long		quad_t;
 typedef unsigned long long 	u_quad_t;
 #endif
 
-#if defined(__SunOS) || defined(__svr4__)
+#if defined(__SunOS) || defined(__svr4__) || defined(__minix)
 typedef long long 		quad_t;
 typedef unsigned long long 	u_quad_t;
 #endif

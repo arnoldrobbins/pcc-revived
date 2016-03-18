@@ -66,11 +66,19 @@ case "$target_os" in
 	esac
 	;;
 
-    minix)
+    minix*)
 	targos=minix
-	case "$target_cpu" in
-	    m68k) targmach=m68k endian=big ;;
+	case "$target_os" in
+	    minix3) CPPFLAGS="$CPPFLAGS -DSOFTFLOAT_NEED_FIXUNS" ;;
+	    minix3.*) ;;
 	esac
+	case "$target_cpu" in
+	    i86) targmach=i86 ;;
+	    i?86) targmach=i386 ;;
+	    arm*) targmach=arm ;;
+	    x86_64) targmach=amd64 ;;
+	    m68k) targmach=m68k endian=big ;;
+	esac 
 	;;
 
     mirbsd*)
