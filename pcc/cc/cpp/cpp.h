@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.93 2016/03/12 15:46:06 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.96 2016/03/21 21:27:18 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -139,15 +139,20 @@ struct initar {
 };
 
 /* buffer definition */
+#define	BNORMAL	0	/* standard buffer */
+#define	BMAC	1	/* store macro definitions */
+#define	BINBUF	2	/* read data from input files */
+#define	BUTBUF	3	/* write data to stdout */
 struct iobuf {
 	usch *buf;
 	usch *cptr;
 	usch *bsz;
-	int ro:1, inuse:1;
+	int ro:1, inuse:1, type:4;
 };
-struct iobuf *getobuf(void);
+struct iobuf *getobuf(int);
 void putob(struct iobuf *ob, int ch);
 void bufree(struct iobuf *iob);
+extern struct iobuf pb;
 
 /*
  * Struct used in parse tree evaluation.
@@ -188,20 +193,20 @@ void prtline(int nl);
 int yylex(void);
 void cunput(int);
 int yyparse(void);
-usch *savstr(const usch *str);
-void savch(int c);
 void putch(int);
 void putstr(const usch *s);
 usch *sheap(const char *fmt, ...);
 struct iobuf *bsheap(struct iobuf *, const char *fmt, ...);
+struct iobuf *strtobuf(usch *str, struct iobuf *iob);
+struct iobuf *buftobuf(struct iobuf *in, struct iobuf *iob);
 void warning(const char *fmt, ...);
 void error(const char *fmt, ...);
 int cinput(void);
 int inc2(void);
 int Ccmnt(void (*d)(int));
-usch *heapid(int ch);
+usch *bufid(int ch, struct iobuf *);
 usch *readid(int ch);
-void faststr(int bc, void (*d)(int));
-int fastnum(int ch, void (*d)(int));
+struct iobuf *faststr(int bc, struct iobuf *);
+int fastnum(int ch, struct iobuf *);
 void *xrealloc(void *p, int sz);
 void *xmalloc(int sz);
