@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.264 2016/03/21 21:27:18 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.267 2016/03/25 14:06:39 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -85,7 +85,6 @@ static void prrep(const usch *s);
 
 int Aflag, Cflag, Eflag, Mflag, dMflag, Pflag, MPflag, MMDflag;
 char *Mfile, *MPfile;
-struct initar *initar;
 char *Mxfile;
 int warnings, Mxlen;
 static usch utbuf[CPPBUF];
@@ -164,9 +163,11 @@ usch locs[] =
 int
 main(int argc, char **argv)
 {
-	struct initar *it;
+	struct includ bic;
+	struct iobuf *fb = getobuf(BNORMAL);
 	register int ch;
 	const usch *fn1, *fn2;
+	char *a;
 
 #ifdef TIMING
 	struct timeval t1, t2;
@@ -189,15 +190,17 @@ main(int argc, char **argv)
 			break;
 
 		case 'D': /* define something */
+			if ((a = strchr(optarg, '=')) != NULL)
+				*a = ' ';
+			bsheap(fb, "#define %s%s", optarg, a ? "\n" : " 1\n");
+			break;
+
 		case 'i': /* include */
+			bsheap(fb, "#include \"%s\"\n", optarg);
+			break;
+
 		case 'U': /* undef */
-			/* XXX should not need malloc() here */
-			if ((it = xmalloc(sizeof(struct initar))) == NULL)
-				error("couldn't apply -%c %s", ch, optarg);
-			it->type = ch;
-			it->str = optarg;
-			it->next = initar;
-			initar = it;
+			bsheap(fb, "#undef %s\n", optarg);
 			break;
 
 		case 'd':
@@ -323,6 +326,22 @@ main(int argc, char **argv)
 		fn1 = NULL;
 		fn2 = (const usch *)"";
 	}
+
+	/* initialization defines */
+	if (dMflag)
+		write(1, fb->buf, fb->cptr - fb->buf);
+	*fb->cptr = 0;
+	memset(&bic, 0, sizeof(bic));
+	bic.fname = bic.orgfn = (const usch *)"<command line>";
+	bic.lineno = 1;
+	bic.infil = -1;
+	bic.maxread = fb->cptr;
+	bic.buffer = bic.curptr = fb->buf;
+	ifiles = &bic;
+	fastscan();
+	bufree(fb);
+	/* end initial defines */
+
 	if (pushfile(fn1, fn2, 0, NULL))
 		error("cannot open %s", argv[0]);
 
@@ -373,6 +392,21 @@ putob(struct iobuf *ob, int ch)
 	*ob->cptr++ = ch;
 }
 
+static struct iobuf *
+giob(int typ, const usch *bp, int bsz)
+{
+	struct iobuf *iob = xmalloc(sizeof(struct iobuf));
+
+	if (bp == NULL)
+		bp = xmalloc(bsz);
+	iob->buf = iob->cptr = (usch *)bp;
+	iob->bsz = iob->buf + bsz;
+	iob->ro = 0;
+	iob->type = typ;
+	return iob;
+}
+
+
 int nbufused;
 /*
  * Write a character to an out buffer.
@@ -385,13 +419,13 @@ getobuf(int type)
 	switch (type) {
 	case BNORMAL:
 		nbufused++;
-		iob = xmalloc(sizeof(struct iobuf));
-		iob->buf = iob->cptr = xmalloc(BUFSIZ+1);
-		iob->bsz = iob->buf + BUFSIZ;
-		iob->ro = 0;
+		iob = giob(BNORMAL, NULL, BUFSIZ);
+		iob->bsz = iob->buf + BUFSIZ-1; /* space for \0 */
 		break;
-	case BMAC:
 	case BINBUF:
+		iob = giob(BINBUF, NULL, BUFSIZ);
+		break;
+	default:
 		error("getobuf");
 	}
 	return iob;
@@ -403,13 +437,12 @@ getobuf(int type)
 static struct iobuf *
 mkrobuf(const usch *s)
 {
-	struct iobuf *iob = xmalloc(sizeof(struct iobuf));
+	struct iobuf *iob;
 
 	nbufused++;
-	DPRINT(("mkrobuf %s\n", s));
-	iob->buf = iob->cptr = (usch *)s;
-	iob->bsz = iob->buf + strlen((char *)iob->buf);
+	iob = giob(BNORMAL, s, strlen((char *)s));
 	iob->ro = 1;
+	DPRINT(("mkrobuf %s\n", s));
 	return iob;
 }
 
@@ -432,11 +465,11 @@ buftobuf(struct iobuf *in, struct iobuf *iob)
  * Copy a string to a buffer.
  */
 struct iobuf *
-strtobuf(usch *str, struct iobuf *iob)
+strtobuf(const usch *str, struct iobuf *iob)
 {
-	DPRINT(("strtobuf iob %p buf %p str %s\n", iob, iob->buf, str));
 	if (iob == NULL)
 		iob = getobuf(BNORMAL);
+	DPRINT(("strtobuf iob %p buf %p str %s\n", iob, iob->buf, str));
 	do {
 		putob(iob, *str);
 	} while (*str++);
@@ -847,12 +880,12 @@ skipwscmnt(struct iobuf *ib)
 }
 
 static int
-findarg(usch *s, usch **args, int narg)
+findarg(usch *s, struct iobuf *ab, int *arg, int narg)
 {
 	int i;
 
 	for (i = 0; i < narg; i++)
-		if (strcmp((char *)s, (char *)args[i]) == 0)
+		if (strcmp((char *)s, (char *)ab->buf + arg[i]) == 0)
 			return i;
 	return -1;
 }
@@ -865,9 +898,10 @@ findarg(usch *s, usch **args, int narg)
 void
 define(void)
 {
-	struct iobuf *ib;
+	struct iobuf *ib, *ab;
 	struct symtab *np;
-	usch *args[MAXARGS+1], cc[2], *vararg, *dp;
+	usch cc[2], *vararg, *dp;
+	int arg[MAXARGS+1];
 	int c, i, redef, oCflag, t;
 	int narg = -1;
 	int wascon;
@@ -879,7 +913,6 @@ define(void)
 	if (!ISID0(c = skipws(0)))
 		goto bad;
 
-	setcmbase();
 	dp = readid(c);
 	np = lookup(dp, ENTER);
 	if (np->value) {
@@ -889,8 +922,8 @@ define(void)
 		redef = 0;
 	}
 
+	ab = getobuf(BNORMAL);
 	vararg = NULL;
-	macsav(0); /* set type slot */
 	if ((c = cinput()) == '(') {
 		narg = 0;
 		/* function-like macros, deal with identifiers */
@@ -908,20 +941,21 @@ define(void)
 				if (!ISID0(c))
 					goto bad;
 
-				dp = readid(c);
+				dp = bufid(c, ab);
 				/* make sure there is no arg of same name */
-				if (findarg(dp, args, narg) >= 0)
+				if (findarg(dp, ab, arg, narg) >= 0)
 					error("Duplicate parameter \"%s\"", dp);
 				if (narg == MAXARGS)
 					error("Too many macro args");
-				args[narg++] = xstrdup(dp);
+				putob(ab, 0);
+				arg[narg++] = dp - ab->buf;
 				switch ((c = skipws(0))) {
 				case ',': break;
 				case ')': continue;
 				case '.':
 					if (isell() == 0 || skipws(0) != ')')
 						goto bad;
-					vararg = args[--narg];
+					vararg = ab->buf + arg[--narg];
 					c = ')';
 					continue;
 				default:
@@ -943,6 +977,8 @@ define(void)
 
 	Cflag = oCflag; /* Enable comments again */
 
+	setcmbase();
+	macsav(0); /* set type slot */
 	if (vararg)
 		macsav(0); /* for macro type */
 
@@ -999,11 +1035,15 @@ define(void)
 				break;
 				
 			}
-			if ((i = findarg(dp, args, narg)) < 0)
+			if ((i = findarg(dp, ab, arg, narg)) < 0)
 				goto bad;
 			macsav(WARN);
 			macsav(i);
 			macsav(SNUFF);
+			break;
+
+		case CMNT:
+			Ccmnt(macsav);
 			break;
 
 		case NUMBER: 
@@ -1045,7 +1085,7 @@ define(void)
 			}
 
 			/* check if its an argument */
-			if ((i = findarg(dp, args, narg)) < 0) {
+			if ((i = findarg(dp, ab, arg, narg)) < 0) {
 				macstr(dp);
 				break;
 			}
@@ -1103,8 +1143,7 @@ define(void)
 		printf("\'\n");
 	}
 #endif
-	for (i = 0; i < narg; i++)
-		free(args[i]);
+	bufree(ab);
 	return;
 
 bad:	error("bad #define");
@@ -1513,6 +1552,9 @@ kfind(struct symtab *sp)
 	blkidp = 1;
 	outb = NULL;
 	DPRINT(("%d:enter kfind(%s)\n",0,sp->namep));
+//printf("sp->val %p\n", sp->value);
+//printf("*sp->val %d\n", *sp->value);
+	DPRINT(("%d:enter kfind2(%s)\n",0,sp->value));
 	switch (*sp->value) {
 	case FILLOC:
 		ob = unfname();
@@ -2279,18 +2321,13 @@ prline(const usch *s)
 void
 putch(int ch)
 {
-	if (Mflag)
-		return;
 	putob(&pb, ch);
 }
 
 void
 putstr(const usch *s)
 {
-	for (; *s; s++) {
-		if (Mflag == 0)
-			putob(&pb, *s);
-	}
+	strtobuf(s, &pb);
 }
 
 /*

@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.96 2016/03/21 21:27:18 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.98 2016/03/25 14:06:39 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -132,12 +132,6 @@ struct symtab {
 	int line;
 };
 
-struct initar {
-	struct initar *next;
-	int type;
-	char *str;
-};
-
 /* buffer definition */
 #define	BNORMAL	0	/* standard buffer */
 #define	BMAC	1	/* store macro definitions */
@@ -197,7 +191,7 @@ void putch(int);
 void putstr(const usch *s);
 usch *sheap(const char *fmt, ...);
 struct iobuf *bsheap(struct iobuf *, const char *fmt, ...);
-struct iobuf *strtobuf(usch *str, struct iobuf *iob);
+struct iobuf *strtobuf(const usch *str, struct iobuf *iob);
 struct iobuf *buftobuf(struct iobuf *in, struct iobuf *iob);
 void warning(const char *fmt, ...);
 void error(const char *fmt, ...);
@@ -210,3 +204,4 @@ struct iobuf *faststr(int bc, struct iobuf *);
 int fastnum(int ch, struct iobuf *);
 void *xrealloc(void *p, int sz);
 void *xmalloc(int sz);
+void fastscan(void);
