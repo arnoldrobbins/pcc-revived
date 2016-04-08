@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.169 2016/03/30 16:15:58 ragge Exp $	*/
+/*	$Id: token.c,v 1.171 2016/04/02 14:04:57 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -92,7 +92,7 @@ static void unch(int c);
 #define	PUTCH(ch) if (!flslvl) putch(ch)
 /* protection against recursion in #include */
 #define MAX_INCLEVEL	100
-static int inclevel;
+int inclevel;
 
 struct includ *ifiles;
 
@@ -157,13 +157,12 @@ inpbuf(void)
 
 	if (ifiles->infil == -1)
 		return 0;
-	len = read(ifiles->infil, ifiles->buffer, CPPBUF);
+	len = read(ifiles->infil, ifiles->buffer, CPPBUF-PBMAX);
 	if (len == -1)
 		error("read error on file %s", ifiles->orgfn);
 	if (len > 0) {
-		(ifiles->buffer)[len] = 0;
-		ifiles->curptr = ifiles->buffer;
-		ifiles->maxread = ifiles->buffer + len;
+		ifiles->ib->cptr = PBMAX;
+		ifiles->ib->bsz = PBMAX + len;
 	}
 	return len;
 }
@@ -180,15 +179,15 @@ refill(int minsz)
 	if (ifiles->curptr+minsz < ifiles->maxread)
 		return 0; /* already enough in input buffer */
 
-	sz = ifiles->maxread - ifiles->curptr;
-	dp = ifiles->buffer - sz;
+	sz = ifiles->ib->bsz - ifiles->ib->cptr;
+	dp = ifiles->ib->buf+PBMAX - sz;
 	for (i = 0; i < sz; i++)
-		dp[i] = ifiles->curptr[i];
+		dp[i] = ifiles->ib->buf[ifiles->ib->cptr+i];
 	i = inpbuf();
-	ifiles->curptr = dp;
+	ifiles->ib->cptr = dp - ifiles->ib->buf;
 	if (i == 0) {
-		ifiles->maxread = ifiles->buffer;
-		(ifiles->buffer)[0] = 0;
+		ifiles->ib->bsz = PBMAX;
+		ifiles->ib->buf[PBMAX] = 0;
 	}
 	return 0;
 }
@@ -202,8 +201,8 @@ inpch(void)
 {
 
 	do {
-		if (ifiles->curptr < ifiles->maxread)
-			return *ifiles->curptr++;
+		if (ifiles->ib->cptr < ifiles->ib->bsz)
+			return ifiles->ib->buf[ifiles->ib->cptr++];
 	} while (inpbuf() > 0);
 
 	return -1;
@@ -218,10 +217,10 @@ unch(int c)
 	if (c == -1)
 		return;
 
-	ifiles->curptr--;
-	if (ifiles->curptr < ifiles->bbuf)
+	ifiles->ib->cptr--;
+	if (ifiles->ib->cptr < 0)
 		error("pushback buffer full");
-	*ifiles->curptr = (usch)c;
+	ifiles->ib->buf[ifiles->ib->cptr] = (usch)c;
 }
 
 /*
@@ -485,19 +484,19 @@ fastspcg(void)
 usch *
 bufid(int ch, struct iobuf *ob)
 {
-	usch *p = ob->cptr;
+	int n = ob->cptr;
 
 	do {
-		if (p - ob->cptr == MAXIDSZ)
+		if (ob->cptr - n == MAXIDSZ)
 			warning("identifier exceeds C99 5.2.4.1");
 		if (ob->cptr < ob->bsz)
-			*ob->cptr++ = ch;
+			ob->buf[ob->cptr++] = ch;
 		else
 			putob(ob, ch);
 	} while (spechr[ch = inch()] & C_ID);
-	*ob->cptr = 0; /* legal */
+	ob->buf[ob->cptr] = 0; /* legal */
 	unch(ch);
-	return p;
+	return ob->buf+n;
 }
 
 usch idbuf[MAXIDSZ+1];
@@ -554,7 +553,7 @@ faststr(int bc, struct iobuf *ob)
 		putob(ob, ch);
 	}
 	putob(ob, ch);
-	*ob->cptr = 0;
+	ob->buf[ob->cptr] = 0;
 	incmnt = 0;
 	return ob;
 }
@@ -624,8 +623,9 @@ fastscan(void)
 	usch *dp;
 
 #define	IDSIZE	128
-	rb->buf = rb->cptr = xmalloc(IDSIZE+1);
-	rb->bsz = rb->buf + IDSIZE;
+	rb->buf = xmalloc(IDSIZE+1);
+	rb->cptr = 0;
+	rb->bsz = IDSIZE;
 
 	goto run;
 
@@ -633,8 +633,8 @@ fastscan(void)
 		/* tight loop to find special chars */
 		/* should use getchar/putchar here */
 		for (;;) {
-			if (ifiles->curptr < ifiles->maxread) {
-				ch = *ifiles->curptr++;
+			if (ifiles->ib->cptr < ifiles->ib->bsz) {
+				ch = ifiles->ib->buf[ifiles->ib->cptr++];
 			} else {
 				if (inpbuf() > 0)
 					continue;
@@ -651,7 +651,7 @@ xloop:			if (ch < 0) {
 		}
 
 		REFILL(2);
-		nch = *ifiles->curptr;
+		nch = ifiles->ib->buf[ifiles->curptr];
 		switch (ch) {
 		case WARN:
 		case CONC:
@@ -720,7 +720,7 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 			goto xloop;
 
 		case 'u':
-			if (nch == '8' && ifiles->curptr[1] == '\"') {
+			if (nch == '8' && ifiles->ib->buf[ifiles->curptr+1] == '\"') {
 				putch(ch);
 				break;
 			}
@@ -740,16 +740,16 @@ run:			while ((ch = inch()) == '\t' || ch == ' ')
 		ident:
 			if (flslvl)
 				error("fastscan flslvl");
-			rb->cptr = rb->buf;
+			rb->cptr = 0;
 			dp = bufid(ch, rb);
 			if ((nl = lookup(dp, FIND)) != NULL) {
 				if ((ob = kfind(nl)) != NULL) {
 					if (*ob->buf == '-' || *ob->buf == '+')
 						putch(' ');
 					buftobuf(ob, &pb);
-					if (ob->cptr > ob->buf &&
-					    (ob->cptr[-1] == '-' ||
-					    ob->cptr[-1] == '+'))
+					if (ob->cptr > 0 &&
+					    (ob->buf[ob->cptr-1] == '-' ||
+					    ob->buf[ob->cptr-1] == '+'))
 						putch(' ');
 					bufree(ob);
 				}
@@ -830,7 +830,7 @@ xloop:		if (c == '\n')
 			} else if (nl != NULL) {
 				inexpr = 1;
 				if ((ob = kfind(nl))) {
-					*ob->cptr = 0;
+					ob->buf[ob->cptr] = 0;
 					strtobuf(ob->buf, rb);
 					bufree(ob);
 				} else
@@ -841,7 +841,7 @@ xloop:		if (c == '\n')
 		} else
 			putob(rb, c);
 	}
-	*rb->cptr = 0;
+	rb->buf[rb->cptr] = 0;
 	unch('\n');
 	yyinp = rb->buf;
 	c = yyparse();
@@ -940,8 +940,16 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 		ic->infil = 0;
 		ic->orgfn = ic->fname = (const usch *)"<stdin>";
 	}
-	ic->ib = getobuf(BINBUF);
+#if LIBVMF
+	if (ifiles) {
+		vmmodify(ifiles->vseg);
+		vmunlock(ifiles->vseg);
+	}
+	ic->vseg = vmmapseg(&ibspc, inclevel);
+	vmlock(ic->vseg);
+#endif
 	ifiles = ic;
+	ic->ib = getobuf(BINBUF);
 	ic->lineno = 1;
 	ic->escln = 0;
 	ic->maxread = ic->curptr;
@@ -957,9 +965,25 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 		error("unterminated conditional");
 
 	ifiles = ic->next;
+	inclevel--;
+#if LIBVMF
+	vmmodify(ic->vseg);
+	vmunlock(ic->vseg);
+	ic->ib->ro = 1; /* XXX no free */
+	if (ifiles) {
+		int diff;
+
+		ifiles->vseg = vmmapseg(&ibspc, inclevel);
+		vmlock(ifiles->vseg);
+		/* XXX recalc ptr diffs */
+		diff = (usch *)ifiles->vseg->s_cinfo - ifiles->bbuf;
+		ifiles->bbuf += diff;
+		ifiles->maxread += diff;
+		ifiles->curptr += diff;
+	}
+#endif
 	close(ic->infil);
 	bufree(ic->ib);
-	inclevel--;
 	return 0;
 }
 
@@ -980,7 +1004,7 @@ prtline(int nl)
 			if (MPflag &&
 			    strcmp((const char *)ifiles->fname, (char *)MPfile))
 				bsheap(ob, "%s:\n", ifiles->fname);
-			write(1, ob->buf, ob->cptr - ob->buf);
+			write(1, ob->buf, ob->cptr);
 			bufree(ob);
 		}
 	} else if (!Pflag) {
@@ -1223,7 +1247,7 @@ savln(void)
 		}
 		putob(ob, c);
 	}
-	*ob->cptr = 0;
+	ob->buf[ob->cptr] = 0;
 	return ob;
 }
 
