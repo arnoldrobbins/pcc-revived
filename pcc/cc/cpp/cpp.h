@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.101 2016/04/02 14:04:57 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.102 2016/04/12 18:49:35 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -147,6 +147,8 @@ struct symtab {
 	const usch *value;
 	const usch *file;
 	int line;
+	unsigned char type;	/* macro type */
+	unsigned char narg;	/* # of args (if feasible) */
 };
 
 /*

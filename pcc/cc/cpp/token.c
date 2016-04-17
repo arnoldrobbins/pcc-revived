@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.171 2016/04/02 14:04:57 ragge Exp $	*/
+/*	$Id: token.c,v 1.172 2016/04/12 18:49:35 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -822,7 +822,7 @@ xloop:		if (c == '\n')
 		if (ISID0(c)) {
 			dp = readid(c);
 			nl = lookup(dp, FIND);
-			if (nl && *nl->value == DEFLOC) {
+			if (nl && nl->type == DEFLOC) {
 				ifdef = 1;
 			} else if (ifdef) {
 				putob(rb, nl ? '1' : '0');
