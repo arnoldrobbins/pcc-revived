@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.374 2016/04/02 09:47:12 ragge Exp $	*/
+/*	$Id: trees.c,v 1.375 2016/04/18 16:34:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2078,7 +2078,7 @@ fixbranch(P1ND *p, int label)
 	logwalk(p);
 
 	if (p->n_op == ICON) {
-		if (glval(p) != 0)
+		if (glval(p) != 0 || p->n_sp != NULL)
 			branch(label);
 		p1nfree(p);
 	} else {
