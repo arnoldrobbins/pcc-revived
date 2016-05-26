@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.274 2016/04/12 18:49:35 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.278 2016/05/16 18:43:50 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -83,6 +83,7 @@ static void prrep(const usch *s);
 #define IMP(x)
 #endif
 
+static int istty;
 int Aflag, Cflag, Eflag, Mflag, dMflag, Pflag, MPflag, MMDflag;
 char *Mfile, *MPfile;
 char *Mxfile;
@@ -158,6 +159,7 @@ static void addidir(char *idir, struct incs **ww);
 static void vsheap(struct iobuf *, const char *, va_list);
 static int skipws(struct iobuf *ib);
 static int getyp(usch *s);
+static void macsav(int ch);
 
 int
 main(int argc, char **argv)
@@ -328,6 +330,7 @@ main(int argc, char **argv)
 		if (open(argv[1], O_WRONLY|O_CREAT, 0600) < 0)
 			error("Can't creat %s", argv[1]);
 	}
+	istty = isatty(1);
 
 	if (argc && strcmp(argv[0], "-")) {
 		fn1 = fn2 = (usch *)argv[0];
@@ -915,6 +918,7 @@ findarg(usch *s, struct iobuf *ab, int *arg, int narg)
 void
 define(void)
 {
+	extern int incmnt;
 	struct iobuf *ib, *ab;
 	struct symtab *np;
 	usch cc[2], *vararg, *dp;
@@ -944,7 +948,7 @@ define(void)
 	ab = getobuf(BNORMAL);
 	vararg = NULL;
 	if ((c = cinput()) == '(') {
-		type = 0;
+		type = FUNLIKE;
 		/* function-like macros, deal with identifiers */
 		c = skipws(0);
 		for (;;) {
@@ -1006,7 +1010,9 @@ define(void)
 	/* parse replacement-list, substituting arguments */
 	wascon = 0;
 	while (c != '\n') {
-		cc[0] = c, cc[1] = inc2();
+		incmnt++;
+		cc[0] = c, cc[1] = cinput();
+		incmnt--;
 		t = getyp(cc);
 		cunput(cc[1]);
 
@@ -1024,7 +1030,7 @@ define(void)
 				(void)cinput(); /* eat # */
 				DELEWS();
 				macsav(CONC);
-				if (ISID0(c = skipws(0)) && type == 0)
+				if (ISID0(c = skipws(0)) && type == FUNLIKE)
 					wascon = 1;
 				if (c == '\n')
 					goto bad; /* 6.10.3.3 p1 */
@@ -1058,7 +1064,7 @@ define(void)
 			break;
 
 		case CMNT:
-			Ccmnt(macsav);
+			Ccmnt2(macsav, cinput());
 			break;
 
 		case NUMBER: 
@@ -1373,6 +1379,7 @@ static void
 fstrnum(struct iobuf *ib, struct iobuf *ob)  
 {	
 	usch *s = ib->buf+ib->cptr;
+	int c2;
 
 	if (*s == '.') {
 		/* not digit, dot.  Next will be digit */
@@ -1380,7 +1387,7 @@ fstrnum(struct iobuf *ib, struct iobuf *ob)
 	}
 	for (;;) {
 		putob(ob, *s++);
-		if ((spechr[*s] & C_EP)) {
+		if ((c2 = (*s & 0337)) == 'E' || c2 == 'P') {
 			if (s[1] != '-' && s[1] != '+')
 				break;
 			putob(ob, *s++);
@@ -1822,7 +1829,12 @@ readargs1(struct symtab *sp, const usch **args)
 				error("eof in macro");
 			else if (c == '/') {
 				int mp = macpos;
-				Ccmnt(macsav);
+				if ((c = ra1_wsnl()) == '*' || c == '/')
+					Ccmnt2(macsav, c);
+				else {
+					macsav('/');
+					cunput(c);
+				}
 				macsav(0);
 				strtobuf(macbase+mp, ab);
 				macpos = mp;
@@ -2049,6 +2061,36 @@ readargs2(struct iobuf *in, struct symtab *sp, const usch **args)
 }
 
 /*
+ * escape "\ inside strings.
+ */
+static void
+escstr(const usch *bp, struct iobuf *ob)
+{
+	int instr = 0;
+
+	while (*bp) {
+		if (!instr && ISWS(*bp)) {
+			while (ISWS(*bp))
+				bp++;
+			putob(ob, ' ');
+		}
+
+		if (*bp == '\'' || *bp == '"') {
+			instr ^= 1;
+			if (*bp == '"')
+				putob(ob, '\\');
+		} 
+		if (instr && *bp == '\\') {
+			putob(ob, *bp);
+			if (bp[1] == '\"') 
+				putob(ob, *bp), putob(ob, *bp++);
+		}
+		putob(ob, *bp);
+		bp++;
+	}
+}
+
+/*
  * expand a function-like macro.
  * vp points to end of replacement-list
  * reads function arguments from input stream.
@@ -2059,8 +2101,8 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 {
 	struct blocker *w;
 	struct iobuf *ob, *cb, *nb;
-	int narg, instr, snuff;
-	const usch *sp, *bp, *ap, *vp, *tp;
+	int narg, instr, snuff, c2;
+	const usch *sp, *bp, *ap, *vp;
 
 	DPRINT(("%d:subarg '%s'\n", lvl, nl->namep));
 	ob = getobuf(BNORMAL);
@@ -2112,7 +2154,8 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 				printf("'\n");
 			}
 #endif
-			if (sp[-2] != CONC && !snuff && sp[1] != CONC) {
+			c2 = (sp-2 < vp ? 0 : sp[-2]);
+			if (c2 != CONC && !snuff && sp[1] != CONC) {
 				/*
 				 * Expand an argument; 6.10.3.1:
 				 * "A parameter in the replacement list,
@@ -2130,26 +2173,10 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 				strtobuf(nb->buf, ob);
 				bufree(nb);
 			} else {
-				while (*bp) {
-					if (snuff && !instr && ISWS(*bp)) {
-						while (ISWS(*bp))
-							bp++;
-						putob(ob, ' ');
-					}
-
-					if (snuff &&
-					    (*bp == '\'' || *bp == '"')) {
-						instr ^= 1;
-						for (tp = bp - 1; *tp == '\\'; tp--)
-							instr ^= 1;
-						if (*bp == '"')
-							putob(ob, '\\');
-					} 
-					if (snuff && instr && *bp == '\\')
-						putob(ob, '\\');
-					putob(ob, *bp);
-					bp++;
-				}
+				if (snuff)
+					escstr(bp, ob);
+				else
+					strtobuf(bp, ob);
 			}
 		} else if (ISID0(*sp)) {
 			if (lookup(sp, FIND))
@@ -2331,6 +2358,9 @@ void
 putch(int ch)
 {
 	putob(&pb, ch);
+	if (ch == '\n' && istty && Mflag == 0)
+		(void)write(1, pb.buf, pb.cptr), pb.cptr = 0;
+		
 }
 
 void
