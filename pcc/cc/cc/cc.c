@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.307 2016/07/10 08:21:10 ragge Exp $	*/
+/*	$Id: cc.c,v 1.308 2016/08/05 10:38:11 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -569,6 +569,16 @@ main(int argc, char *argv[])
 			break;
 
 		case 'd': /* debug options */
+			if (match(argp, "-dumpmachine")) {
+ 				/* Print target and immediately exit */
+ 				puts(TARGSTR);
+ 				exit(0);
+ 			}
+ 			if (match(argp, "-dumpversion")) {
+ 				/* Print claimed gcc level, immediately exit */
+ 				puts("4.3.1");
+ 				exit(0);
+ 			}
 			for (t = &argp[2]; *t; t++) {
 				if (*t == 'M')
 					strlist_append(&preprocessor_flags, "-dM");
