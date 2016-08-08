@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.180 2016/08/05 10:23:31 ragge Exp $	*/
+/*	$Id: token.c,v 1.181 2016/08/08 16:39:55 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -86,7 +86,6 @@ static void elifstmt(void);
 
 static void unch(int c);
 
-#define	PUTCH(ch) if (!flslvl) putch(ch)
 #define	UNCH(ib, ch)	ib->buf[--ib->cptr] = ch
 /* protection against recursion in #include */
 #define MAX_INCLEVEL	100
@@ -731,9 +730,6 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 			break;
 		}
 	}
-
-/*eof:*/	warning("unexpected EOF");
-	putch('\n');
 }
 
 /*
