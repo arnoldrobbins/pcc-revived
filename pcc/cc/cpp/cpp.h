@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.106 2016/08/05 10:23:31 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.107 2016/08/10 17:33:23 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -213,3 +213,4 @@ void *xrealloc(void *p, int sz);
 void *xmalloc(int sz);
 void fastscan(void);
 void cntline(void);
+struct iobuf *savln(void);

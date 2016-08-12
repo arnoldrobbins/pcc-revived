@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.376 2016/07/07 10:08:30 ragge Exp $	*/
+/*	$Id: trees.c,v 1.377 2016/08/09 17:29:35 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1600,6 +1600,7 @@ tymatch(P1ND *p)
 
 	if (casgop(o)) {
 		if (r->n_op != ICON && tl < FLOAT && tr < FLOAT &&
+		    tr > UNSIGNED &&
 		    DEUNSIGN(tl) < DEUNSIGN(tr) && o != CAST)
 			warner(Wtruncate, tnames[tr], tnames[tl]);
 		if (l->n_type == BOOL && r->n_type != BOOL) {

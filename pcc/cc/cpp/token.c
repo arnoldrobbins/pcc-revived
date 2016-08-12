@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.181 2016/08/08 16:39:55 ragge Exp $	*/
+/*	$Id: token.c,v 1.182 2016/08/10 17:33:23 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -1190,7 +1190,7 @@ elifstmt(void)
 }
 
 /* save line into iobuf */
-static struct iobuf *
+struct iobuf *
 savln(void)
 {
 	struct iobuf *ob = getobuf(BNORMAL);
