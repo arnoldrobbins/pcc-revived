@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.309 2016/08/08 16:43:59 ragge Exp $	*/
+/*	$Id: cc.c,v 1.310 2016/08/26 13:52:57 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -549,6 +549,11 @@ main(int argc, char *argv[])
 				(void)nxtopt(0); /* ignore arg */
 			} else
 				oerror(argp);
+			break;
+
+		case 'a':	/* only -ansi switch for now */
+			if (match(argp, "-ansi"))
+				cstd = SC89;
 			break;
 
 		case 'B': /* other search paths for binaries */
