@@ -1,4 +1,4 @@
-Thu Dec 10 21:34:32 IST 2015
+Thu Sep  1 20:49:54 IDT 2016
 ============================
 
 This Git repo is a simple mirror of the CVS repositories for the PCC
@@ -17,6 +17,10 @@ is used.  For instructions using CVS, see:
 	http://pcc.ludd.ltu.se/supported-platforms/
 
 The mailing list for reporting errors is: pcc@lists.ludd.ltu.se.
+
+The JIRA is
+
+	http://pcc.ludd.ltu.se/jira/secure/Dashboard.jspa
 
 I am creating this Git repo so that I can access the code via HTTP(S)
 from behind the corporate firewall at my work. There are no other
