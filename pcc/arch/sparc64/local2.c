@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.27 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local2.c,v 1.28 2016/09/26 16:45:42 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 David Crawshaw <david@zentus.com>
@@ -53,7 +53,7 @@ prologue(struct interpass_prolog *ipp)
 
 	stack = V9RESERVE + V9STEP(p2maxautooff);
 
-	for (i = ipp->ipp_regs[0]; i; i >>= 1)
+	for (i = p2env.p_regs[0]; i; i >>= 1)
 		if (i & 1)
 			stack += 16;
 

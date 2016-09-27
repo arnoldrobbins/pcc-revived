@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.42 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local2.c,v 1.43 2016/09/26 16:45:42 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -47,7 +47,7 @@ static void acon(NODE *p);
 void
 prologue(struct interpass_prolog *ipp)
 {
-	printf("	.word 0x%llx\n", (unsigned long long)ipp->ipp_regs[0]);
+	printf("	.word 0x%llx\n", (unsigned long long)p2env.p_regs[0]);
 	if (p2maxautooff)
 		printf("	subl2 $%d,%%sp\n", p2maxautooff);
 	if (pflag) {

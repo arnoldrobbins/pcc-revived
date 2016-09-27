@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.110 2015/08/11 20:08:22 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.111 2016/09/26 16:45:43 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -262,9 +262,6 @@ struct interpass_prolog {
 	char *ipp_name;		/* Function name */
 	int ipp_vis;		/* Function visibility */
 	TWORD ipp_type;		/* Function type */
-#define	NIPPREGS	BIT2BYTE(MAXREGS)/sizeof(bittype)
-	bittype ipp_regs[NIPPREGS];
-				/* Bitmask of registers to save */
 	int ipp_autos;		/* Size on stack needed */
 	int ip_tmpnum;		/* # allocated temp nodes so far */
 	int ip_lblnum;		/* # used labels so far */

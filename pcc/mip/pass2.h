@@ -1,4 +1,4 @@
-/*	$Id: pass2.h,v 1.142 2015/08/13 11:56:03 ragge Exp $	*/
+/*	$Id: pass2.h,v 1.143 2016/09/26 16:45:43 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -526,6 +526,8 @@ struct p2env {
 	struct labelinfo labinfo;
 	struct basicblock bblocks;
 	int nbblocks;
+#define NIPPREGS        BIT2BYTE(MAXREGS)/sizeof(bittype)
+	bittype p_regs[NIPPREGS];	/* Bitmask of registers to save */
 };
 
 extern struct p2env p2env;

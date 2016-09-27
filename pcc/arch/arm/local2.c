@@ -1,4 +1,4 @@
-/*      $Id: local2.c,v 1.39 2016/03/09 18:19:56 ragge Exp $    */
+/*      $Id: local2.c,v 1.40 2016/09/26 16:45:42 ragge Exp $    */
 /*
  * Copyright (c) 2007 Gregory McGarry (g.mcgarry@ieee.org).
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -163,13 +163,12 @@ prologue(struct interpass_prolog *ipp)
 
 #ifdef PCC_DEBUG
 	if (x2debug)
-		printf("prologue: type=%d, lineno=%d, name=%s, vis=%d, ipptype=%d, regs=0x%lx, autos=%d, tmpnum=%d, lblnum=%d\n",
+		printf("prologue: type=%d, lineno=%d, name=%s, vis=%d, ipptype=%d, autos=%d, tmpnum=%d, lblnum=%d\n",
 			ipp->ipp_ip.type,
 			ipp->ipp_ip.lineno,
 			ipp->ipp_name,
 			ipp->ipp_vis,
 			ipp->ipp_type,
-			ipp->ipp_regs[0],
 			ipp->ipp_autos,
 			ipp->ip_tmpnum,
 			ipp->ip_lblnum);

@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.7 2015/07/24 08:00:12 ragge Exp $	*/
+/*	$Id: local2.c,v 1.8 2016/09/26 16:45:42 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -65,7 +65,7 @@ prtprolog(struct interpass_prolog *ipp, int addto)
 		printf("	enter %d,0\n", addto);
 #endif
 	for (i = 0; i < MAXREGS; i++)
-		if (TESTBIT(ipp->ipp_regs, i))
+		if (TESTBIT(p2env.p_regs, i))
 			printf("	mov -%d[%s],%s\n",
 			     regoff[i], rnames[FPREG], rnames[i]);
 }
@@ -82,7 +82,7 @@ offcalc(struct interpass_prolog *ipp)
 	if (addto >= AUTOINIT/SZCHAR)
 		addto -= AUTOINIT/SZCHAR;
 	for (i = 0; i < MAXREGS; i++)
-		if (TESTBIT(ipp->ipp_regs, i)) {
+		if (TESTBIT(p2env.p_regs, i)) {
 			addto += SZINT/SZCHAR;
 			regoff[i] = addto;
 		}
@@ -120,7 +120,7 @@ eoftn(struct interpass_prolog *ipp)
 
 	/* return from function code */
 	for (i = 0; i < MAXREGS; i++)
-		if (TESTBIT(ipp->ipp_regs, i))
+		if (TESTBIT(p2env.p_regs, i))
 			printf("	mov %s,-%d[%s]\n",
 			    rnames[i],regoff[i], rnames[FPREG]);
 

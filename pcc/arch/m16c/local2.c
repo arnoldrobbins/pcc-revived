@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.43 2015/01/04 19:17:23 ragge Exp $	*/
+/*	$Id: local2.c,v 1.44 2016/09/26 16:45:42 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -51,8 +51,8 @@ prologue(struct interpass_prolog *ipp)
     ftype = ipp->ipp_type;
 
 #if 0
-    if (ipp->ipp_regs > 0 && ipp->ipp_regs != MINRVAR)
-	comperr("fix prologue register savings", ipp->ipp_regs);
+    if (p2env.p_regs > 0 && p2env.p_regs != MINRVAR)
+	comperr("fix prologue register savings", p2env.p_regs);
 #endif
     
     printf("	RSEG CODE:CODE:REORDER:NOROOT(0)\n");
@@ -82,8 +82,8 @@ void
 eoftn(struct interpass_prolog *ipp)
 {
 #if 0
-	if (ipp->ipp_regs != MINRVAR)
-		comperr("fix eoftn register savings %x", ipp->ipp_regs);
+	if (p2env.p_regs != MINRVAR)
+		comperr("fix eoftn register savings %x", p2env.p_regs);
 #endif
 
 	//	if (xsaveip == 0)

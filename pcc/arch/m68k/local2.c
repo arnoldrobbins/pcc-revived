@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.17 2016/01/30 17:26:19 ragge Exp $	*/
+/*	$Id: local2.c,v 1.18 2016/09/26 16:45:42 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -53,7 +53,7 @@ prologue(struct interpass_prolog *ipp)
 		fpsub -= AUTOINIT/SZCHAR;
 	regm = regf = nfp = 0;
 	for (i = 0; i < MAXREGS; i++)
-		if (TESTBIT(ipp->ipp_regs, i)) {
+		if (TESTBIT(p2env.p_regs, i)) {
 			if (i <= A7) {
 				regm |= (1 << i);
 				fpsub += 4;

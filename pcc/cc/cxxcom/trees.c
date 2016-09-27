@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.22 2016/08/09 17:11:57 ragge Exp $	*/
+/*	$Id: trees.c,v 1.23 2016/09/26 16:45:43 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -3100,8 +3100,6 @@ send_passt(int type, ...)
 	case IP_PROLOG:
 		inftn = type == IP_PROLOG ? 1 : 0;
 		ipp = (struct interpass_prolog *)ip;
-		memset(ipp->ipp_regs, (type == IP_PROLOG)? -1 : 0,
-		    sizeof(ipp->ipp_regs));
 		ipp->ipp_autos = va_arg(ap, int);
 		ipp->ipp_name = va_arg(ap, char *);
 		ipp->ipp_type = va_arg(ap, TWORD);

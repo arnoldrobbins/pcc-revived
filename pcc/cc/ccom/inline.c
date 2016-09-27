@@ -1,4 +1,4 @@
-/*	$Id: inline.c,v 1.65 2015/11/17 19:19:40 ragge Exp $	*/
+/*	$Id: inline.c,v 1.66 2016/09/26 16:45:43 ragge Exp $	*/
 /*
  * Copyright (c) 2003, 2008 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -408,16 +408,16 @@ printip(struct interpass *pole)
 #endif
 		case IP_PROLOG:
 			ipplg = (struct interpass_prolog *)ip;
-			printf("%s %s regs %lx autos %d mintemp %d minlbl %d\n",
+			printf("%s %s autos %d mintemp %d minlbl %d\n",
 			    ipplg->ipp_name, ipplg->ipp_vis ? "(local)" : "",
-			    (long)ipplg->ipp_regs[0], ipplg->ipp_autos,
+			    ipplg->ipp_autos,
 			    ipplg->ip_tmpnum, ipplg->ip_lblnum);
 			break;
 		case IP_EPILOG:
 			epplg = (struct interpass_prolog *)ip;
-			printf("%s %s regs %lx autos %d mintemp %d minlbl %d\n",
+			printf("%s %s autos %d mintemp %d minlbl %d\n",
 			    epplg->ipp_name, epplg->ipp_vis ? "(local)" : "",
-			    (long)epplg->ipp_regs[0], epplg->ipp_autos,
+			    epplg->ipp_autos,
 			    epplg->ip_tmpnum, epplg->ip_lblnum);
 			break;
 		case IP_DEFLAB: printf(LABFMT "\n", ip->ip_lbl); break;
