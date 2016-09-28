@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.64 2016/09/26 16:45:42 ragge Exp $	*/
+/*	$Id: local2.c,v 1.65 2016/09/27 20:23:20 plunky Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -78,7 +78,7 @@ offcalc(struct interpass_prolog *ipp)
 	if (addto >= AUTOINIT/SZCHAR)
 		addto -= AUTOINIT/SZCHAR;
 	for (i = 0; i < MAXREGS; i++)
-		if (TESTBIT(p23nv.p_regs, i)) {
+		if (TESTBIT(p2env.p_regs, i)) {
 			addto += SZLONG/SZCHAR;
 			regoff[i] = addto;
 		}
