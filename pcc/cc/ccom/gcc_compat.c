@@ -1,4 +1,4 @@
-/*      $Id: gcc_compat.c,v 1.120 2016/04/02 09:02:56 ragge Exp $     */
+/*      $Id: gcc_compat.c,v 1.121 2016/10/11 13:48:23 ragge Exp $     */
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -410,7 +410,8 @@ struct atax mods[] = {
 static int
 amatch(char *s, struct atax *at, int mx)
 {
-	int i, len;
+	int i;
+	size_t len;
 
 	if (s[0] == '_' && s[1] == '_')
 		s += 2;

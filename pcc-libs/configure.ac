@@ -54,7 +54,7 @@ case "$target_os" in
      litebsd*)
  	targos=litebsd
  	case "$target_cpu" in
- 	    mips*) targmach=mips* ;;
+ 	    mips*) targmach=mips ;;
  	esac
  	;;
 
@@ -108,9 +108,12 @@ case "$target_os" in
 	targos=openbsd
 	case "$target_cpu" in
 	    i?86) targmach=i386 ;;
-	    vax) targmach=vax ;;
+	    mips64el) targmach=mips ;;
+	    mips64) targmach=mips endian=big ;;
 	    powerpc) targmach=powerpc endian=big ;;
 	    sparc64) targmach=sparc64 endian=big ;;
+	    vax) targmach=vax ;;
+	    x86_64) targmach=amd64 ;;
 	esac
 	;;
 

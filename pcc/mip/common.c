@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.122 2015/09/30 20:04:30 ragge Exp $	*/
+/*	$Id: common.c,v 1.124 2016/10/12 07:46:58 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -206,7 +206,7 @@ struct Warning Warnings[] = {
 		"declaration of '%s' shadows a %s declaration"
 	}, {
 		"pointer-sign", 0, 0,
-		"illegal pointer combination"
+		"pointer sign mismatch"
 	}, {
 		"sign-compare", 0, 0,
 		"comparison between signed and unsigned"
@@ -729,7 +729,7 @@ struct xalloc {
 		char elm[MAXSZ];
 	} u;
 } *tapole, *tmpole;
-int uselem = NELEM; /* next unused element */
+size_t uselem = NELEM; /* next unused element */
 
 void *
 tmpalloc(size_t size)
@@ -796,7 +796,7 @@ markset(struct mark *m)
 {
 	m->tmsav = tmpole;
 	m->tasav = tapole;
-	m->elem = uselem;
+	m->elem = (int)uselem;
 }
 
 /*
@@ -831,7 +831,7 @@ newstring(char *s, size_t len)
 	char *u, *c;
 
 	len++;
-	savstringsz += len;
+	savstringsz += (int)len;
 	if (allocleft < len) {
 		u = c = permalloc(len);
 	} else {
@@ -918,12 +918,12 @@ struct attr *
 attr_new(int type, int nelem)
 {
 	struct attr *ap;
-	int sz;
+	size_t sz;
 
 	sz = sizeof(struct attr) + nelem * sizeof(union aarg);
 
 	ap = memset(permalloc(sz), 0, sz);
-	newattrsz += sz;
+	newattrsz += (int)sz;
 	ap->atype = type;
 	ap->sz = nelem;
 	return ap;
@@ -965,7 +965,7 @@ attr_find(struct attr *ap, int type)
 struct attr *
 attr_copy(struct attr *aps, struct attr *apd, int n)
 {
-	int sz = sizeof(struct attr) + n * sizeof(union aarg);
+	size_t sz = sizeof(struct attr) + n * sizeof(union aarg);
 	return memcpy(apd, aps, sz);
 }
 
@@ -975,7 +975,7 @@ attr_copy(struct attr *aps, struct attr *apd, int n)
 struct attr *
 attr_dup(struct attr *ap)
 {
-	int sz = sizeof(struct attr) + ap->sz * sizeof(union aarg);
+	size_t sz = sizeof(struct attr) + ap->sz * sizeof(union aarg);
 	ap = memcpy(permalloc(sz), ap, sz);
 	ap->next = NULL;
 	return ap;

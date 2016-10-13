@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.38 2015/09/15 20:01:10 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.39 2016/10/11 13:48:24 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -228,7 +228,7 @@ lookup(char *key, int stype)
 		w = sympole[type];
 		for (;;) {
 			bit = BITNO(w->bitno);
-			fbit = (code >> bit) & 1;
+			fbit = (int)(code >> bit) & 1;
 			svbit = fbit ? IS_RIGHT_LEAF(w->bitno) :
 			    IS_LEFT_LEAF(w->bitno);
 			w = w->lr[fbit];
@@ -275,7 +275,7 @@ lookup(char *key, int stype)
 		;
 
 	new = (symtreecnt++, permalloc(sizeof(struct tree)));
-	bit = (code >> cix) & 1;
+	bit = (int)(code >> cix) & 1;
 	new->bitno = cix | (bit ? RIGHT_IS_LEAF : LEFT_IS_LEAF);
 	new->lr[bit] = (struct tree *)getsymtab(key, stype);
 	if (numsyms[type]++ == 1) {
@@ -295,7 +295,7 @@ lookup(char *key, int stype)
 			cerror("bitno == cix");
 		if (bitno > cix)
 			break;
-		svbit = (code >> bitno) & 1;
+		svbit = (int)(code >> bitno) & 1;
 		last = w;
 		w = w->lr[svbit];
 		if (fbit & (svbit ? RIGHT_IS_LEAF : LEFT_IS_LEAF))

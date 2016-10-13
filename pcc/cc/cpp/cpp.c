@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.282 2016/10/03 20:10:50 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.286 2016/10/13 18:20:35 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -260,7 +260,7 @@ main(int argc, char **argv)
 				MPflag++;
 			} else if (strncmp(optarg, "MT,", 3) == 0 ||
 			    strncmp(optarg, "MQ,", 3) == 0) {
-				int l = strlen(optarg+3) + 2;
+				int l = (int)strlen(optarg+3) + 2;
 				char *cp, *up;
 
 				if (optarg[1] == 'Q')
@@ -397,6 +397,8 @@ putob(struct iobuf *ob, int ch)
 			ob->bsz = sz + CPPBUF;
 			break;
 		case BMAC:
+			macsav(ch);
+			return;
 		case BINBUF:
 			error("putob");
 		case BUTBUF:
@@ -501,25 +503,25 @@ strtobuf(const usch *str, struct iobuf *iob)
 	return iob;
 }
 
-static usch *macbase;
-static int macpos, cmbase;
+struct iobuf macstore = { .type = BMAC, }, *mbuf = &macstore;
+static int cmbase;
 
 static void
 macsav(int ch)
 {
-	if (macbase == NULL)
-		macbase = xmalloc(CPPBUF);
-	if (macpos == CPPBUF) {
+	if (mbuf->buf == NULL)
+		mbuf->buf = xmalloc(mbuf->bsz = CPPBUF);
+	if (mbuf->cptr == CPPBUF) {
 		usch *tb;
 		if (cmbase == 0)
 			error("macro too large");
 		tb = xmalloc(CPPBUF);
-		memcpy(tb, macbase+cmbase, CPPBUF-cmbase);
-		macpos -= cmbase;
+		memcpy(tb, mbuf->buf+cmbase, CPPBUF-cmbase);
+		mbuf->cptr -= cmbase;
 		cmbase = 0;
-		macbase = tb;
+		mbuf->buf = tb;
 	}
-	macbase[macpos++] = ch;
+	mbuf->buf[mbuf->cptr++] = ch;
 }
 
 static void                     
@@ -528,11 +530,11 @@ macstr(const usch *s)
 	do {
 		macsav(*s);
 	} while (*s++ != 0);
-	macpos--;
+	mbuf->cptr--;
 }
 
-#define	setcmbase()	cmbase = macpos
-#define	clrcmbase()	macpos = cmbase
+#define	setcmbase()	cmbase = mbuf->cptr
+#define	clrcmbase()	mbuf->cptr = cmbase
 
 void
 bufree(struct iobuf *iob)
@@ -708,7 +710,7 @@ fsrch(const usch *fn, int idx, struct incs *w)
 		for (; w; w = w->next) {
 			macstr(w->dir); macsav('/');
 			macstr(fn); macsav(0);
-			if (pushfile(macbase+cmbase, fn, i, w->next) == 0)
+			if (pushfile(mbuf->buf+cmbase, fn, i, w->next) == 0)
 				return 1;
 			clrcmbase();
 		}
@@ -813,7 +815,7 @@ include(void)
 		/* nope, failed, try to create a path for it */
 		if ((nm = (usch *)strrchr((char *)ifiles->orgfn, '/'))) {
 			ob = strtobuf((usch *)ifiles->orgfn, NULL);
-			ob->cptr = (nm - ifiles->orgfn) + 1;
+			ob->cptr = (int)(nm - ifiles->orgfn) + 1;
 			strtobuf(fn, ob);
 			nm = xstrdup(ob->buf);
 			bufree(ob);
@@ -919,7 +921,7 @@ void
 define(void)
 {
 	extern int incmnt;
-	struct iobuf *ib, *ab;
+	struct iobuf *ab;
 	struct symtab *np;
 	usch cc[2], *vararg, *dp;
 	int arg[MAXARGS+1];
@@ -971,7 +973,7 @@ define(void)
 				if (narg == MAXARGS)
 					error("Too many macro args");
 				putob(ab, 0);
-				arg[narg++] = dp - ab->buf;
+				arg[narg++] = (int)(dp - ab->buf);
 				switch ((c = skipws(0))) {
 				case ',': break;
 				case ')': continue;
@@ -1004,8 +1006,8 @@ define(void)
 	if (ISWS(c))
 		c = skipwscmnt(0);
 
-#define	DELEWS() while ((macpos > cmbase) && \
-	ISWS(macbase[macpos-1])) macpos--
+#define	DELEWS() while ((mbuf->cptr > cmbase) && \
+	ISWS(mbuf->buf[mbuf->cptr-1])) mbuf->cptr--
 
 	/* parse replacement-list, substituting arguments */
 	wascon = 0;
@@ -1064,15 +1066,11 @@ define(void)
 			break;
 
 		case CMNT:
-			Ccmnt2(macsav, cinput());
+			Ccmnt2(mbuf, cinput());
 			break;
 
 		case NUMBER: 
-			ib = getobuf(BNORMAL);
-			c = fastnum(c, ib);
-			for (dp = ib->buf; dp < ib->buf + ib->cptr; dp++)
-				macsav(*dp);
-			bufree(ib);
+			c = fastnum(c, mbuf);
 			continue;
 
 		case STRING:
@@ -1085,12 +1083,8 @@ define(void)
 			}
 			if (tflag)
 				macsav(c);
-			else {
-				ib = faststr(c, NULL);
-				for (dp = ib->buf; *dp ; dp++)
-					macsav(*dp);
-				bufree(ib);
-			}
+			else
+				faststr(c, mbuf);
 			break;
 
 		case IDENT:
@@ -1132,19 +1126,19 @@ define(void)
 	if (vararg)
 		type = VARG;
 
-	if (macbase[cmbase] == CONC)
+	if (mbuf->buf[cmbase] == CONC)
 		goto bad; /* 6.10.3.3 p1 */
 
 	if (redef && ifiles->idx != SYSINC) {
-		if (cmprepl(np->value, macbase+cmbase) || 
+		if (cmprepl(np->value, mbuf->buf+cmbase) || 
 		    np->type != type || np->narg != narg) { /* not equal */
-			np->value = macbase+cmbase;
+			np->value = mbuf->buf+cmbase;
 			warning("%s redefined (previously defined at \"%s\" line %d)",
 			    np->namep, np->file, np->line);
 		} else
-			macpos = cmbase;  /* forget this space */
+			mbuf->cptr = cmbase;  /* forget this space */
 	} else
-		np->value = macbase+cmbase;
+		np->value = mbuf->buf+cmbase;
 	np->type = type;
 	np->narg = narg;
 
@@ -1391,7 +1385,7 @@ fstrnum(struct iobuf *ib, struct iobuf *ob)
 		} else if ((*s != '.') && ((spechr[*s] & C_ID) == 0))
 			break;
 	}
-	ib->cptr = s - ib->buf;
+	ib->cptr = (int)(s - ib->buf);
 }
 
 /*
@@ -1416,7 +1410,7 @@ fstrstr(struct iobuf *ib, struct iobuf *ob)
 		putob(ob, *s++);
 	}
 	putob(ob, *s++);
-	ib->cptr = s - ib->buf;
+	ib->cptr = (int)(s - ib->buf);
 }
 
 /*
@@ -1434,7 +1428,7 @@ fcmnt(struct iobuf *ib, struct iobuf *ob)
 		if (s[-1] == '*' && *s == '/')
 			break;
 	}
-	ib->cptr = s - ib->buf + 1;
+	ib->cptr = (int)(s - ib->buf + 1);
 }
 
 static int
@@ -1825,16 +1819,12 @@ readargs1(struct symtab *sp, const usch **args)
 			if (c == 0)
 				error("eof in macro");
 			else if (c == '/') {
-				int mp = macpos;
 				if ((c = ra1_wsnl()) == '*' || c == '/')
-					Ccmnt2(macsav, c);
+					Ccmnt2(ab, c);
 				else {
-					macsav('/');
+					putob(ab, '/');
 					cunput(c);
 				}
-				macsav(0);
-				strtobuf(macbase+mp, ab);
-				macpos = mp;
 			} else if (c == '\"' || c == '\'') {
 				faststr(c, ab);
 			} else if (ISID0(c)) {
@@ -2098,7 +2088,7 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 {
 	struct blocker *w;
 	struct iobuf *ob, *cb, *nb;
-	int narg, instr, snuff, c2;
+	int narg, snuff, c2;
 	const usch *sp, *bp, *ap, *vp;
 
 	DPRINT(("%d:subarg '%s'\n", lvl, nl->namep));
@@ -2107,7 +2097,7 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 	narg = nl->narg;
 
 	sp = vp;
-	instr = snuff = 0;
+	snuff = 0;
 #ifdef PCC_DEBUG
 	if (dflag>1) {
 		printf("%d:subarg ARGlist for %s: '", lvl, nl->namep);
@@ -2249,7 +2239,7 @@ exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 					putob(tb, *cp);
 			}
 			tb->buf[tb->cptr] = 0;
-			ib->cptr = cp - ib->buf;
+			ib->cptr = (int)(cp - ib->buf);
 
 			/* Any match? */
 			if ((nl = lookup(tb->buf, FIND)) == NULL) {
@@ -2271,7 +2261,7 @@ exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 				if (gotlp && *cp != ')')
 					error("bad defined");
 				cp++;
-				ib->cptr = cp - ib->buf;
+				ib->cptr = (int)(cp - ib->buf);
 			} else if (expokb(nl, bl) && expok(nl, m) &&
 			    (nob = submac(nl, lvl+1, ib, bl))) {
 				if (nob->buf[0] == '-' || nob->buf[0] == '+')

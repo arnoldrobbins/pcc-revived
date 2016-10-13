@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.10 2016/08/09 17:30:26 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.11 2016/10/11 13:48:24 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1901,7 +1901,7 @@ static char *
 mkpstr(char *str)
 {
 	char *s, *os;
-	int v, l = strlen(str)+3; /* \t + \n + \0 */
+	int v, l = (int)strlen(str)+3; /* \t + \n + \0 */
 
 	os = s = inlalloc(l);
 	*s++ = '\t';
@@ -1985,7 +1985,7 @@ stradd(char *old, char *new)
 		new++;			 /* remove first " */
 		new[strlen(new) - 1] = 0;/* remove last " */
 	}
-	len = strlen(old) + maxstlen(new) + 1;
+	len = (int)strlen(old) + maxstlen(new) + 1;
 	rv = tmpalloc(len);
 	strlcpy(rv, old, len);
 	fixstr(rv + strlen(old), new, maxstlen(new) + 1);
@@ -2024,7 +2024,7 @@ clbrace(NODE *p)
 char *
 simname(char *s)
 {
-	int len = strlen(s) + 10 + 1;
+	int len = (int)strlen(s) + 10 + 1;
 	char *w = tmpalloc(len);
 
 	snprintf(w, len, "%s%d", s, getlab());

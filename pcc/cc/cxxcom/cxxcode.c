@@ -1,4 +1,4 @@
-/*	$Id: cxxcode.c,v 1.6 2014/05/03 09:57:57 ragge Exp $	*/
+/*	$Id: cxxcode.c,v 1.7 2016/10/11 13:48:24 ragge Exp $	*/
 /*
  * Copyright (c) 2011 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -245,7 +245,7 @@ nmch(int c)
 static void
 pshsln(char *c)
 {
-	int i, j, ln = strlen(c);
+	int i, j, ln = (int)strlen(c);
 
 #define cnt(v,n) for (v = 0; ln >= n; v++, ln -= n)
 	cnt(i,100);

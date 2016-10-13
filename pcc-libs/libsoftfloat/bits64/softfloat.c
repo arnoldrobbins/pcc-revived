@@ -390,7 +390,7 @@ Returns the exponent bits of the double-precision floating-point value `a'.
 INLINE int16 extractFloat64Exp( float64 a )
 {
 
-    return ( FLOAT64_DEMANGLE(a)>>52 ) & 0x7FF;
+    return (int16) ( FLOAT64_DEMANGLE(a)>>52 ) & 0x7FF;
 
 }
 
@@ -402,7 +402,7 @@ Returns the sign bit of the double-precision floating-point value `a'.
 INLINE flag extractFloat64Sign( float64 a )
 {
 
-    return FLOAT64_DEMANGLE(a)>>63;
+    return (flag) (FLOAT64_DEMANGLE(a)>>63);
 
 }
 
@@ -492,7 +492,7 @@ static float64 roundAndPackFloat64( flag zSign, int16 zExp, bits64 zSig )
             }
         }
     }
-    roundBits = zSig & 0x3FF;
+    roundBits = (int16) (zSig & 0x3FF);
     if ( 0x7FD <= (bits16) zExp ) {
         if (    ( 0x7FD < zExp )
              || (    ( zExp == 0x7FD )
@@ -510,7 +510,7 @@ static float64 roundAndPackFloat64( flag zSign, int16 zExp, bits64 zSig )
                 || ( zSig + roundIncrement < LIT64( 0x8000000000000000 ) );
             shift64RightJamming( zSig, - zExp, &zSig );
             zExp = 0;
-            roundBits = zSig & 0x3FF;
+            roundBits = (int16) (zSig & 0x3FF);
             if ( isTiny && roundBits ) float_raise( float_flag_underflow );
         }
     }
@@ -1889,7 +1889,7 @@ float32 float32_mul( float32 a, float32 b )
     aSig = ( aSig | 0x00800000 )<<7;
     bSig = ( bSig | 0x00800000 )<<8;
     shift64RightJamming( ( (bits64) aSig ) * bSig, 32, &zSig64 );
-    zSig = zSig64;
+    zSig = (bits32) zSig64;
     if ( 0 <= (sbits32) ( zSig<<1 ) ) {
         zSig <<= 1;
         --zExp;
@@ -1953,7 +1953,7 @@ float32 float32_div( float32 a, float32 b )
         aSig >>= 1;
         ++zExp;
     }
-    zSig = ( ( (bits64) aSig )<<32 ) / bSig;
+    zSig = (bits32) ( ( (bits64) aSig )<<32 ) / bSig;
     if ( ( zSig & 0x3F ) == 0 ) {
         zSig |= ( (bits64) bSig * zSig != ( (bits64) aSig )<<32 );
     }
@@ -2332,7 +2332,7 @@ int32 float64_to_int32_round_to_zero( float64 a )
     shiftCount = 0x433 - aExp;
     savedASig = aSig;
     aSig >>= shiftCount;
-    z = aSig;
+    z = (int32) aSig;
     if ( aSign ) z = - z;
     if ( ( z < 0 ) ^ aSign ) {
  invalid:
@@ -2467,7 +2467,7 @@ float32 float64_to_float32( float64 a )
         return packFloat32( aSign, 0xFF, 0 );
     }
     shift64RightJamming( aSig, 22, &aSig );
-    zSig = aSig;
+    zSig = (bits32) aSig;
     if ( aExp || zSig ) {
         zSig |= 0x40000000;
         aExp -= 0x381;

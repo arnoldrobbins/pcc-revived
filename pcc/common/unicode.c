@@ -1,4 +1,4 @@
-/*	$Id: unicode.c,v 1.9 2015/07/19 13:20:37 ragge Exp $	*/
+/*	$Id: unicode.c,v 1.10 2016/10/11 13:48:24 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Eric Olson <ejolson@renomath.org>
  * Some rights reserved.
@@ -105,11 +105,11 @@ cp2u16(long num, unsigned short *s)
 {
 	s[0] = s[1] = 0;
 	if (num <= 0xd7ff || (num >= 0xe000 && num <= 0xffffL)) {
-        	*s = num;
+        	*s = (unsigned short)num;
 	} else if (num >= 0x010000L && num <= 0x10ffffL) {
 		num -= 0x010000L;
-		s[0] = ((num >> 10) + 0xd800);
-		s[1] = ((num & 0x3ff) + 0xdc00);
+		s[0] = (unsigned short)((num >> 10) + 0xd800);
+		s[1] = (unsigned short)((num & 0x3ff) + 0xdc00);
 	} else if (num > 0x10ffffL)
 		werror("illegal UTF-16 value");
 }

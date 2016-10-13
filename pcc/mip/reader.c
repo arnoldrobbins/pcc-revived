@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.300 2016/04/02 09:47:12 ragge Exp $	*/
+/*	$Id: reader.c,v 1.301 2016/10/11 13:48:24 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -154,7 +154,7 @@ sanitychecks(struct p2env *p2e)
 	struct interpass *ip;
 	int i, sz;
 
-	sz = sizeof(int) * (p2e->epp->ip_lblnum - p2e->ipp->ip_lblnum);
+	sz = (int)sizeof(int) * (p2e->epp->ip_lblnum - p2e->ipp->ip_lblnum);
 	lbldef = xcalloc(sz, 1);
 	lbluse = xcalloc(sz, 1);
 

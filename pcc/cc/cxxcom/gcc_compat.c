@@ -1,4 +1,4 @@
-/*      $Id: gcc_compat.c,v 1.10 2015/01/05 21:31:01 plunky Exp $     */
+/*      $Id: gcc_compat.c,v 1.11 2016/10/11 13:48:24 ragge Exp $     */
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -301,7 +301,7 @@ amatch(char *s, struct atax *at, int mx)
 
 	if (s[0] == '_' && s[1] == '_')
 		s += 2;
-	len = strlen(s);
+	len = (int)strlen(s);
 	if (len > 2 && s[len-1] == '_' && s[len-2] == '_')
 		len -= 2;
 	for (i = 0; i < mx; i++) {

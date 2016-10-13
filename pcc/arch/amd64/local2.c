@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.65 2016/09/27 20:23:20 plunky Exp $	*/
+/*	$Id: local2.c,v 1.66 2016/10/10 19:02:59 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -765,7 +765,7 @@ cbgen(int o, int lab)
 static char *
 adjustname(char *s)
 {
-	int len = strlen(s);
+	size_t len = strlen(s);
 	char *d = tmpalloc(len+1);
 	int i, j, flvl, tlvl;
 
@@ -1095,7 +1095,7 @@ retry:	switch (c) {
 			}
 			uerror("xasm arg not constant");
 		}
-		v = getlval(p->n_left);
+		v = (int)getlval(p->n_left);
 		if ((c == 'K' && v < -128) ||
 		    (c == 'L' && v != 0xff && v != 0xffff) ||
 		    (c != 'K' && v < 0) ||

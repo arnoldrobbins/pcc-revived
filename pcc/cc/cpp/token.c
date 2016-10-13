@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.182 2016/08/10 17:33:23 ragge Exp $	*/
+/*	$Id: token.c,v 1.184 2016/10/13 18:20:36 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -168,7 +168,7 @@ inpbuf(int n)
 
 	if (ifiles->infil == -1)
 		return 0;
-	len = read(ifiles->infil, ib->buf+PBMAX, CPPBUF-PBMAX);
+	len = (int)read(ifiles->infil, ib->buf+PBMAX, CPPBUF-PBMAX);
 	if (len == -1)
 		error("read error on file %s", ifiles->orgfn);
 	if (len > 0) {
@@ -377,24 +377,26 @@ ucn(int n)
  * Save comments in expanded macros???
  */
 void
-Ccmnt2(void (*d)(int), int ch)
+Ccmnt2(struct iobuf *ob, int ch)
 {
 
+	if (skpows)
+		cntline();
+
 	if (ch == '/') { /* C++ comment */
-		d(ch);
+		putob(ob, ch);
 		do {
-			d(ch);
+			putob(ob, ch);
 		} while ((ch = qcchar()) && ch != '\n');
 		unch(ch);
 	} else if (ch == '*') {
-		d('/');
-		d('*');
+		strtobuf((usch *)"/*", ob);
 		for (;;) {
 			ch = qcchar();
-			d(ch);
+			putob(ob, ch);
 			if (ch == '*') {
 				if ((ch = qcchar()) == '/') {
-					d(ch);
+					putob(ob, ch);
 					break;
 				} else
 					unch(ch);
@@ -611,7 +613,7 @@ xloop:			if (ch < 0) ch = 0; /* XXX */
 					if (n == ifiles->lineno)
 						putch(' '); /* 5.1.1.2 p3 */
 				} else
-					Ccmnt2(putch, ch);
+					Ccmnt2(&pb, ch);
 			} else {
 				putch('/');
 				goto xloop;

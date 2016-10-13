@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.148 2016/08/07 08:54:56 ragge Exp $	*/
+/*	$Id: scan.l,v 1.149 2016/10/11 13:48:24 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -706,7 +706,7 @@ wcharcon(void)
 		if (*pp == '\\')
 			val = esccon(&pp);
 		else
-			val = u82cp(&pp);
+			val = (unsigned)u82cp(&pp);
 
 		i++;
 	}
@@ -752,7 +752,7 @@ control(int t)
 		wr += 4;
 		/* FALLTHROUGH */
 	case CPP_HASH:
-		val = strtol(wr, &eptr, 10);
+		val = (unsigned)strtol(wr, &eptr, 10);
 		if (wr == eptr)	/* Illegal string */
 			goto bad;
 		wr = eptr;

@@ -142,7 +142,7 @@ precision floating-point format.
 static float32 commonNaNToFloat32( commonNaNT a )
 {
 
-    return ( ( (bits32) a.sign )<<31 ) | 0x7FC00000 | ( a.high>>41 );
+    return (float32) ((((bits32) a.sign )<<31 ) | 0x7FC00000 | ( a.high>>41 ));
 
 }
 
@@ -228,7 +228,7 @@ static commonNaNT float64ToCommonNaN( float64 a )
     commonNaNT z;
 
     if ( float64_is_signaling_nan( a ) ) float_raise( float_flag_invalid );
-    z.sign = FLOAT64_DEMANGLE(a)>>63;
+    z.sign = (flag) (FLOAT64_DEMANGLE(a)>>63);
     z.low = 0;
     z.high = FLOAT64_DEMANGLE(a)<<12;
     return z;

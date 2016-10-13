@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.100 2016/04/02 09:02:57 ragge Exp $	*/
+/*	$Id: init.c,v 1.101 2016/10/11 13:48:23 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -1069,7 +1069,7 @@ strcvt(NODE *p)
 
 	for (s = p->n_sp->sname; *s != 0; ) {
 		if (p->n_type == ARY+WCHAR_TYPE)
-			i = u82cp(&s);
+			i = (int)u82cp(&s);
 		else if (*s == '\\')
 			i = esccon(&s);
 		else

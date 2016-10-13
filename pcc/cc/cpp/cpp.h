@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.108 2016/10/03 20:10:50 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.109 2016/10/13 18:20:36 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -207,7 +207,7 @@ void warning(const char *fmt, ...);
 void error(const char *fmt, ...);
 int cinput(void);
 int inc2(void);
-void Ccmnt2(void (*d)(int), int);
+void Ccmnt2(struct iobuf *, int);
 usch *bufid(int ch, struct iobuf *);
 usch *readid(int ch);
 struct iobuf *faststr(int bc, struct iobuf *);

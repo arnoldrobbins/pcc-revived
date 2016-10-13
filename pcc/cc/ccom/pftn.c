@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.422 2016/08/09 17:30:26 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.423 2016/10/11 13:48:23 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -3524,7 +3524,7 @@ stmtalloc(size_t size)
 		cstp = 0;
 	}
 	rv = &sapole->elm[cstp];
-	cstp += size;
+	cstp += (int)size;
 	return rv;
 }
 
@@ -3566,7 +3566,7 @@ blkalloc(size_t size)
 		cbkp = 0;
 	}
 	rv = &bkpole->elm[cbkp];
-	cbkp += size;
+	cbkp += (int)size;
 	return rv;
 }
 
