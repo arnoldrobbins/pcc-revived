@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.289 2016/10/15 12:52:05 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.290 2016/10/16 09:12:11 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -614,7 +614,7 @@ line(void)
 		warning("#line only allows character literals");
 
 	ob->cptr = 0;
-	ib->cptr = inp - ib->buf;
+	ib->cptr = (int) (inp - ib->buf);
 	fstrstr(ib, ob);
 	inp = ib->buf + ib->cptr;
 	ob->buf[--ob->cptr] = 0; /* remove trailing \" */
