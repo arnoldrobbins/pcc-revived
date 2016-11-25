@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.67 2016/03/05 15:31:24 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.68 2016/11/21 20:56:38 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -953,7 +953,7 @@ static const struct bitable bitable[] = {
 	{ "__builtin_strspn", builtin_unimp, 0, 2, strspnt, SIZET },
 	{ "__builtin_strstr", builtin_unimp, 0, 2, strcmpt, CHAR|PTR },
 	{ "__builtin_strpbrk", builtin_unimp, 0, 2, strpbrkt, CHAR|PTR },
-	{ "__builtin_types_compatible_p", builtin_tc, BTNOPROTO, 2, 0, INT },
+	{ "__builtin_types_compatible_p", builtin_tc, BTNOPROTO|BTNOEVE, 2, 0, INT },
 #ifndef TARGET_STDARGS
 	{ "__builtin_stdarg_start", builtin_stdarg_start, 0, 2, 0, VOID },
 	{ "__builtin_va_start", builtin_stdarg_start, 0, 2, 0, VOID },
