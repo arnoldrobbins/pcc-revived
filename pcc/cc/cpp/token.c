@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.185 2016/11/21 19:17:02 ragge Exp $	*/
+/*	$Id: token.c,v 1.186 2016/12/01 20:58:58 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -503,7 +503,8 @@ faststr(int bc, struct iobuf *ob)
 		if (ch == bc)
 			break;
 	}
-	ob->buf[ob->cptr] = 0;
+	putob(ob, 0);
+	ob->cptr--;
 	instr = 0;
 	return ob;
 }
@@ -1236,7 +1237,7 @@ undefstmt(void)
 		error("bad #undef");
 	bp = readid(ch);
 	if ((np = lookup(bp, FIND)) != NULL)
-		np->value = 0;
+		np->valoff = 0;
 	chknl(0);
 }
 

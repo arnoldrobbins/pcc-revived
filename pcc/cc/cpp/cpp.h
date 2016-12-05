@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.109 2016/10/13 18:20:36 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.111 2016/12/04 12:55:05 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -48,10 +48,17 @@ extern	int	defining, inclevel;
 
 /* buffer used internally */
 #if SIZEOF_INT_P == 2 || LIBVMF
-#define CPPBUF  1024
+#define CPPL2	10
+typedef	unsigned short mvtyp;
 #else
-#define CPPBUF	16384
+#define CPPL2	14
+typedef	unsigned int mvtyp;
 #endif
+
+#define	CPPBUF		(1 << CPPL2)
+#define	VALPTR(x)	((x) & (CPPBUF-1))
+#define	VALBUF(x)	((x) >> CPPL2)
+#define	MKVAL(b, c)	(((b) << CPPL2) + (c))
 
 #define	MAXARGS	128	/* Max # of args to a macro. Should be enough */
 #define	MAXIDSZ	63	/* Max length of C99 identifier; 5.2.4.1 */
@@ -121,7 +128,7 @@ extern struct iobuf pb;
 #define	bbuf	ib->buf
 
 #if LIBVMF
-extern struct vspace ibspc;
+extern struct vspace ibspc, macspc;
 #endif
 
 /*
@@ -150,7 +157,7 @@ extern struct includ *ifiles;
 /* Symbol table entry  */
 struct symtab {
 	const usch *namep;
-	const usch *value;
+	mvtyp valoff;
 	const usch *file;
 	int line;
 	unsigned char type:4,	/* macro type */
