@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.11 2016/03/05 15:53:04 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.12 2017/01/17 13:12:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -117,6 +117,7 @@ typedef long long OFFSZ;
 #define TARGET_ENDIAN TARGET_LE /* XXX TARGET_PDP */
 #define	MYINSTRING
 #define	MYALIGN
+#define	TARGET_ISMATH		/* need private versions of these */
 
 /* Definitions mostly used in pass2 */
 
