@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.6 2017/02/05 19:30:43 ragge Exp $	*/
+/*	$Id: local.c,v 1.7 2017/02/11 09:20:01 ragge Exp $	*/
 /*
  * Copyright (c) 2017 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -160,12 +160,11 @@ andable(P1ND *p)
 
 /*
  * Return 1 if a variable of type type is OK to put in register.
- * No registers on pdp7.
  */
 int
 cisreg(TWORD t)
 {
-	return 0;
+	return 1;
 }
 
 /*
@@ -281,10 +280,9 @@ instring(struct symtab *sp)
 char *
 exname(char *p)
 {
-	if (strcmp("exit", p) == 0)
-		return ".exit";
-	return p;
-
+	static char b[100] = "_";
+	strcpy(b+1, p);
+	return b;
 }
 
 /*
