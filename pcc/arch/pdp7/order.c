@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.5 2017/02/11 09:20:01 ragge Exp $	*/
+/*	$Id: order.c,v 1.6 2017/02/16 18:55:31 ragge Exp $	*/
 /*
  * Copyright (c) 2017 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -91,7 +91,7 @@ shumul(NODE *p, int shape)
 
 	if (shape & SOREG)
 		return SROREG;
-	if ((shape & SNAME) && (p->n_op == NAME))
+	if ((shape & STARNM) && (p->n_op == NAME))
 		return SRDIR;
 	if (shape & STARREG)
 		return SROREG;
@@ -174,5 +174,16 @@ livecall(NODE *p)
 int
 acceptable(struct optab *op)
 {
+	if (msettings & M_CHAR18) {
+		if (op->visit & USECHAR18)
+			return 1;
+		else if (op->visit & USECHAR9)
+			return 0;
+	} else {
+		if (op->visit & USECHAR18)
+			return 0;
+		else if (op->visit & USECHAR9)
+			return 1;
+	}
 	return 1;
 }

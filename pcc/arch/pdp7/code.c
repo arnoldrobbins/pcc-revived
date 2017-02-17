@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.6 2017/02/05 19:30:43 ragge Exp $	*/
+/*	$Id: code.c,v 1.7 2017/02/16 18:55:31 ragge Exp $	*/
 /*
  * Copyright (c) 2017 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -120,7 +120,7 @@ bfcode(struct symtab **sp, int cnt)
 	/* handcraft isz */
 	l = strlen(cftnsp->sname)+10;
 	c = tmpalloc(l);
-	snprintf(c, l, "	isz %s\n", cftnsp->sname);
+	snprintf(c, l, "	isz %s\n", exname(cftnsp->sname));
 
 	/* Convert param symtab entries to NAMEs */
 	for (i = 0; i < cnt; i++) {

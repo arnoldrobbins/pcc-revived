@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.7 2017/02/11 09:20:01 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.8 2017/02/16 18:55:31 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -167,3 +167,13 @@ int COLORMAP(int c, int *r);
 #define STKREG	SP	/* stack pointer */
 
 #define	SLDFPSP		(MAXSPECIAL+1)	/* load fp or sp */
+
+extern int msettings;
+#define	M_CHAR18	001	/* Use chars that are word size */
+
+#define	ISCHAR18	(msettings & M_CHAR18)
+#define	ISCHAR9		((msettings & M_CHAR18) == 0)
+
+/* For acceptable() */
+#define	USECHAR9	0200
+#define	USECHAR18	0400
