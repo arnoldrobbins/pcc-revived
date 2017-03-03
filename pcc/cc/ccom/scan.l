@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.149 2016/10/11 13:48:24 ragge Exp $	*/
+/*	$Id: scan.l,v 1.150 2017/03/02 21:10:45 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -332,6 +332,7 @@ kwdecode(struct symtab *s)
 	return kw->wclass;
 }
 
+#ifdef NATIVE_FLOATING_POINT
 static long double
 typround(long double dc, char *e, TWORD *tw)
 {
@@ -492,6 +493,44 @@ fhexcon(char *c)
 	flt->t = tw;
 	return flt;
 }
+#else /* NATIVE_FLOATING_POINT */
+static TWORD
+endtyp(char *s)
+{
+	TWORD tw = DOUBLE;
+
+	for (; *s; s++)
+		;
+	s--;
+	if (*s == 'i' || *s == 'I')
+		tw += (FIMAG-FLOAT), s--;
+	if (*s == 'f' || *s == 'F')
+		tw--, s--;
+	else if (*s == 'l' || *s == 'L')
+		tw++, s--;
+	if ((*s == 'i' || *s == 'I') && ISFTY(tw))
+		tw += (FIMAG-FLOAT), s--;
+/* XXX complain */
+	return tw;
+}
+
+FLT *
+fhexcon(char *s)
+{
+	FLT *flt = stmtalloc(sizeof(FLT));
+
+	flt->t = endtyp(s);
+	flt->sf = strtosf(s, flt->t);
+	return flt;
+}
+
+FLT *
+floatcon(char *s)
+{
+	return fhexcon(s);
+}
+
+#endif /* NATIVE_FLOATING_POINT */
 
 P1ND *
 cvtdig(int radix)

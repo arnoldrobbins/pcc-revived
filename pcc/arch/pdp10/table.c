@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.97 2008/02/10 19:25:44 ragge Exp $	*/
+/*	$Id: table.c,v 1.98 2017/02/18 15:43:48 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1011,7 +1011,7 @@ struct optab table[] = {
 { OPLTYPE,	INAREG,
 	SOREG,		TSHORT|TUSHORT|TCHAR|TUCHAR,
 	SOREG,		TSHORT|TUSHORT|TCHAR|TUCHAR,
-		NASR,	RESC1,
+		NAREG|NASR,	RESC1,
 		"ZU", },
 
 { OPLTYPE,	INAREG,
