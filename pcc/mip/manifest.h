@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.111 2016/09/26 16:45:43 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.112 2017/03/15 08:31:48 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -174,7 +174,7 @@
  */
 extern int gflag, kflag, pflag;
 extern int sspflag;
-extern int xssa, xtailcall, xtemps, xdeljumps, xdce;
+extern int xscp, xssa, xtailcall, xtemps, xdeljumps, xdce;
 extern int xuchar;
 
 int yyparse(void);

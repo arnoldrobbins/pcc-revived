@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.98 2016/08/09 17:16:58 ragge Exp $	*/
+/*	$Id: code.c,v 1.99 2017/03/19 11:06:21 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -187,7 +187,11 @@ static TWORD reparegs[] = { EAX, EDX, ECX };
 static TWORD fastregs[] = { ECX, EDX };
 #endif
 static TWORD longregs[] = { EAXEDX, EDXECX };
+#ifdef NOBREGS
+static TWORD charregs[] = { EAX, EDX, ECX };
+#else
 static TWORD charregs[] = { AL, DL, CL };
+#endif
 static TWORD *regpregs;
 
 /*

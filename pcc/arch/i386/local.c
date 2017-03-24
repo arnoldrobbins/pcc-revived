@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.203 2017/03/02 21:11:52 ragge Exp $	*/
+/*	$Id: local.c,v 1.204 2017/03/19 11:06:21 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -629,7 +629,7 @@ clocal(P1ND *p)
 
 		if (DEUNSIGN(p->n_type) == INT && DEUNSIGN(l->n_type) == INT &&
 		    coptype(l->n_op) == BITYPE && l->n_op != COMOP &&
-		    l->n_op != QUEST && l->n_op != ASSIGN) {
+		    l->n_op != QUEST && l->n_op != ASSIGN && l->n_op != RS) {
 			l->n_type = p->n_type;
 			p1nfree(p);
 			return l;
@@ -690,6 +690,7 @@ clocal(P1ND *p)
 		    RETREG(CHAR) : RETREG(p->n_type);
 		break;
 
+#ifndef NOBREGS
 	case LS:
 	case RS:
 		/* shift count must be in a char */
@@ -697,6 +698,7 @@ clocal(P1ND *p)
 			break;
 		p->n_right = block(SCONV, p->n_right, NIL, CHAR, 0, 0);
 		break;
+#endif
 
 		/* If not using pcc struct return */
 	case STASG:

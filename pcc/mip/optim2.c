@@ -1,4 +1,4 @@
-/*	$Id: optim2.c,v 1.96 2016/10/11 15:27:38 ragge Exp $	*/
+/*	$Id: optim2.c,v 1.98 2017/03/16 16:19:51 ragge Exp $	*/
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -75,6 +75,7 @@ void findTemps(struct interpass *ip);
 void placePhiFunctions(struct p2env *);
 void renamevar(struct p2env *p2e,struct basicblock *bblock);
 void removephi(struct p2env *p2e);
+void simple_cp(struct p2env *p2e);
 void remunreach(struct p2env *);
 static void liveanal(struct p2env *p2e);
 static void printip2(struct interpass *);
@@ -164,6 +165,10 @@ optimize(struct p2env *p2e)
 #endif
 
 		removephi(p2e);
+
+		/* Simple constant propagation */
+		if (xscp)
+			simple_cp(p2e);
 
 		BDEBUG(("Calling remunreach\n"));
 /*		remunreach(p2e); */
@@ -1343,6 +1348,90 @@ renamevar(struct p2env *p2e,struct basicblock *bb)
 	}
 }
 
+static struct cpinfo {
+	int ipb, asz;
+	CONSZ *conp;
+	char **namep;
+	int *valp;
+} cpi;
+
+static void
+getconst(NODE *p)
+{
+	int ix;
+
+	if (p->n_op == ASSIGN && p->n_left->n_op == TEMP && 
+	    p->n_right->n_op == ICON) {
+		ix = regno(p->n_left) - cpi.ipb;
+//printf("Found %d val " CONFMT " name \n", regno(p->n_left), getlval(p->n_right));
+		if (cpi.valp[ix])
+			comperr("TEMP %d found", regno(p->n_left));
+		cpi.valp[ix] = 1;
+		cpi.conp[ix] = getlval(p->n_right);
+		cpi.namep[ix] = p->n_right->n_name;
+	}
+	if (optype(p->n_op) == BITYPE)
+		getconst(p->n_right);
+	if (optype(p->n_op) != LTYPE)
+		getconst(p->n_left);
+}
+
+static int replaced;
+
+static void
+replconst(NODE *p)
+{  
+
+	if (p->n_op == ASSIGN && p->n_left->n_op == TEMP) {
+		replconst(p->n_right);
+	} else if (p->n_op == TEMP) {
+		if (cpi.valp[regno(p) - cpi.ipb]) {
+//printf("replacing %d %p\n", regno(p), p);
+			p->n_op = ICON;
+			setlval(p, cpi.conp[regno(p) - cpi.ipb]);
+			p->n_name = cpi.namep[regno(p) - cpi.ipb];
+			replaced = 1;
+			regno(p) = 0;
+		}
+	} else {
+		if (optype(p->n_op) == BITYPE)
+			replconst(p->n_right);
+		if (optype(p->n_op) != LTYPE)
+			replconst(p->n_left);
+	}
+}
+
+/*
+ * Simple version of constant propagation.
+ * Should be replaced with conditional constant propagation someday.
+ */
+void
+simple_cp(struct p2env *p2e)
+{
+	struct interpass *ip;
+
+	cpi.ipb = p2e->ipp->ip_tmpnum;
+	cpi.asz = p2e->epp->ip_tmpnum - cpi.ipb;
+	cpi.conp = tmpcalloc(cpi.asz * sizeof(CONSZ));
+	cpi.valp = tmpcalloc(cpi.asz * sizeof(int));
+	cpi.namep = tmpcalloc(cpi.asz * sizeof(char *));
+
+	/* First loop over and get all constants */
+	DLIST_FOREACH(ip, &p2e->ipole, qelem) {
+		if (ip->type == IP_NODE)
+			getconst(ip->ip_node);
+	}
+
+	do {
+		replaced = 0;
+		/* Second loop replaces all uses of the constants */
+		DLIST_FOREACH(ip, &p2e->ipole, qelem) {
+			if (ip->type == IP_NODE)
+				replconst(ip->ip_node);
+		}
+	} while (replaced);
+}
+
 enum pred_type {
     pred_unknown    = 0,
     pred_goto       = 1,
@@ -1372,12 +1461,11 @@ removephi(struct p2env *p2e)
 			i=0;
 			
 			SLIST_FOREACH(cfgn, &bb->parents, cfgelem) { 
-				bbparent=cfgn->bblock;
-				
-				pip=bbparent->last;
+
+				bbparent = cfgn->bblock;	/* cfg parent basic block */
+				pip = bbparent->last;		/* last stmt in parent bb (goto, ...) */
 				
 				complex = pred_unknown ;
-				
 				BDEBUG(("removephi: %p in %d",pip,bb->dfnum));
 
 				if (pip->type == IP_NODE && pip->ip_node->n_op == GOTO) {
@@ -1387,8 +1475,9 @@ removephi(struct p2env *p2e)
 				} else if (pip->type == IP_NODE && pip->ip_node->n_op == CBRANCH) {
 					BDEBUG((" CBRANCH "));
 					label = (int)getlval(pip->ip_node->n_right);
-					
-					if (bb==p2e->labinfo.arr[label - p2e->ipp->ip_lblnum])
+
+					/* Check if parent got us here via branch */
+					if (bb == p2e->labinfo.arr[label - p2e->ipp->ip_lblnum])
 						complex = pred_cond ;
 					else
 						complex = pred_falltrough ;
