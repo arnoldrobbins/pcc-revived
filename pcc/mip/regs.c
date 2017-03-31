@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.250 2017/03/11 09:22:09 ragge Exp $	*/
+/*	$Id: regs.c,v 1.251 2017/03/26 18:14:14 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1448,7 +1448,7 @@ xasmconstr(NODE *p, void *arg)
 		return;
 
 	for (i = 0; i < MAXREGS; i++)
-		if (strcmp(rnames[i], p->n_name) == 0) {
+		if (rnames[i] && strcmp(rnames[i], p->n_name) == 0) {
 			addalledges(&ablock[i]);
 			return;
 		}

@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.66 2016/10/10 19:02:59 ragge Exp $	*/
+/*	$Id: local2.c,v 1.67 2017/03/26 18:14:14 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -770,7 +770,7 @@ adjustname(char *s)
 	int i, j, flvl, tlvl;
 
 	flvl = tlvl = 0;
-	for (i = j = 0; i < len; i++) {
+	for (i = j = 0; i < (int)len; i++) {
 		switch (s[i]) {
 		case '{': tlvl++; break;
 		case '}': if (tlvl)tlvl--; else flvl--; break;
@@ -917,7 +917,7 @@ COLORMAP(int c, int *r)
 	return 0; /* XXX gcc */
 }
 
-char *rnames[] = {
+char *rnames[MAXREGS] = {
 	"%rax", "%rdx", "%rcx", "%rbx", "%rsi", "%rdi", "%rbp", "%rsp",
 	"%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15",
 	"%xmm0", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5", "%xmm6", "%xmm7",
