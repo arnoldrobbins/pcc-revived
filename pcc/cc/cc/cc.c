@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.314 2017/03/13 18:03:48 ragge Exp $	*/
+/*	$Id: cc.c,v 1.315 2017/04/02 08:28:27 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -767,7 +767,13 @@ main(int argc, char *argv[])
 			break;
 
 		case 'r':
-			rflag = 1;
+			if (match(argp, "-rdynamic")) {
+				strlist_append(&middle_linker_flags,
+				    "--export-dynamic");
+			} else if (match(argp, "-r")) {
+				rflag = 1;
+			} else
+				oerror(argp);
 			break;
 
 		case 'T':

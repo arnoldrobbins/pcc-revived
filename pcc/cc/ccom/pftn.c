@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.423 2016/10/11 13:48:23 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.424 2017/04/01 09:51:30 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1222,7 +1222,11 @@ tsize(TWORD ty, union dimfun *d, struct attr *apl)
 		switch (ty & TMASK) {
 
 		case FTN:
+#ifdef GCC_COMPAT
+			return SZCHAR;
+#else
 			uerror( "cannot take size of function");
+#endif
 		case PTR:
 			return( SZPOINT(ty) * mult );
 		case ARY:
