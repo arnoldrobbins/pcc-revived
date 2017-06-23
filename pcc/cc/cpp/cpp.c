@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.296 2017/02/27 19:31:23 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.299 2017/06/17 14:46:48 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -66,7 +66,7 @@
  *	- string buffers (used to store macros)
  */
 
-static int	counter;
+static int	counter, didexpand;
 /* C command */
 
 int tflag;	/* traditional cpp syntax */
@@ -974,18 +974,23 @@ findarg(usch *s, struct iobuf *ab, int *arg, int narg)
 }
 
 static void
-delews(void)
+delews(mvtyp beg)
 {
-	for (;;) {
-		int p = MKVAL(scnum, scmac.cptr) - 1;
-		if (ISWSNL(macget(p))) {
-			if (scmac.cptr == 1) {
-				scmac = macbs[--scnum];
-				scmac.cptr = CPPBUF;
-			} else
-				scmac.cptr--;
-		} else
-			break;
+	int c;
+	mvtyp lastnonws = beg;
+
+	macsav(0);
+	for (;;beg++) {
+		if ((c = macget(beg)) == 0) {
+			lastnonws++;
+			scmac = macbs[VALBUF(lastnonws)];
+			scmac.cptr = VALPTR(lastnonws);
+			return;
+		}
+		if (c == WARN)
+			beg++;
+		if (!ISWSNL(c))
+			lastnonws = beg;
 	}
 }
 
@@ -1004,7 +1009,8 @@ define(void)
 	int arg[MAXARGS+1];
 	int c, i, redef, oCflag, t;
 	int type, narg;
-	int wascon, scptr, cnum;
+	int wascon;
+	mvtyp begpos;
 
 	if (flslvl)
 		return;
@@ -1079,7 +1085,7 @@ define(void)
 
 	Cflag = oCflag; /* Enable comments again */
 
-	cnum = scnum, scptr = scmac.cptr;
+	begpos = MKVAL(scnum, scmac.cptr);
 	if (ISWS(c))
 		c = skipwscmnt(0);
 
@@ -1104,7 +1110,7 @@ define(void)
 			if (cc[1] == '#') {
 				/* concat op */
 				(void)cinput(); /* eat # */
-				delews();
+				delews(begpos);
 				macsav(CONC);
 				if (ISID0(c = skipws(0)) && type == FUNLIKE)
 					wascon = 1;
@@ -1194,25 +1200,26 @@ define(void)
 	}
 	cunput(c);
 	/* remove trailing whitespace */
-	delews();
+	delews(begpos);
 
 	macsav(0);
 	if (vararg)
 		type = VARG;
 
-	if (macbs[cnum].buf[scptr] == CONC)
+	if (macget(begpos) == CONC)
 		goto bad; /* 6.10.3.3 p1 */
 
 	if (redef && ifiles->idx != SYSINC) {
-		if (cmprepl(np->valoff, MKVAL(cnum, scptr)) || 
+		if (cmprepl(np->valoff, begpos) || 
 		    np->type != type || np->narg != narg) { /* not equal */
-			np->valoff = MKVAL(cnum, scptr);
+			np->valoff = begpos;
 			warning("%s redefined (previously defined at \"%s\" line %d)",
 			    np->namep, np->file, np->line);
 		} else
-			scmac = macbs[scnum = cnum], scmac.cptr = scptr;  /* forget this space */
+			scmac = macbs[VALBUF(begpos)],
+			  scmac.cptr = VALPTR(begpos);  /* forget this space */
 	} else
-		np->valoff = MKVAL(cnum, scptr);
+		np->valoff = begpos;
 	np->type = type;
 	np->narg = narg;
 
@@ -1321,6 +1328,23 @@ pragoper(struct iobuf *ib)
 err:	error("_Pragma() syntax error");
 }
 
+#ifdef PCC_DEBUG
+static void
+prblocker(char *s, struct blocker *bl)
+{
+	printf("%s (blocker): ", s);
+	for (; bl; bl = bl->next)
+		printf("%s ", bl->sp->namep);
+	printf("\n");
+		
+}
+#else
+#define	prblocker(x,y)
+#endif
+
+/*
+ * Check if symtab is in blocklist based on index l.
+ */
 static int
 expok(struct symtab *sp, int l)
 {
@@ -1329,7 +1353,8 @@ expok(struct symtab *sp, int l)
 	if (l == 0)
 		return 1;
 #ifdef PCC_DEBUG
-if (dflag) { printf("expok blocked: "); for (w = blkidx[l]; w; w = w->next) printf("%s ", w->sp->namep); printf("\n"); }
+	if (dflag)
+		prblocker("expok", blkidx[l]);
 #endif
 	w = blkidx[l];
 	while (w) {
@@ -1340,6 +1365,9 @@ if (dflag) { printf("expok blocked: "); for (w = blkidx[l]; w; w = w->next) prin
 	return 1;
 }
 
+/*
+ * Check if symtab is in blocklist.
+ */
 static int
 expokb(struct symtab *sp, struct blocker *bl)
 {
@@ -1348,7 +1376,8 @@ expokb(struct symtab *sp, struct blocker *bl)
 	if (bl == 0)
 		return 1;
 #ifdef PCC_DEBUG
-if (dflag) { printf("expokb blocked: "); for (w = bl; w; w = w->next) printf("%s ", w->sp->namep); printf("\n"); }
+	if (dflag)
+		prblocker("expok", bl);
 #endif
 	w = bl;
 	while (w) {
@@ -1386,6 +1415,10 @@ mergeadd(struct blocker *bl, int m)
 	struct blocker *w, *ww;
 
 	DPRINT(("mergeadd: %p %d\n", bl, m));
+	if (dflag > 1) {
+		prblocker("mergeadd", bl);
+		if (m) prblocker("mergeadd", blkidx[m]);
+	}
 	if (bl == 0)
 		return blkidx[m];
 	if (m == 0)
@@ -1400,11 +1433,8 @@ mergeadd(struct blocker *bl, int m)
 	}
 	DPRINT(("mergeadd return: %d ", blkidp));
 #ifdef PCC_DEBUG
-	if (dflag) {
-		for (w = blkidx[blkidp]; w; w = w->next)
-			printf("%s ", w->sp->namep);
-		printf("\n");
-	}
+	if (dflag)
+		prblocker("mergeadd", blkidx[blkidp]);
 #endif
 	return blkidx[blkidp++];
 }
@@ -2007,10 +2037,8 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 	if (dflag>1) {
 		printf("%d:subarg ARGlist for %s: '", lvl, nl->namep);
 		prrep(nl->valoff);
-		printf("' ");
-		for (w = bl; w; w = w->next)
-			printf("%s ", w->sp->namep);
-		printf("\n");
+		printf("'\n");
+		prblocker("subarg", bl);
 	}
 #endif
 
@@ -2056,12 +2084,17 @@ subarg(struct symtab *nl, const usch **args, int lvl, struct blocker *bl)
 				 *  been expanded.".
 				 */
 				w = bl ? bl->next : NULL;
-				cb = mkrobuf(bp);
-				nb = getobuf(BNORMAL);
+				nb = mkrobuf(bp);
 				DPRINT(("%d:subarg: calling exparg\n", lvl));
-				nb = exparg(lvl+1, cb, nb, w);
+				do {
+					cb = nb;
+					cb->cptr = 0;
+					didexpand = 0;
+					nb = getobuf(BNORMAL);
+					nb = exparg(lvl+1, cb, nb, w);
+					bufree(cb);
+				} while (didexpand);
 				DPRINT(("%d:subarg: return exparg\n", lvl));
-				bufree(cb);
 				strtobuf(nb->buf, ob);
 				bufree(nb);
 			} else {
@@ -2108,35 +2141,31 @@ exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 		printf("exparg entry: full ");
 		prline(ib->buf+ib->cptr);
 		printf("\n");
+		prblocker("exparg", bl);
 	}
 #endif
 
 	while ((c = getyp(ib->buf+ib->cptr)) != 0) {
-		ib->cptr++;
-
 		switch (c) {
 
 		case CMNT:
-			ib->cptr--;
 			fcmnt(ib, ob);
 			break;
 		case NUMBER:
-			ib->cptr--;
 			fstrnum(ib, ob);
 			break;
 		case STRING:
-			ib->cptr--;
 			fstrstr(ib, ob);
 			break;
 		case BLKID:
-			m = ib->buf[ib->cptr++];
+			m = ib->buf[++ib->cptr];
 			ib->cptr++;
 			/* FALLTHROUGH */
 		case IDENT:
 			if (c != BLKID)
 				m = 0;
 			tb = getobuf(BNORMAL);
-			cp = ib->buf+ib->cptr-1;
+			cp = ib->buf+ib->cptr;
 			for (; ISID(*cp) || *cp == BLKID; cp++) {
 				if (*cp == BLKID) {
 					/* XXX add to block list */
@@ -2170,6 +2199,7 @@ exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 				ib->cptr = (int)(cp - ib->buf);
 			} else if (expokb(nl, bl) && expok(nl, m) &&
 			    (nob = submac(nl, lvl+1, ib, bl))) {
+				didexpand = 1;
 				if (nob->buf[0] == '-' || nob->buf[0] == '+')
 					putob(ob, ' ');
 				strtobuf(nob->buf, ob);
@@ -2187,6 +2217,7 @@ exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 
 		default:
 			putob(ob, c);
+			ib->cptr++;
 			break;
 		}
 	}
@@ -2198,12 +2229,24 @@ exparg(int lvl, struct iobuf *ib, struct iobuf *ob, struct blocker *bl)
 		printf("%d:exparg: full ", lvl);
 		prline(ob->buf);
 		printf("\n");
+		prblocker("exparg", bl);
 	}
 #endif
 	return ob;
 }
 
 #ifdef PCC_DEBUG
+
+static void
+blkprint(int idx)
+{
+	struct blocker *bl = blkidx[idx];
+
+	printf("<BLKID(");
+	for (; bl; bl = bl->next)
+		printf("%s ", bl->sp->namep);
+	printf(")>");
+}
 
 static void
 prrep(mvtyp ptr)
@@ -2220,7 +2263,7 @@ prrep(mvtyp ptr)
 			break;
 		case CONC: printf("<CONC>"); break;
 		case SNUFF: printf("<SNUFF>"); break;
-		case BLKID: printf("<BLKID(%d)>", macget(ptr++)); break;
+		case BLKID: blkprint(macget(ptr++)); break;
 		default: printf("%c", s); break;
 		}
 	}
@@ -2231,7 +2274,7 @@ prline(const usch *s)
 {
 	while (*s) {
 		switch (*s) {
-		case BLKID: printf("<BLKID(%d)>", *++s); break;
+		case BLKID: blkprint(*++s); break;
 		case WARN: printf("<WARN>"); break;
 		case CONC: printf("<CONC>"); break;
 		case SNUFF: printf("<SNUFF>"); break;
