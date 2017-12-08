@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.315 2017/04/02 08:28:27 ragge Exp $	*/
+/*	$Id: cc.c,v 1.316 2017/12/03 17:31:58 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -679,6 +679,10 @@ main(int argc, char *argv[])
 				break;
 			}
 #ifdef mach_amd64
+			if (strncmp(argp, "-mcmodel=", 9) == 0) {
+				strlist_append(&compiler_flags, argp);
+				break;
+			}
 			/* need to call i386 ccom for this */
 			if (strcmp(argp, "-melf_i386") == 0) {
 				pass0 = LIBEXECDIR "/ccom_i386";

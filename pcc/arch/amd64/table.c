@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.55 2015/02/07 08:47:54 ragge Exp $	*/
+/*	$Id: table.c,v 1.56 2017/12/03 17:34:16 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2008 Anders Magnusson (ragge@ludd.ltu.se).
@@ -473,54 +473,53 @@ struct optab table[] = {
  * Subroutine calls.
  */
 
-{ CALL,		FOREFF,
+{ CALL,		FOREFF|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SANY,	TANY,
 		0,	0,
 		"	call CL\nZC", },
 
-{ UCALL,	FOREFF,
+{ UCALL,	FOREFF|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SANY,	TANY,
 		0,	0,
 		"	call CL\n", },
 
-{ CALL,	INAREG,
+{ CALL,	INAREG|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SAREG,	TLL|ANYFIXED|TPOINT,
 		NAREG|NASL,	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
-{ UCALL,	INAREG,
+{ UCALL,	INAREG|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SAREG,	TLL|ANYFIXED|TPOINT,
 		NAREG|NASL,	RESC1,	/* should be 0 */
 		"	call CL\n", },
 
 { CALL,	INBREG,
+	SCON,	TANY|MCSMALL|MCMEDIUM,
+	SBREG,	TANY,
+		NBREG|NBSL,	RESC1,	/* should be 0 */
+		"	call CL\nZC", },
+
+{ UCALL,	INBREG|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SBREG,	TANY,
 		NBREG|NBSL,	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
-{ UCALL,	INBREG,
-	SCON,	TANY,
-	SBREG,	TANY,
-		NBREG|NBSL,	RESC1,	/* should be 0 */
-		"	call CL\nZC", },
-
-{ CALL, INCREG,
+{ CALL, INCREG|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SCREG,	TANY,
 		NCREG|NCSL,	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
-{ UCALL,	INCREG,
+{ UCALL,	INCREG|MCSMALL|MCMEDIUM,
 	SCON,	TANY,
 	SCREG,	TANY,
 		NCREG|NCSL,	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
-
 
 { CALL,		FOREFF,
 	SAREG,	TANY,

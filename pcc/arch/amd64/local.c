@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.98 2016/10/16 09:09:16 ragge Exp $	*/
+/*	$Id: local.c,v 1.99 2017/12/03 17:34:15 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -126,7 +126,7 @@ picext(NODE *p)
 #endif
 
 	c = getexname(p->n_sp);
-	sp = picsymtab("", c, "@GOTPCREL");
+	sp = picsymtab("", c, mcmodel & MCLARGE ? "@GOTOFF" : "@GOTPCREL");
 	sp->sflags |= SBEENHERE;
 	q = block(NAME, NIL, NIL, INCREF(p->n_type), p->n_df, p->n_ap);
 	q->n_sp = sp;
@@ -593,7 +593,10 @@ myp2tree(NODE *p)
 
 		sp = p->n_left->n_sp;
 		if ((s = strstr(sp->sname, "@GOTPCREL")) != NULL) {
-			memcpy(s, "@PLT", sizeof("@PLT"));
+			if (mcmodel & MCLARGE)
+				memcpy(s, "@PLTOFF", sizeof("@PLTOFF"));
+			else
+				memcpy(s, "@PLT", sizeof("@PLT"));
 			p->n_left->n_op = ICON;
 		}
 		return;
