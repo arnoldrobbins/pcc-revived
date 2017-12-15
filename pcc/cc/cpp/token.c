@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.187 2017/06/24 10:42:06 ragge Exp $	*/
+/*	$Id: token.c,v 1.188 2017/12/10 19:17:20 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -301,6 +301,8 @@ static void
 fastcmnt2(int ch)
 {
 
+	int lastline = ifiles->lineno;
+
 	incmnt = 1;
 	if (ch == '/') { /* C++ comment */
 		while ((ch = qcchar()) != '\n')
@@ -323,7 +325,7 @@ fastcmnt2(int ch)
 	} else
 		error("fastcmnt2");
 	if (ch == 0)
-		error("file ends in comment");
+		error("comment at line %d never ends", lastline);
 	incmnt = 0;
 }
 

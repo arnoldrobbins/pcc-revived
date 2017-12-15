@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.303 2017/06/24 16:29:39 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.304 2017/12/11 10:36:20 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -2013,7 +2013,7 @@ readargs(struct iobuf *in, struct symtab *sp, const usch **args)
 		plev = 0;
 		c = skpws();
 		for (;;) {
-			if (plev == 0 && c == ')')
+			if ((plev == 0 && c == ')') || c == 0)
 				break;
 			if (c == '(') plev++;
 			if (c == ')') plev--;
@@ -2024,6 +2024,8 @@ readargs(struct iobuf *in, struct symtab *sp, const usch **args)
 			if ((c = cinput()) == '\n')
 				ifiles->escln++, c = ' ';
 		}
+		if (c == 0)
+			error("unterminated macro invocation");
 		while (argary[i] < ab->cptr && ISWSNL(ab->buf[ab->cptr-1]))
 			ab->cptr--;
 		putob(ab, '\0');
