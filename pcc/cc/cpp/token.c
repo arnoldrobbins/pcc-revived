@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.188 2017/12/10 19:17:20 ragge Exp $	*/
+/*	$Id: token.c,v 1.189 2018/01/21 10:58:26 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -1427,6 +1427,11 @@ redo:	Cflag = 0;
 			flscan();
 			goto redo;
 		}
+	}
+	if (flslvl == 0) {
+		if (Aflag)
+			skpln();
+		return;
 	}
 	flscan();
 	goto redo;
