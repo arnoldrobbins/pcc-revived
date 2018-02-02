@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.68 2017/12/03 17:34:15 ragge Exp $	*/
+/*	$Id: local2.c,v 1.69 2018/01/26 17:39:38 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -43,7 +43,7 @@ static int regoff[MAXREGS];
 static TWORD ftype;
 char *rbyte[], *rshort[], *rlong[];
 static int needframe;
-int mcmodel = MCLARGE;
+int mcmodel = MCSMALL;
 
 /*
  * Print out the prolog assembler.
