@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.96 2017/03/13 15:56:01 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.97 2018/03/08 12:22:59 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -125,6 +125,7 @@ typedef long long OFFSZ;
 #define	ARGREG	EBP
 #define ARGOFFSET 8
 #endif
+#define	TARGET_TIMODE		/* has TI/TF/TC types (128 bit) */
 
 #ifdef MACHOABI
 #define STAB_LINE_ABSOLUTE	/* S_LINE fields use absolute addresses */
