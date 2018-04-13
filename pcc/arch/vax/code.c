@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.27 2015/10/12 18:07:13 ragge Exp $	*/
+/*	$Id: code.c,v 1.28 2018/04/03 14:49:46 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -425,7 +425,7 @@ builtin_return_address(const struct bitable *bt, NODE *a)
 
 	if (a->n_op != ICON)
 		goto bad;
-	v =a->n_lval;
+	v = glval(a);
 	tfree(a);
 
 	if (v != 0) {
@@ -455,7 +455,7 @@ builtin_frame_address(const struct bitable *bt, NODE *a)
 	if (a->n_op != ICON)
 		goto bad;
 
-	nframes = a->n_lval;
+	nframes = glval(a);
 
 	tfree(a);
 

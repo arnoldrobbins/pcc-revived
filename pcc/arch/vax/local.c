@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.31 2015/11/13 11:38:47 ragge Exp $	*/
+/*	$Id: local.c,v 1.34 2018/04/04 17:34:07 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -45,6 +45,7 @@
 
 static void r1arg(NODE *p, NODE *q);
 
+#define IALLOC(sz)      (isinlining ? permalloc(sz) : tmpalloc(sz))
 
 /*	this file contains code which is dependent on the target machine */
 
@@ -90,8 +91,8 @@ clocal(p) NODE *p; {
 		case PARAM:
 			/* fake up a structure reference */
 			r = block( REG, NIL, NIL, PTR+STRTY, 0, 0 );
-			r->n_lval = 0;
-			r->n_rval = (q->sclass==PARAM?ARGREG:FPREG);
+			slval(r, 0);
+			regno(r) = q->sclass==PARAM?ARGREG:FPREG;
 			p = stref( block( STREF, r, p, 0, 0, 0 ) );
 			break;
 		}
@@ -198,7 +199,7 @@ myp2tree(NODE *p)
 	if (p->n_op != FCON) 
 		return;
 
-	sp = tmpalloc(sizeof(struct symtab));
+	sp = IALLOC(sizeof(struct symtab));
 	sp->sclass = STATIC;
 	sp->sap = 0;
 	sp->slevel = 1; /* fake numeric label */
@@ -206,12 +207,14 @@ myp2tree(NODE *p)
 	sp->sflags = 0;
 	sp->stype = p->n_type;
 	sp->squal = (CON >> TSHIFT);
+	sp->sname = NULL;
 
+	locctr(DATA, sp);
 	defloc(sp);
 	inval(0, tsize(sp->stype, sp->sdf, sp->sap), p);
 
 	p->n_op = NAME;
-	p->n_lval = 0;
+	slval(p, 0);
 	p->n_sp = sp;
 
 }
@@ -248,13 +251,13 @@ spalloc(NODE *t, NODE *p, OFFSZ off)
 
 	/* sub the size from sp */
 	sp = block(REG, NIL, NIL, p->n_type, 0, 0);
-	sp->n_lval = 0;
+	slval(sp, 0);
 	sp->n_rval = STKREG;
 	ecomp(buildtree(MINUSEQ, sp, p));
 
 	/* save the address of sp */
 	sp = block(REG, NIL, NIL, PTR+INT, t->n_df, t->n_ap);
-	sp->n_lval = 0;
+	slval(sp, 0);
 	sp->n_rval = STKREG;
 	t->n_type = sp->n_type;
 	ecomp(buildtree(ASSIGN, t, sp)); /* Emit! */
@@ -339,15 +342,15 @@ ninval(CONSZ off, int fsz, NODE *p)
 	switch (p->n_type) {
 	case LDOUBLE:
 		u.i[2] = 0;
-		u.l = (long double)((union flt *)p->n_dcon)->fp;
+		u.l = (long double)((FLT *)p->n_dcon)->fp;
 		printf("\t.long\t0x%x,0x%x,0x%x\n", u.i[0], u.i[1], u.i[2]);
 		break;
 	case DOUBLE:
-		u.d = (double)((union flt *)p->n_dcon)->fp;
+		u.d = (double)((FLT *)p->n_dcon)->fp;
 		printf("\t.long\t0x%x,0x%x\n", u.i[0], u.i[1]);
 		break;
 	case FLOAT:
-		u.f = (float)((union flt *)p->n_dcon)->fp;
+		u.f = (float)((FLT *)p->n_dcon)->fp;
 		printf("\t.long\t0x%x\n", u.i[0]);
 		break;
 	default:

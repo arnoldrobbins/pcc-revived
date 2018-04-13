@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.150 2017/03/02 21:10:45 ragge Exp $	*/
+/*	$Id: scan.l,v 1.151 2018/04/04 17:29:27 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -404,7 +404,7 @@ floatcon(char *s)
 #else
 	flt->sf = strtosf(s);		/* parse number */
 #endif
-	flt->t = tw = endtyp(s);
+	flt->t = tw = ctype(endtyp(s));
 	if (ISITY(tw))
 		tw -= (FIMAG-FLOAT);
 	return flt;

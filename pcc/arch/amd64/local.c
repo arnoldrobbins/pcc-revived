@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.99 2017/12/03 17:34:15 ragge Exp $	*/
+/*	$Id: local.c,v 1.100 2018/04/08 07:58:51 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -116,7 +116,7 @@ picext(NODE *p)
 	struct symtab *sp;
 	char *c;
 
-	if (p->n_sp->sflags & SBEENHERE)
+	if (attr_find(p->n_sp->sap, ATTR_AMD64_BEENHERE))
 		return p;
 #ifdef GCC_COMPAT
 	struct attr *ga;
@@ -127,7 +127,7 @@ picext(NODE *p)
 
 	c = getexname(p->n_sp);
 	sp = picsymtab("", c, mcmodel & MCLARGE ? "@GOTOFF" : "@GOTPCREL");
-	sp->sflags |= SBEENHERE;
+	sp->sap = attr_add(sp->sap, attr_new(ATTR_AMD64_BEENHERE, 1));
 	q = block(NAME, NIL, NIL, INCREF(p->n_type), p->n_df, p->n_ap);
 	q->n_sp = sp;
 	q = block(UMUL, q, 0, p->n_type, p->n_df, p->n_ap);

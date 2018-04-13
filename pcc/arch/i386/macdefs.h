@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.97 2018/03/08 12:22:59 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.98 2018/04/08 07:55:12 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -404,11 +404,9 @@ int COLORMAP(int c, int *r);
 #define SMIHWXOR	(MAXSPECIAL+6)
 
 /*
- * i386-specific symbol table flags.
+ * i386-specific pass1 attributes.
  */
-#define	SSECTION	SLOCAL1
-#define SSTDCALL	SLOCAL2	
-#define SDLLINDIRECT	SLOCAL3
+#define ATTR_P1_TARGET	ATTR_I386_DLLINDIRECT
 
 /*
  * i386-specific interpass stuff.

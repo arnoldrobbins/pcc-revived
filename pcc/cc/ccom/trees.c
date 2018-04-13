@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.380 2017/03/13 15:53:27 ragge Exp $	*/
+/*	$Id: trees.c,v 1.382 2018/04/07 12:48:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -736,6 +736,10 @@ nametree(struct symtab *sp)
 	/* Get a label name */
 	if (sp->sflags == SLBLNAME)
 		sp->stype = p->n_type = VOID;
+	if (sp->sflags & SINREG) {
+		p->n_op = REG;
+		regno(p) = (int)sp->soffset;
+	}
 #endif
 	if (sp->stype == UNDEF) {
 		uerror("%s undefined", sp->sname);
@@ -2841,7 +2845,7 @@ p2tree(P1ND *p)
 	if (ty != BITYPE)
 		np->n_rval = p->n_rval;
 	if (ty == LTYPE) {
-		slval(np, glval(p));
+		setlval(np, glval(p));
 	}
 
 	/* cleanup attributes.

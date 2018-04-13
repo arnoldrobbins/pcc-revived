@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.99 2017/03/19 11:06:21 ragge Exp $	*/
+/*	$Id: code.c,v 1.100 2018/04/08 07:55:12 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -260,8 +260,6 @@ bfcode(struct symtab **sp, int cnt)
 
 #ifdef GCC_COMPAT
 	regpregs = reparegs;
-        if (attr_find(cftnsp->sap, GCC_ATYP_STDCALL) != NULL)
-                cftnsp->sflags |= SSTDCALL;
         if ((ap = attr_find(cftnsp->sap, GCC_ATYP_REGPARM)))
                 regparmarg = ap->iarg(0);
         if ((ap = attr_find(cftnsp->sap, GCC_ATYP_FASTCALL)))
@@ -374,7 +372,7 @@ bfcode(struct symtab **sp, int cnt)
 		}
 	}
 
-        if (cftnsp->sflags & SSTDCALL) {
+        if (attr_find(cftnsp->sap, GCC_ATYP_STDCALL)) {
 #ifdef PECOFFABI
                 char buf[256];
                 char *name;

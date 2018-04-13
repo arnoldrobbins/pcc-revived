@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.296 2017/03/02 21:10:45 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.298 2018/04/08 07:35:41 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -101,9 +101,7 @@ extern	char *scnames(int);
 #define	STNODE		01000	/* symbol shall be a temporary node */
 #define	SBUILTIN	02000	/* this is a builtin function */
 #define	SASG		04000	/* symbol is assigned to already */
-#define	SLOCAL1		010000
-#define	SLOCAL2		020000
-#define	SLOCAL3		040000
+#define	SINREG		010000	/* variable is put in reg */
 
 	/* alignment of initialized quantities */
 #ifndef AL_INIT
