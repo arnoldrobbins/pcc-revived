@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.23 2016/03/13 16:12:12 ragge Exp $
+#	$Id: Makefile.in,v 1.24 2018/07/27 16:30:00 ragge Exp $
 #
 # Makefile.in for libpcc.a
 #
@@ -38,7 +38,7 @@ OBJS =		cmpdi2.o divdi3.o fixdfdi.o fixsfdi.o fixunsdfdi.o \
 		ucmpdi2.o udivdi3.o umoddi3.o cxmuldiv.o \
 		ashldi3.o ashrdi3.o lshrdi3.o \
 		_alloca.o unwind.o \
-		ssp.o
+		ssp.o signbit.o
 
 DEST = libpcc.a
 
