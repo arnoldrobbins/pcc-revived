@@ -1,4 +1,4 @@
-/*	$Id: softfloat.h,v 1.5 2018/07/28 09:39:11 ragge Exp $	*/
+/*	$Id: softfloat.h,v 1.8 2018/08/07 08:05:48 ragge Exp $	*/
 
 /*
  * Copyright (c) 2015 Anders Magnusson. All rights reserved.
@@ -26,13 +26,22 @@
 
 /*
  * Definitions for softfloat routines.
+ *
+ * Floating point numbers will always be stored as the largest supported
+ * float type (long double).  This in turn will be stuffed bitwise into
+ * an array of short for addressing.
  */
-
+#ifndef CROSS_COMPILING
+#define	DEBUGFP	/* compare everything with native fp */
+#endif
 
 typedef struct softfloat {
-#if 0
-	unsigned short int fp[SZLDOUBLE/16];
+	union {
+		unsigned short int fp[(SZLDOUBLE+15)/16];
+#ifdef DEBUGFP
+		long double debugfp;
 #endif
+	};
 	unsigned long long significand;
 	short exponent;
 	short kind;
@@ -81,8 +90,6 @@ typedef SF *SFP;
 #endif
 
 #define	TARGET_FLT_RADIX	C(FLT_FP,_RADIX)
-
-#ifndef NATIVE_FLOATING_POINT
 
 /*
  * Description of a floating point format, based what is in gdtoa package.
@@ -142,6 +149,7 @@ enum {
 
 extern FPI * fpis[3]; /* FLOAT, DOUBLE, LDOUBLE, respectively */
 
+#ifndef CC_DRIVER
 SF soft_neg(SF);
 SF soft_int2fp(CONSZ p, TWORD f, TWORD v);
 CONSZ soft_fp2int(SF p, TWORD v);
@@ -164,4 +172,10 @@ void soft_cxmul(SF r1, SF i1, SF r2, SF i2, SF *rrv, SF *irv, TWORD t);
 void soft_cxdiv(SF r1, SF i1, SF r2, SF i2, SF *rrv, SF *irv, TWORD t);
 int soft_isnan(SF sf);
 int soft_fpclassify(SF sf, TWORD t);
+SF soft_huge_val(void);
+SF soft_nan(char *);
+SF soft_zero(void);
+#ifdef DEBUGFP
+void fpwarn(char *s, long double soft, long double hard);
+#endif
 #endif

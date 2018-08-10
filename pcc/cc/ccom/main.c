@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.134 2017/03/15 08:31:48 ragge Exp $	*/
+/*	$Id: main.c,v 1.135 2018/08/06 07:37:04 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -132,7 +132,7 @@ fflags(char *str)
 int
 main(int argc, char *argv[])
 {
-	int ch;
+	int ch, sdflag;
 
 //kflag = 1;
 #ifdef TIMING
@@ -287,6 +287,8 @@ main(int argc, char *argv[])
 
 #ifndef PASS2
 	lineno = 1;
+	sdflag = ddebug;
+	ddebug = 0;
 #ifdef GCC_COMPAT
 	gcc_init();
 #endif
@@ -309,6 +311,7 @@ main(int argc, char *argv[])
 #ifndef NO_BUILTIN
 	builtin_init();
 #endif
+	ddebug = sdflag;
 
 #ifdef DWARF
 	if (gflag)

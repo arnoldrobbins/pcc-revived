@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.151 2018/04/04 17:29:27 ragge Exp $	*/
+/*	$Id: scan.l,v 1.152 2018/08/06 20:19:33 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -332,7 +332,7 @@ kwdecode(struct symtab *s)
 	return kw->wclass;
 }
 
-#ifdef NATIVE_FLOATING_POINT
+#ifdef notdef
 static long double
 typround(long double dc, char *e, TWORD *tw)
 {
@@ -519,7 +519,7 @@ fhexcon(char *s)
 {
 	FLT *flt = stmtalloc(sizeof(FLT));
 
-	flt->t = endtyp(s);
+	flt->t = ctype(endtyp(s));
 	flt->sf = strtosf(s, flt->t);
 	return flt;
 }

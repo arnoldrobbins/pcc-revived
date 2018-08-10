@@ -1,4 +1,4 @@
-/*	$Id: softfloat.c,v 1.1 2017/03/02 21:13:19 ragge Exp $	*/
+/*	$Id: softfloat.c,v 1.5 2018/08/07 08:32:51 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 Anders Magnusson. All rights reserved.
@@ -26,10 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NATIVE_FLOATING_POINT
-
 #include "manifest.h"
 #include "softfloat.h"
+
+#include <stdint.h>
+#include <stdlib.h>
 
 #ifndef PCC_DEBUG
 #define assert(e) ((void)0)
@@ -500,33 +501,47 @@ static SF sfddiv(SF, ULLong, SF, ULLong, TWORD);
 extern int strtodg (const char*, char**, FPI*, Long*, ULong*);
 
 /* IEEE binary formats, and their interchange format encodings */
+#ifdef notdef
 FPI fpi_binary16 = { 11, 1-15-11+1,
                         30-15-11+1, 1, 0,
         0, 1, 1, 0,  16,   15+11-1 };
-FPI fpi_binary32 = { 24,  1-127-24+1,
-                        254-127-24+1, 1, 0,
-        0, 1, 1, 0,  32,    127+24-1 };
-FPI fpi_binary64 = { 53,   1-1023-53+1,
-                        2046-1023-53+1, 1, 0,
-        0, 1, 1, 0,  64,     1023+53-1 };
+#endif
 #ifndef notyet
 FPI fpi_binary128 = { 113,   1-16383-113+1,
                          32766-16383-113+1, 1, 0,
         0, 1, 1, 0,   128,     16383+113-1 };
 #endif
+
+#ifdef USE_IEEEFP_32
+#define FPI_FLOAT	fpi_binary32
+FPI fpi_binary32 = { 24,  1-127-24+1,
+                        254-127-24+1, 1, 0,
+        0, 1, 1, 0,  32,    127+24-1 };
+#else
+#error need float definition
+#endif
+#ifdef USE_IEEEFP_64
+#define FPI_DOUBLE	fpi_binary64
+FPI fpi_binary64 = { 53,   1-1023-53+1,
+                        2046-1023-53+1, 1, 0,
+        0, 1, 1, 0,  64,     1023+53-1 };
+#else
+#error need double definition
+#endif
+#ifdef USE_IEEEFP_X80
+#define FPI_LDOUBLE	fpi_binaryx80
 /* IEEE double extended in its usual form, for example Intel 387 */
 FPI fpi_binaryx80 = { 64,   1-16383-64+1,
                         32766-16383-64+1, 1, 0,
         1, 1, 1, 0,   80,     16383+64-1 };
-
-#ifndef FPI_FLOAT
-#define FPI_FLOAT	fpi_binary32
-#endif
-#ifndef FPI_DOUBLE
-#define FPI_DOUBLE	fpi_binary64
-#endif
-#ifndef FPI_LDOUBLE
-#define FPI_LDOUBLE	FPI_DOUBLE
+#define FPI_LDOUBLE_NAN		{ 0, 0, 0, 0xc000, 0x7fff }
+#define FPI_LDOUBLE_INF		{ 0, 0, 0, 0x8000, 0x7fff }
+#define FPI_LDOUBLE_ZERO	{ 0, 0, 0, 0, 0 }
+#define	FPI_LDOUBLE_ISZ(sf)	(sf.fp[0] == 0 && sf.fp[1] == 0 && \
+	sf.fp[2] == 0 && sf.fp[3] == 0 && (sf.fp[4] & 0x7fff) == 0)
+#define	FPI_LDOUBLE_NEG(sf)	sf.fp[4] ^= 0x8000
+#else
+#error need long double definition
 #endif
 
 FPI * fpis[3] = {
@@ -672,9 +687,9 @@ muld(ULLong a, ULLong b)
 
 #define HALFWORKBITS	(WORKBITS/2)
 #define LOWHALFMASK	ONES(WORKBITS-HALFWORKBITS)
-	ahi = a >> HALFWORKBITS;
+	ahi = (ULong)(a >> HALFWORKBITS);
 	a &= LOWHALFMASK;
-	bhi = b >> HALFWORKBITS;
+	bhi = (ULong)(b >> HALFWORKBITS);
 	b &= LOWHALFMASK;
 	z.lo = a * b;
 	a *= bhi;
@@ -786,7 +801,7 @@ sfround(SF sf, ULLong extra, TWORD t)
 	if (extra != 0) {
 		doinc = rd == FPI_Round_up;
 		if (rd == FPI_Round_near && extra == NORMALMANT)
-			doinc = sf.significand & 1;
+			doinc = (int)sf.significand & 1;
 		else if ((rd & 3) == FPI_Round_near && extra >= NORMALMANT)
 			doinc = 1;
 /* XXX set SFEXCP_Inex(hi|lo) ? later ? */
@@ -824,7 +839,7 @@ sfround(SF sf, ULLong extra, TWORD t)
 			if (z.lo > NORMALMANT)
 				doinc = 1;
 			else if (rd == FPI_Round_near && z.lo == NORMALMANT)
-				doinc = z.hi & 1;
+				doinc = (int)z.hi & 1;
 			else if (rd == FPI_Round_near_from0 && z.lo == NORMALMANT)
 				doinc = 1;
 		}
@@ -952,14 +967,12 @@ soft_fp2int(SF sf, TWORD t)
  */
 
 /*
- * Negate a softfloat. Easy.
- * Do not work correctly for SF_Zero when negative zero are not supported
- * (need to have access to fpi-> (i.e. TWORD t) to solve this.) Not-a-problem
+ * Negate a softfloat.
  */
 SF
 soft_neg(SF sf)
 {
-	sf.kind ^= SF_Neg;
+	FPI_LDOUBLE_NEG(sf);
 	return sf;
 }
 
@@ -1568,13 +1581,16 @@ soft_cxdiv(SF r1, SF i1, SF r2, SF i2, SF *rrv, SF *irv, TWORD t)
 
 /*
  * Return true if fp number is zero. Easy.
- *
- * Ignores FLT_EVAL_METHOD, compares the "internal value" of the fp number.
  */
 int
 soft_isz(SF sf)
 {
-	return (sf.kind & SF_kmask) == SF_Zero;
+	int r = FPI_LDOUBLE_ISZ(sf);
+#ifdef DEBUGFP
+	if ((sf.debugfp == 0.0 && r == 0) || (sf.debugfp != 0.0 && r == 1))
+		fpwarn("soft_isz", sf.debugfp, (long double)r);
+#endif
+	return r;
 }
 
 int
@@ -1841,6 +1857,7 @@ soft_pack(SF *psf, TWORD t)
 	return biasedexp;
 }
 
+
 /*
  * Convert an internal floating-point constant into its external representation.
  * isf is floating point number, dt is resulting type and 
@@ -1878,6 +1895,40 @@ soft_fp2ext(SF isf, TWORD dt)
 #endif
 }
 #endif
+#endif
+
+/*
+ * encode (sign,exp,mantissa) as long double.
+ */
+static void
+vals2fp(unsigned short *fp, int k, int exp, uint32_t *mant)
+{
+	fp[4] = fp[3] = fp[2] = fp[1] = fp[0] = 0;
+#ifdef USE_IEEEFP_X80
+	switch (k & SF_kmask) {
+	case SF_Zero:
+		break; /* already 0 */
+
+	case SF_Normal:
+		fp[4] = exp + FPI_LDOUBLE.exp_bias;
+		fp[3] = mant[1] >> 16;
+		fp[2] = mant[1];
+		fp[1] = mant[0] >> 16;
+		fp[0] = mant[0];
+		break;
+	default:
+		fprintf(stderr, "vals2fp: unhandled %x\n", k);
+		break;
+	}
+	if (k & SF_Neg)
+		fp[4] |= 0x8000;
+
+	if (k & (SFEXCP_ALLmask & ~(SFEXCP_Inexlo|SFEXCP_Inexhi)))
+		fprintf(stderr, "vals2fp: unhandled2 %x\n", k);
+#else
+	cerror("fixme floating point");
+#endif
+}
 
 /*
  * Conversions from decimal and hexadecimal strings.
@@ -1889,34 +1940,85 @@ strtosf(char *str, TWORD tw)
 {
 	SF sf;
 	char *eptr;
-	FPI *fpi, const_fpi;
 	ULong bits[2] = { 0, 0 };
 	Long expt;
 	int k;
 
-#ifdef TARGET_FLT_EVAL_METHOD
-	fpi = fpis[tw > TARGET_FLT_EVAL_METHOD + FLOAT ? tw - FLOAT :
-			TARGET_FLT_EVAL_METHOD];
-#else
-	fpi = fpis[tw - FLOAT];
-#endif
-	if (sf_constrounding != FPI_RoundNotSet) {
-		const_fpi = *fpi;
-		const_fpi.rounding = sf_constrounding;
-		fpi = &const_fpi;
-	}
-	k = strtodg(str, &eptr, fpi, &expt, bits);
+	k = strtodg(str, &eptr, &FPI_LDOUBLE, &expt, bits);
+
 	if (k & SFEXCP_Overflow)
 		werror("Overflow in floating-point constant");
-/* XXX F.7.2 recommends (indirectly) diagnostic for underflow; might be verbose though */
 	if (k & SFEXCP_Inexact && (str[1] == 'x' || str[1] == 'X'))
-		werror("Hexadecimal floating-point constant not represented exactly");
-	sf.kind = k;
-	sf.significand = bits[0];
-	if (fpi->nbits > 32)
-		sf.significand |= ((ULLong)bits[1] << 32);
-	sf.exponent = expt;
+		werror("Hexadecimal floating-point constant not exactly");
+//fprintf(stderr, "vals: k %x expt %d bits %x %x\n", k, expt, bits[0], bits[1]);
+	vals2fp(sf.fp, k, expt, bits);
+
+#ifdef DEBUGFP
+	{
+		long double ld = strtold(str, NULL);
+		if (ld != sf.debugfp)
+			fpwarn("strtosf", sf.debugfp, ld);
+	}
+#endif
+
 	return sf;
 }
+
+/*
+ * return INF/NAN.
+ */
+SF
+soft_huge_val(void)
+{
+	SF sf;
+	static short val[] = FPI_LDOUBLE_INF;
+
+	memcpy(&sf, val, sizeof val);
+#ifdef DEBUGFP
+	if (sf.debugfp != __builtin_huge_vall())
+		fpwarn("soft_huge_val", sf.debugfp, __builtin_huge_vall());
 #endif
+	return sf;
+}
+
+SF
+soft_nan(char *c)
+{
+	SF sf;
+	static short val[] = FPI_LDOUBLE_NAN;
+
+	memcpy(&sf, val, sizeof val);
+	return sf;
+}
+
+/*
+ * Return a LDOUBLE zero.
+ */
+SF
+soft_zero()
+{
+	SF sf;
+	static short val[] = FPI_LDOUBLE_ZERO;
+
+	memcpy(&sf, val, sizeof val);
+	return sf;
+}
+
+#ifdef DEBUGFP
+void
+fpwarn(char *s, long double soft, long double hard)
+{
+	extern int nerrors;
+
+	union { long double ld; int i[3]; } X;
+	fprintf(stderr, "WARNING: In function %s: soft=%La hard=%La\n",
+	    s, soft, hard);
+	fprintf(stderr, "WARNING: soft=%Lf hard=%Lf\n", soft, hard);
+	X.ld=soft;
+	fprintf(stderr, "WARNING: s[0]=%x s[1]=%x s[2]=%x ",
+	    X.i[0], X.i[1], X.i[2]);
+	X.ld=hard;
+	fprintf(stderr, "h[0]=%x h[1]=%x h[2]=%x\n", X.i[0], X.i[1], X.i[2]);
+	nerrors++;
+}
 #endif
