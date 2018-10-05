@@ -1,4 +1,4 @@
-/*	$Id: optim2.c,v 1.98 2017/03/16 16:19:51 ragge Exp $	*/
+/*	$Id: optim2.c,v 1.99 2018/09/15 15:21:45 ragge Exp $	*/
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1263,6 +1263,10 @@ renamevarhelper(struct p2env *p2e,NODE *t,void *poplistarg)
 		
 			if (SLIST_FIRST(&defsites.stack[tempnr])!=NULL) {
 				x=SLIST_FIRST(&defsites.stack[tempnr])->tmpregno;
+				if (x == 0) {
+					warner(Wuninitialized);
+					x = defsites.low; /* can be anything */
+				}
 				regno(t)=x;
 			}
 		}

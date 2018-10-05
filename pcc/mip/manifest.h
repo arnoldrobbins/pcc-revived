@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.112 2017/03/15 08:31:48 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.113 2018/09/15 15:21:45 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -393,6 +393,7 @@ extern	int warniserr;		/* treat warnings as errors */
 #define	Wunreachable_code		9
 #define	Wdeprecated_declarations	10
 #define	Wattributes			11
+#define	Wuninitialized			12
 
 void warner(int type, ...);
 int Wset(char *, int, int);
