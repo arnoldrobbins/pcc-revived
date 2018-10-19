@@ -1,4 +1,4 @@
-/*	$Id: softfloat.h,v 1.8 2018/08/07 08:05:48 ragge Exp $	*/
+/*	$Id: softfloat.h,v 1.10 2018/10/14 10:08:52 ragge Exp $	*/
 
 /*
  * Copyright (c) 2015 Anders Magnusson. All rights reserved.
@@ -24,12 +24,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdint.h>
+
 /*
  * Definitions for softfloat routines.
  *
  * Floating point numbers will always be stored as the largest supported
  * float type (long double).  This in turn will be stuffed bitwise into
- * an array of short for addressing.
+ * an array of uint32_t for addressing.
  */
 #ifndef CROSS_COMPILING
 #define	DEBUGFP	/* compare everything with native fp */
@@ -37,7 +39,7 @@
 
 typedef struct softfloat {
 	union {
-		unsigned short int fp[(SZLDOUBLE+15)/16];
+		uint32_t fp[(SZLDOUBLE+31)/32];
 #ifdef DEBUGFP
 		long double debugfp;
 #endif
@@ -175,6 +177,7 @@ int soft_fpclassify(SF sf, TWORD t);
 SF soft_huge_val(void);
 SF soft_nan(char *);
 SF soft_zero(void);
+uint32_t *soft_toush(SF, TWORD);
 #ifdef DEBUGFP
 void fpwarn(char *s, long double soft, long double hard);
 #endif

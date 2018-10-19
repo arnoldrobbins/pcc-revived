@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.301 2018/08/07 08:32:51 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.303 2018/10/14 10:08:51 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -455,18 +455,16 @@ struct flt {
 };	
 typedef struct flt FLT;	
 #define	fltallo()		stmtalloc(sizeof(FLT))
-#define	FCAST(x)		((FLT *)(x))
 
 #define FLOAT_ISZERO(p)		soft_isz(p->sf)
 #define FLOAT_NEG(p)		p->sf = soft_neg(p->sf)
+#define FLOAT_FP2FP(f,t)	f->sf = soft_fp2fp(f->sf, t)
 
 #ifdef NATIVE_FLOATING_POINT
 #define FLOAT_PLUS(p1,p2)	((p1)->n_dcon->fp += (p2)->n_dcon->fp)
 #define FLOAT_MINUS(p1,p2)	((p1)->n_dcon->fp -= (p2)->n_dcon->fp)
 #define FLOAT_MUL(p1,p2)	((p1)->n_dcon->fp *= (p2)->n_dcon->fp)
 #define FLOAT_DIV(p1,p2)	((p1)->n_dcon->fp /= (p2)->n_dcon->fp)
-#define FLOAT_FP2FP(f,t)	(f->fp = (t == FLOAT ? (float)f->fp :	\
-	t == DOUBLE ? (double)f->fp : f->fp))
 #define FLOAT_INT2FP(d,p,v)	(ISUNSIGNED(v) ? \
 	(d->fp = (long double)(U_CONSZ)(p)) : (d->fp = (long double)(CONSZ)(p)))
 #define FLOAT_FP2INT(i,d,t)     (ISUNSIGNED(t) ? \
@@ -487,7 +485,6 @@ typedef struct flt FLT;
 	soft_mul(p1->n_dcon->sf, p2->n_dcon->sf, p1->n_type)
 #define FLOAT_DIV(p1,p2)	p1->n_dcon->sf = \
 	soft_div(p1->n_dcon->sf, p2->n_dcon->sf, p1->n_type)
-#define FLOAT_FP2FP(f,t)	f->sf = soft_fp2fp(f->sf, t)
 #define FLOAT_INT2FP(f,p,t)	f->sf = soft_int2fp(p, t, ctype(LDOUBLE))
 #define FLOAT_FP2INT(i,d,t)	i = soft_fp2int(d->sf, t) /* XXX fp format */
 #define FLOAT_EQ(d1,d2)		soft_cmp(d1->sf, d2->sf, EQ)
