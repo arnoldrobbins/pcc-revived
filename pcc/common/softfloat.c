@@ -1,4 +1,4 @@
-/*	$Id: softfloat.c,v 1.8 2018/10/15 11:50:29 ragge Exp $	*/
+/*	$Id: softfloat.c,v 1.11 2018/10/24 19:01:22 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 Anders Magnusson. All rights reserved.
@@ -1339,18 +1339,40 @@ sfround(SF sf, ULLong extra, TWORD t)
  * Rounds correctly to the target type.
  */
 SF
-soft_int2fp(CONSZ ll, TWORD f, TWORD t)
+soft_int2fp(CONSZ l, TWORD f, TWORD t)
 {
 	SF rv;
+	int64_t ll = l;
+	uint64_t mant;
+	int sign = 0, exp;
 
-	rv = zerosf(0);
-	if (ll == 0)
-		return rv;  /* fp is zero */
-	rv.kind = SF_Normal;
-	if (!ISUNSIGNED(f) && ll < 0)
-		rv.kind |= SF_Neg, ll = -ll;
-	rv.significand = ll; /* rv.exponent already 0 */
-	return SFROUND(rv, t);
+	if (!ISUNSIGNED(f) && ll < 0) {
+		ll = -ll;
+		sign = 1;
+	}
+
+	if (ll == 0) {
+		LDOUBLE_ZERO(rv, 0);
+	} else {
+		exp = LDOUBLE_BIAS + 64;
+		while (ll > 0)
+			ll <<= 1, exp--;
+		ll <<= 1, exp--;
+		mant = l;
+		LDOUBLE_MAKE(rv, sign, exp, mant);
+		if (t == FLOAT || t == DOUBLE)
+			rv = soft_fp2fp(rv, t);
+	}
+#ifdef DEBUGFP
+	{ long double dl;
+		dl = ISUNSIGNED(f) ? (long double)(U_CONSZ)(l) :
+		    (long double)(CONSZ)(l);
+		dl = t == FLOAT ? (float)dl : t == DOUBLE ? (double)dl : dl;
+		if (dl != rv.debugfp)
+			fpwarn("soft_int2fp", rv.debugfp, dl);
+	}
+#endif
+	return rv;
 }
 
 /*
@@ -2115,143 +2137,67 @@ soft_classify(SF sf, TWORD t)
 	return rv;
 }
 
-/*
- * Return true if either operand is NaN.
- */
-static int
-soft_cmp_unord(SF x1, SF x2)
-{
-	return SFISNAN(x1) || SFISNAN(x2);
-}
-
 static int
 soft_cmp_eq(SF x1, SF x2)
 {
-	int exp1, exp2;
+	int s1, s2, e1, e2;
+	uint64_t m1, m2;
 
-	if (soft_cmp_unord(x1, x2))
-		return 0; /* IEEE says "quiet" */
-	if (SFISZ(x1))
-		/* special case: +0 == -0 (discard sign) */
-		return SFISZ(x2);
-	if ((x1.kind & SF_Neg) != (x2.kind & SF_Neg))
+	s1 = ldouble_sign(x1);
+	s2 = ldouble_sign(x2);
+	e1 = ldouble_exp(x1);
+	e2 = ldouble_exp(x2);
+	m1 = ldouble_mant(x1);
+	m2 = ldouble_mant(x2);
+
+	if (e1 == 0 && e2 == 0 && m1 == 0 && m2 == 0)
+		return 1; /* special case: +0 == -0 (discard sign) */
+	if (s1 != s2)
 		return 0;
-	if (SFISINF(x1))
-		return SFISINF(x2);
-	/* Both operands are finite, nonzero, same sign. */
-	exp1 = x1.exponent, exp2 = x2.exponent;
-	assert(x1.significand && x2.significand);
-	while (x1.significand < NORMALMANT)
-		x1.significand <<= 1, exp1--;
-	while (x2.significand < NORMALMANT)
-		x2.significand <<= 1, exp2--;
-	return exp1 == exp2 && x1.significand == x2.significand;
+	if (e1 == e2 && m1 == m2)
+		return 1;
+	return 0;
 }
 
 /*
- * IEEE754 states that between any two floating-point numbers,
- * four mutually exclusive relations are possible:
- * less than, equal, greater than, or unordered.
- */
-
-static int
-soft_cmp_ne(SF x1, SF x2)
-{
-	return soft_cmp_unord(x1, x2) ? 0 : ! soft_cmp_eq(x1, x2);
-}
-
-static int
-soft_cmp_lt(SF x1, SF x2)
-{
-	int exp1, exp2;
-
-	if (soft_cmp_unord(x1, x2))
-/* XXX "invalid"; warns? use sf_exceptions */
-		return 0;
-	if (SFISZ(x1) && SFISZ(x2))
-		return 0; /* special case: -0 !> +0 */
-	switch ((x1.kind & SF_Neg) - (x2.kind & SF_Neg)) {
-	  case SF_Neg - 0:
-		return 1; /* x1 < 0 < x2 */
-	  case 0 - SF_Neg:
-		return 0; /* x1 > 0 > x2 */
-	  case 0:
-		break;
-	}
-	if (x1.kind & SF_Neg) {
-		SF tmp = x1;
-		x1 = x2;
-		x2 = tmp;
-	}
-	if (SFISINF(x2))
-		return ! SFISINF(x1);
-	if (SFISZ(x1))
-		return 1;
-	if (SFISZ(x2) || SFISINF(x1))
-		return 0;
-	/* Both operands are finite, nonzero, same sign. Test |x1| < |x2|*/
-	exp1 = x1.exponent, exp2 = x2.exponent;
-	assert(x1.significand && x2.significand);
-	while (x1.significand < NORMALMANT)
-		x1.significand <<= 1, exp1--;
-	while (x2.significand < NORMALMANT)
-		x2.significand <<= 1, exp2--;
-	return exp1 < exp2 || x1.significand < x2.significand;
-}
-
-static int
-soft_cmp_gt(SF x1, SF x2)
-{
-	int exp1, exp2;
-
-	if (soft_cmp_unord(x1, x2))
-/* XXX "invalid"; warns? use sf_exceptions */
-		return 0;
-	if (SFISZ(x1) && SFISZ(x2))
-		return 0; /* special case: -0 !< +0 */
-	switch ((x1.kind & SF_Neg) - (x2.kind & SF_Neg)) {
-	  case SF_Neg - 0:
-		return 1; /* x1 > 0 > x2 */
-	  case 0 - SF_Neg:
-		return 0; /* x1 < 0 < x2 */
-	  case 0:
-		break;
-	}
-	if (x1.kind & SF_Neg) {
-		SF tmp = x1;
-		x1 = x2;
-		x2 = tmp;
-	}
-	if (SFISINF(x1))
-		return ! SFISINF(x2);
-	if (SFISZ(x1) || SFISINF(x2))
-		return 0;
-	if (SFISZ(x2))
-		return 1;
-	/* Both operands are finite, nonzero, same sign. Test |x1| > |x2|*/
-	exp1 = x1.exponent, exp2 = x2.exponent;
-	assert(x1.significand && x2.significand);
-	while (x1.significand < NORMALMANT)
-		x1.significand <<= 1, exp1--;
-	while (x2.significand < NORMALMANT)
-		x2.significand <<= 1, exp2--;
-	return exp1 > exp2 || x1.significand > x2.significand;
-}
-
-/*
- * Note: for _le and _ge, having NaN operand is "invalid" in IEEE754;
- * but we cannot return SFEXCP_Invalid as done for the operations.
+ * Is x1 greater/less than x2?
  */
 static int
-soft_cmp_le(SF x1, SF x2)
+soft_cmp_gl(SF x1, SF x2, int isless)
 {
-	return soft_cmp_unord(x1, x2) ? 0 : ! soft_cmp_gt(x1, x2);
-}
+	uint64_t mant1, mant2;
+	int s2, rv;
 
-static int
-soft_cmp_ge(SF x1, SF x2)
-{
-	return soft_cmp_unord(x1, x2) ? 0 : ! soft_cmp_lt(x1, x2);
+	/* Both zero -> not greater */
+	if (LDOUBLE_ISZERO(x1) && LDOUBLE_ISZERO(x2))
+		return 0;
+
+	/* one negative -> return x2 sign */
+	if (ldouble_sign(x1) + (s2 = ldouble_sign(x2)) == 1)
+		return isless ? !s2 : s2;
+
+	/* check exponent */
+	if (ldouble_exp(x1) > ldouble_exp(x2)) {
+		rv = isless ? 0 : 1;
+	} else if (ldouble_exp(x1) < ldouble_exp(x2)) {
+		rv = isless ? 1 : 0;
+	} else {
+
+		/* exponent equal, check mantissa */
+		mant1 = ldouble_mant(x1);
+		mant2 = ldouble_mant(x2);
+		if (mant1 == mant2)
+			return 0; /* same number */
+		if (mant1 > mant2) {
+			rv = isless ? 0 : 1;
+		} else /* if (mant1 < mant2) */
+			rv = isless ? 1 : 0;
+	}
+
+	/* if both negative, invert rv */
+	if (s2)
+		rv ^= 1;
+	return rv;
 }
 
 int
@@ -2259,24 +2205,25 @@ soft_cmp(SF v1, SF v2, int v)
 {
 	int rv = 0;
 
+	if (LDOUBLE_ISNAN(v1) || LDOUBLE_ISNAN(v2))
+		return 0; /* never equal */
+
 	switch (v) {
 	case GT:
-		rv = soft_cmp_gt(v1, v2);
-		break;
 	case LT:
-		rv = soft_cmp_lt(v1, v2);
+		rv = soft_cmp_gl(v1, v2, v == LT);
 		break;
 	case GE:
-		rv = soft_cmp_ge(v1, v2);
-		break;
 	case LE:
-		rv = soft_cmp_le(v1, v2);
+		if ((rv = soft_cmp_eq(v1, v2)))
+			break;
+		rv = soft_cmp_gl(v1, v2, v == LE);
 		break;
 	case EQ:
 		rv = soft_cmp_eq(v1, v2);
 		break;
 	case NE:
-		rv = soft_cmp_ne(v1, v2);
+		rv = !soft_cmp_eq(v1, v2);
 		break;
 	}
 	return rv;
