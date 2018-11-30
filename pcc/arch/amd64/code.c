@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.89 2016/12/11 13:41:27 ragge Exp $	*/
+/*	$Id: code.c,v 1.90 2018/11/24 21:03:55 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -536,7 +536,7 @@ bjobcode(void)
 #if defined(__GNUC__) || defined(__PCC__)
 	/* Be sure that the compiler uses full x87 */
 	/* XXX cross-compiling will fail here */
-	int fcw = 0;
+	volatile int fcw = 0;
 	__asm("fstcw (%0)" : : "r"(&fcw));
 	fcw |= 0x33f;
 	__asm("fldcw (%0)" : : "r"(&fcw));

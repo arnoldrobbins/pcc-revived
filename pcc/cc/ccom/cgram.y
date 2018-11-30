@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.417 2016/10/11 13:48:23 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.418 2018/11/23 14:43:06 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1066,11 +1066,11 @@ whprefix:	  C_WHILE  '('  e  ')' {
 			savebc();
 			$3 = eve($3);
 			if ($3->n_op == ICON && glval($3) != 0)
-				flostat = FLOOP;
+				flostat = FLOOP | (flostat & FP_CONTR_CBR);
 			plabel( contlab = getlab());
 			reached = 1;
 			brklab = getlab();
-			if (flostat == FLOOP)
+			if (flostat & FLOOP)
 				p1tfree($3);
 			else
 				xcbranch($3, brklab);
@@ -1452,7 +1452,7 @@ savebc(void)
 	bc->flostat = flostat;
 	bc->next = savbc;
 	savbc = bc;
-	flostat = 0;
+	flostat &= FP_CONTR_CBR;
 }
 
 static void

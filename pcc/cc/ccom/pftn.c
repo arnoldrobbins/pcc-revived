@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.427 2018/08/07 08:05:48 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.428 2018/11/23 14:43:06 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -573,7 +573,7 @@ ftnend(void)
 	cftnod = NIL;
 	tcheck();
 	brklab = contlab = retlab = NOLAB;
-	flostat = 0;
+	flostat &= FP_CONTR_CBR;
 	if (nerrors == 0) {
 		if (savbc != NULL)
 			cerror("bcsave error");

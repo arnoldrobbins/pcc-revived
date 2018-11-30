@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.56 2017/12/03 17:34:16 ragge Exp $	*/
+/*	$Id: table.c,v 1.57 2018/11/24 21:03:55 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2008 Anders Magnusson (ragge@ludd.ltu.se).
@@ -413,10 +413,19 @@ struct optab table[] = {
 
 /* long double to unsigned long */
 { SCONV,	INAREG,
-	SCREG|SNAME|SOREG,	TLDOUBLE,
-	SAREG,			TULONG,
-		NAREG,	RESC1,
-		"ZB", },
+	SCREG,	TLDOUBLE,
+	SAREG,	TULONG,
+		NAREG|NTEMP*2,	RESC1,
+		"	fnstcw A2\n"
+		"	fnstcw 4+A2\n"
+		"	movb $7,1+A2\n" /* 64-bit, round down  */
+		"	fldcw A2\n"
+		"	movl $0x5f000000, 8+A2\n"	/* (float)(1<<63) */
+		"	fsubs 8+A2\n"	/* keep in range of fistpq */
+		"	fistpq 8+A2\n"
+		"	xorb $0x80,15+A2\n"	/* addq $1>>63 to 8(%esp) */
+		"	movq 8+A2,A1\n"
+		"	fldcw 4+A2\n", },
 
 /* ldouble -> long  XXX merge with int */
 { SCONV,	INAREG,

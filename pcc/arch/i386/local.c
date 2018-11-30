@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.206 2018/10/13 20:04:15 ragge Exp $	*/
+/*	$Id: local.c,v 1.207 2018/11/21 18:22:33 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -944,9 +944,6 @@ spalloc(P1ND *t, P1ND *p, OFFSZ off)
 int
 ninval(CONSZ off, int fsz, P1ND *p)
 {
-#ifdef NATIVE_FLOATING_POINT
-	union { float f; double d; long double l; int i[3]; } u;
-#endif
 	int i;
 
 	switch (p->n_type) {
@@ -959,31 +956,6 @@ ninval(CONSZ off, int fsz, P1ND *p)
 		slval(p, i);
 		inval(off+32, 32, p);
 		break;
-#if 0
-#ifdef NATIVE_FLOATING_POINT
-	case LDOUBLE:
-		u.i[2] = 0;
-		u.l = (long double)((FLT *)p->n_dcon)->fp;
-#if defined(HOST_BIG_ENDIAN)
-		printf(PRTPREF "\t.long\t0x%x,0x%x,0x%x\n", u.i[2], u.i[1], u.i[0]);
-#else
-		printf(PRTPREF "\t.long\t%d,%d,%d\n", u.i[0], u.i[1], u.i[2] & 0177777);
-#endif
-		break;
-	case DOUBLE:
-		u.d = (double)((FLT *)p->n_dcon)->fp;
-#if defined(HOST_BIG_ENDIAN)
-		printf(PRTPREF "\t.long\t0x%x,0x%x\n", u.i[1], u.i[0]);
-#else
-		printf(PRTPREF "\t.long\t%d,%d\n", u.i[0], u.i[1]);
-#endif
-		break;
-	case FLOAT:
-		u.f = (float)((FLT *)p->n_dcon)->fp;
-		printf(PRTPREF "\t.long\t%d\n", u.i[0]);
-		break;
-#endif
-#endif
 	default:
 		return 0;
 	}

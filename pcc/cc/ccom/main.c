@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.135 2018/08/06 07:37:04 ragge Exp $	*/
+/*	$Id: main.c,v 1.136 2018/11/23 14:43:06 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -289,6 +289,7 @@ main(int argc, char *argv[])
 	lineno = 1;
 	sdflag = ddebug;
 	ddebug = 0;
+	flostat = FP_CONTR_CBR;
 #ifdef GCC_COMPAT
 	gcc_init();
 #endif
