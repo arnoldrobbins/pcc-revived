@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.16 2016/01/30 17:26:19 ragge Exp $	*/
+/*	$Id: local.c,v 1.17 2018/12/02 10:50:00 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -397,29 +397,6 @@ ninval(CONSZ off, int fsz, NODE *p)
 	union { float f; double d; long double l; int i[3]; } u;
 
 	switch (p->n_type) {
-	case LDOUBLE:
-		u.i[2] = 0;
-		u.l = (long double)((union flt *)p->n_dcon)->fp;
-#if defined(HOST_LITTLE_ENDIAN)
-		/* XXX probably broken on most hosts */
-		printf("\t.long\t0x%x,0x%x,0x%x\n", u.i[2], u.i[1], u.i[0]);
-#else
-		printf("\t.long\t0x%x,0x%x,0x%x\n", u.i[0], u.i[1], u.i[2]);
-#endif
-		break;
-	case DOUBLE:
-		u.d = (double)((union flt *)p->n_dcon)->fp;
-#if defined(HOST_LITTLE_ENDIAN)
-		printf("\t.long\t0x%x,0x%x\n", u.i[1], u.i[0]);
-#else
-		printf("\t.long\t0x%x,0x%x\n", u.i[0], u.i[1]);
-#endif
-		break;
-	case FLOAT:
-		u.f = (float)((union flt *)p->n_dcon)->fp;
-		printf("\t.long\t0x%x\n", u.i[0]);
-		break;
-
 	case LONGLONG:
 	case ULONGLONG:
 		printf("\t.long\t0x%x\n", (int)(off >> 32) & 0xffffffff);

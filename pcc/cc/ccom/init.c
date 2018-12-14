@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.104 2018/11/25 20:58:21 ragge Exp $	*/
+/*	$Id: init.c,v 1.106 2018/12/02 18:40:46 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -277,7 +277,7 @@ inval(CONSZ off, int fsz, NODE *p)
 		uint32_t *ufp;
 		int i, nbits;
 
-		ufp = soft_toush(p->n_dcon->sf, t, &nbits);
+		ufp = soft_toush(p->n_scon, t, &nbits);
 		for (i = 0; i < sztable[t]; i += SZINT) {
 			printf(PRTPREF "%s %u\n", astypnames[INT], 
 			    (i < nbits ? ufp[i/SZINT] : 0));

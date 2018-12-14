@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.418 2018/11/23 14:43:06 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.420 2018/12/02 18:40:46 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -256,7 +256,7 @@ struct savbc {
 	struct rstack *rp;
 	char *strp;
 	struct bks *bkp;
-	FLT *flt;
+	struct flt flt;
 	struct genlist *g;
 }
 
@@ -1237,7 +1237,7 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 			$$ = biop(CAST, $3, $$);
 		}
 		|  C_ICON { $$ = $1; }
-		|  C_FCON { $$ = bdty(FCON, $1); }
+		|  C_FCON { $$ = bdty(FCON, &($1)); }
 		|  svstr { $$ = bdty(STRING, $1, styp()); }
 		|  '(' e ')' { $$=$2; }
 		|  '(' xbegin e ';' '}' ')' { $$ = gccexpr($2, eve($3)); }
@@ -1296,6 +1296,7 @@ mkty(TWORD t, union dimfun *d, struct attr *sue)
 P1ND *
 bdty(int op, ...)
 {
+	FLT *f2;
 	CONSZ c;
 	va_list ap;
 	int val;
@@ -1312,8 +1313,10 @@ bdty(int op, ...)
 		break;
 
 	case FCON:
-		q->n_dcon = va_arg(ap, FLT *);
-		q->n_type = q->n_dcon->t;
+		f2 = va_arg(ap, FLT *);
+		q->n_scon = sfallo();
+		*q->n_scon = f2->sf;
+		q->n_type = f2->t;
 		break;
 
 	case CALL:

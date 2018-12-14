@@ -1,4 +1,4 @@
-/*	$Id: softfloat.h,v 1.13 2018/11/25 20:58:21 ragge Exp $	*/
+/*	$Id: softfloat.h,v 1.15 2018/12/02 16:37:53 ragge Exp $	*/
 
 /*
  * Copyright (c) 2015 Anders Magnusson. All rights reserved.
@@ -149,32 +149,22 @@ enum {
 extern FPI * fpis[3]; /* FLOAT, DOUBLE, LDOUBLE, respectively */
 
 #ifndef CC_DRIVER
-SF soft_neg(SF);
-SF soft_int2fp(CONSZ p, TWORD f, TWORD v);
-CONSZ soft_fp2int(SF p, TWORD v);
-SF soft_fp2fp(SF p, TWORD v);
-SFP soft_cast(CONSZ v, TWORD);
-SF soft_plus(SF, SF, TWORD);
-SF soft_minus(SF, SF, TWORD);
-SF soft_mul(SF, SF, TWORD);
-SF soft_div(SF, SF, TWORD);
-int soft_cmp(SF, SF, int);
-int soft_isz(SF);
-SF strtosf(char *, TWORD);
-SF hugesf(int, TWORD);
-SF nansf(int);
-SF zerosf(int kind);
-SF infsf(int kind);
+void soft_neg(SF *);
+void soft_int2fp(SFP, CONSZ p, TWORD f, TWORD v);
+CONSZ soft_fp2int(SF *p, TWORD v);
+void soft_fp2fp(SFP p, TWORD v);
+void soft_plus(SFP, SFP, TWORD);
+void soft_minus(SFP, SFP, TWORD);
+void soft_mul(SFP, SFP, TWORD);
+void soft_div(SFP, SFP, TWORD);
+int soft_cmp(SF*, SF*, int);
+int soft_isz(SF*);
+void strtosf(SFP, char *, TWORD);
 CONSZ soft_signbit(SF sf);
-SF soft_copysign(SF, SF);
-void soft_cxmul(SF r1, SF i1, SF r2, SF i2, SF *rrv, SF *irv, TWORD t);
-void soft_cxdiv(SF r1, SF i1, SF r2, SF i2, SF *rrv, SF *irv, TWORD t);
 int soft_isnan(SF sf);
-int soft_fpclassify(SF sf, TWORD t);
-SF soft_huge_val(void);
-SF soft_nan(char *);
-SF soft_zero(void);
-uint32_t *soft_toush(SF, TWORD, int *);
+void soft_huge_val(SFP);
+void soft_nan(SFP, char *);
+uint32_t *soft_toush(SFP, TWORD, int *);
 #ifdef DEBUGFP
 void fpwarn(const char *s, long double soft, long double hard);
 #endif

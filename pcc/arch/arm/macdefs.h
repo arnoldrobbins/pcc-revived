@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.19 2016/03/09 18:19:56 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.20 2018/12/02 10:37:21 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -267,3 +267,10 @@ NODE *arm_builtin_va_copy(const struct bitable *bt, NODE *a);
 
 #define COM     "\t@ "
 #define NARGREGS	4
+
+/* floating point definitions */
+#define USE_IEEEFP_32
+#define FLT_PREFIX	IEEEFP_32
+#define USE_IEEEFP_64
+#define DBL_PREFIX	IEEEFP_64
+#define LDBL_PREFIX	IEEEFP_64

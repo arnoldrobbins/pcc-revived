@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.101 2018/11/24 21:03:55 ragge Exp $	*/
+/*	$Id: local.c,v 1.102 2018/12/02 18:40:45 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -555,7 +555,11 @@ myp2tree(NODE *p)
 		/* Do not lose negative zeros */
 		long long ll[2];
 		short ss;
+#ifdef LANG_CXX
 		memcpy(ll, &p->n_dcon, sizeof(ll));
+#else
+		memcpy(ll, p->n_scon, sizeof(ll));
+#endif
 		memcpy(&ss, &ll[1], sizeof(ss));
 		if (ll[0] == 0 && ss == 0)
 			return;

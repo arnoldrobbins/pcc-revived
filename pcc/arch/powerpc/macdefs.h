@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.19 2016/07/10 09:49:52 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.20 2018/12/02 11:11:39 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -410,3 +410,11 @@ P1ND *powerpc_builtin_return_address(const struct bitable *f, P1ND *a);
 #else
 #define COM     "       ; "
 #endif
+
+/* floating point definitions */
+#define USE_IEEEFP_32
+#define FLT_PREFIX      IEEEFP_32
+#define USE_IEEEFP_64
+#define DBL_PREFIX      IEEEFP_64
+#define LDBL_PREFIX     IEEEFP_64
+
