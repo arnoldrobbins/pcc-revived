@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.32 2016/07/06 07:49:48 ragge Exp $	*/
+/*	$Id: ccconfig.h,v 1.33 2018/12/14 18:23:29 plunky Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -41,6 +41,7 @@
 #define	DYNLINKLIB	"/usr/libexec/ld.elf_so"
 
 #define CRTEND_T	"crtend.o"
+#define RCRT0		"crt0.o"
 
 #define DEFLIBS		{ "-lc", NULL }
 #define DEFPROFLIBS	{ "-lc_p", NULL }

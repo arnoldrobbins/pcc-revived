@@ -1,4 +1,4 @@
-/*	$Id: strlist.h,v 1.3 2014/12/24 09:55:32 plunky Exp $	*/
+/*	$Id: strlist.h,v 1.4 2018/12/14 17:41:32 plunky Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -48,7 +48,7 @@ struct strlist {
 void strlist_init(struct strlist *);
 void strlist_free(struct strlist *);
 void strlist_make_array(const struct strlist *, char ***, size_t *);
-void strlist_print(const struct strlist *, FILE *, int);
+void strlist_print(const struct strlist *, FILE *, int, const char *);
 
 void strlist_prepend(struct strlist *, const char *);
 void strlist_prepend_nocopy(struct strlist *, char *);

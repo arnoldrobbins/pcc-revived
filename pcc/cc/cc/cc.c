@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.319 2018/11/21 18:25:10 ragge Exp $	*/
+/*	$Id: cc.c,v 1.321 2018/12/15 09:11:17 plunky Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -311,7 +311,7 @@ int	xuchar = 0;
 #endif
 int	cxxflag;
 int	cppflag;
-int	printprogname, printfilename;
+int	printprogname, printfilename, printsearchdirs;
 enum { SC11, STRAD, SC89, SGNU89, SC99, SGNU99 } cstd;
 
 #ifdef SOFTFLOAT
@@ -351,6 +351,7 @@ struct Wflags {
 	{ "unreachable-code", INWEXTRA },
 	{ "deprecated-declarations", INWEXTRA },
 	{ "attributes", 0 },
+	{ "uninitialized", INWEXTRA },
 	{ NULL, 0 },
 };
 
@@ -760,6 +761,8 @@ main(int argc, char *argv[])
 			} else if (match(argp, "-print-libgcc-file-name")) {
 				fname = "libpcc.a";
 				printfilename = 1;
+			} else if (match(argp, "-print-search-dirs")) {
+				printsearchdirs = 1;
 			} else if (match(argp, "-pie")) {
 				strlist_append(&middle_linker_flags, argp);
 				pieflag = 1;
@@ -996,7 +999,7 @@ main(int argc, char *argv[])
 	case SC11: c89defs = c11defs = 1; break;
 	}
 
-	if (ninput == 0 && !(printprogname || printfilename))
+	if (ninput == 0 && !(printprogname || printfilename || printsearchdirs))
 		errorx(8, "no input files");
 	if (outfile && (cflag || Sflag || Eflag) && ninput > 1)
 		errorx(8, "-o given with -c || -E || -S and more than one file");
@@ -1037,6 +1040,15 @@ main(int argc, char *argv[])
 		return 0;
 	} else if (printfilename) {
 		printf("%s\n", find_file(fname, &crtdirs, R_OK));
+		return 0;
+	} else if (printsearchdirs) {
+		printf("install: %s\n", LIBEXECDIR);
+		printf("programs: =");
+		strlist_print(&progdirs, stdout, 0, ":");
+		printf("\n");
+		printf("libraries: =");
+		strlist_print(&crtdirs, stdout, 0, ":");
+		printf("\n");
 		return 0;
 	}
 
@@ -1500,7 +1512,7 @@ strlist_exec(struct strlist *l)
 	strlist_make_array(l, &argv, &argc);
 	if (vflag) {
 		printf("Calling ");
-		strlist_print(l, stdout, noexec);
+		strlist_print(l, stdout, noexec, " ");
 		printf("\n");
 	}
 	if (noexec)
