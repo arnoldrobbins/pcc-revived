@@ -1,4 +1,4 @@
-/*	$Id: softfloat.h,v 1.15 2018/12/02 16:37:53 ragge Exp $	*/
+/*	$Id: softfloat.h,v 1.16 2019/03/03 11:15:23 ragge Exp $	*/
 
 /*
  * Copyright (c) 2015 Anders Magnusson. All rights reserved.
@@ -107,6 +107,8 @@ typedef struct FPI {
 	int has_radix_16:1;
 	int storage;
 	int exp_bias;
+	int bias;
+	int maxexp;
 } FPI;
 
 /* SF.kind values; same as STRTODG_* values */
