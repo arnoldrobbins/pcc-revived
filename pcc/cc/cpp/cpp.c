@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.304 2017/12/11 10:36:20 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.305 2019/03/27 13:52:08 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -782,7 +782,7 @@ fsrch(const usch *fn, int idx, struct incs *w)
 		if (i > idx)
 			w = incdir[i];
 		for (; w; w = w->next) {
-			int len = strlen((char *)w->dir) + strlen((char *)fn) + 2; /* '/' + \0 */
+			size_t len = strlen((char *)w->dir) + strlen((char *)fn) + 2; /* '/' + \0 */
 			char *f = xmalloc(len);
 			snprintf(f, len, "%s/%s", w->dir, fn);
 			if (pushfile((usch *)f, fn, i, w->next) == 0)

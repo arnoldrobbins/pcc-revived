@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.12 2017/01/17 13:12:13 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.13 2019/03/28 19:51:32 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -117,7 +117,6 @@ typedef long long OFFSZ;
 #define TARGET_ENDIAN TARGET_LE /* XXX TARGET_PDP */
 #define	MYINSTRING
 #define	MYALIGN
-#define	TARGET_ISMATH		/* need private versions of these */
 
 /* Definitions mostly used in pass2 */
 
@@ -234,3 +233,7 @@ int COLORMAP(int c, int *r);
 #define	SINCW		(MAXSPECIAL+3)	/* post-increment */
 #define	SARGSUB		(MAXSPECIAL+4)	/* arg pointer to array */
 #define	SARGINC		(MAXSPECIAL+5)	/* post-increment arg */
+
+/* floating point definitions */
+#define	FDFLOAT
+#define	DEFAULT_FPI_DEFS { &fpi_ffloat, &fpi_dfloat, &fpi_dfloat }

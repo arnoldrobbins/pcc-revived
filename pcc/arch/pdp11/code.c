@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.9 2017/01/17 13:12:13 ragge Exp $	*/
+/*	$Id: code.c,v 1.10 2019/03/28 19:52:21 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -219,61 +219,6 @@ builtin_return_address(const struct bitable *bt, NODE *a)
 
 NODE *
 builtin_frame_address(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-
-NODE *
-builtin_huge_val(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_huge_valf(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_huge_vall(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_inf(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_inff(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_infl(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_nan(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_nanf(const struct bitable *bt, NODE *a)
-{
-	uerror(__func__);
-	return bcon(0);
-}
-NODE *
-builtin_nanl(const struct bitable *bt, NODE *a)
 {
 	uerror(__func__);
 	return bcon(0);

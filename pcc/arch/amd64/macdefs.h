@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.40 2018/07/28 09:39:11 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.41 2019/03/27 13:31:44 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -309,3 +309,4 @@ extern int mcmodel;
 #define DBL_PREFIX      IEEEFP_64
 #define USE_IEEEFP_X80
 #define LDBL_PREFIX     IEEEFP_X80
+#define DEFAULT_FPI_DEFS { &fpi_binary32, &fpi_binary64, &fpi_binaryx80 }

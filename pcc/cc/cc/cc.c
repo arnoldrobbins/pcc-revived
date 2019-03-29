@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.321 2018/12/15 09:11:17 plunky Exp $	*/
+/*	$Id: cc.c,v 1.323 2019/03/28 20:36:14 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -256,6 +256,7 @@ static int compile_input(char *input, char *output);
 static int assemble_input(char *input, char *output);
 static int run_linker(void);
 static int strlist_exec(struct strlist *l);
+static char *select_linker(char *);
 
 char *cat(const char *, const char *);
 char *setsuf(char *, char);
@@ -625,6 +626,12 @@ main(int argc, char *argv[])
 			} else if (match(u, "stack-protector") ||
 			    match(u, "stack-protector-all")) {
 				sspflag = j ? 0 : 1;
+			} else if (match(u, "use-ld=")) {
+				/* ignore nonsense -fno-use-ld=* command */
+				if (j)
+					break;
+				u += 7;
+				ld = select_linker(u);
 			}
 			/* silently ignore the rest */
 			break;
@@ -1313,9 +1320,9 @@ assemble_input(char *input, char *output)
 	PCC_EARLY_AS_ARGS
 #endif
 	strlist_append_list(&args, &assembler_flags);
-	strlist_append(&args, input);
 	strlist_append(&args, "-o");
 	strlist_append(&args, output);
+	strlist_append(&args, input);
 	strlist_prepend(&args,
 	    find_file(as, &progdirs, X_OK));
 #ifdef PCC_LATE_AS_ARGS
@@ -1394,6 +1401,28 @@ run_linker(void)
 	strlist_free(&linker_flags);
 	return retval;
 }
+
+static char *
+select_linker(char *name)
+{
+	static char ld_name[8];
+ 
+	/* Short names first.  */
+	if (strcmp(name, "bfd") == 0 ||
+	    strcmp(name, "gold") == 0 ||
+	    strcmp(name, "lld") == 0) {
+		snprintf(ld_name, sizeof ld_name, "ld.%s", name);
+		return ld_name;
+	}
+ 
+	/* Must be absolute path otherwise.  */
+	if (name[0] != '/')
+		return LINKER;
+ 
+	return name;
+}
+
+
 
 static char *cxxt[] = { "cc", "cp", "cxx", "cpp", "CPP", "c++", "C" };
 int
@@ -1936,7 +1965,7 @@ struct flgcheck asflgcheck[] = {
 #if defined(os_darwin)
 	{ &Bstatic, 1, "-static" },
 #endif
-#if !defined(USE_YASM)
+#if !defined(USE_YASM) && !defined(NO_AS_V)
 	{ &vflag, 1, "-v" },
 #endif
 #if defined(os_openbsd) && defined(mach_mips64)

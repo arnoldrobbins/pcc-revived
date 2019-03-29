@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.16 2017/01/17 13:12:13 ragge Exp $	*/
+/*	$Id: local.c,v 1.17 2019/03/28 19:51:57 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -247,7 +247,9 @@ instring(struct symtab *sp)
 int
 ninval(CONSZ off, int fsz, NODE *p)
 {
-	union { float f; double d; short s[4]; int i[2]; } u;
+#ifndef LANG_CXX
+	SFP sfp = p->n_scon;
+#endif
 	TWORD t;
 	int i;
 
@@ -267,15 +269,16 @@ ninval(CONSZ off, int fsz, NODE *p)
 		printf("%o ; %o\n", (int)((glval(p) >> 16) & 0177777),
 		    (int)(glval(p) & 0177777));
 		break;
+#ifndef LANG_CXX
 	case FLOAT:
-		u.f = (float)((FLT *)p->n_dcon)->fp;
-		printf("%o ; %o\n", u.s[0], u.s[1]);
+		printf("%o ; %o\n", sfp->fp[0] & 0xffff, sfp->fp[0] >> 16);
 		break;
 	case LDOUBLE:
 	case DOUBLE:
-		u.d = (double)((FLT *)p->n_dcon)->fp;
-		printf("%o ; %o ; %o ; %o\n", u.s[0], u.s[1], u.s[2], u.s[3]);
+		printf("%o ; %o ; %o ; %o\n", sfp->fp[0] & 0xffff,
+		    sfp->fp[0] >> 16, sfp->fp[1] & 0xffff, sfp->fp[1] >> 16);
 		break;
+#endif
 	default:
 		return 0;
 	}
