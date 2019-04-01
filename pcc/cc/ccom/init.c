@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.106 2018/12/02 18:40:46 ragge Exp $	*/
+/*	$Id: init.c,v 1.107 2019/03/31 18:29:06 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -378,7 +378,7 @@ zbits(OFFSZ off, int fsz)
 	}
 #endif
 	if (fsz >= SZCHAR) {
-		printf(PRTPREF "%s %d\n", asspace, fsz/SZCHAR);
+		printf(PRTPREF "%s " CONFMT "\n", asspace, (CONSZ)(fsz/SZCHAR));
 		fsz -= (fsz/SZCHAR) * SZCHAR;
 	}
 	if (fsz) {

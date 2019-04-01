@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.10 2019/03/28 19:52:21 ragge Exp $	*/
+/*	$Id: code.c,v 1.13 2019/03/31 20:09:18 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -44,11 +44,11 @@ setseg(int seg, char *name)
 {
 	switch (seg) {
 	case PROG: name = ".text"; break;
+	case STRNG:
+	case RDATA:
 	case DATA:
 	case LDATA: name = ".data"; break;
 	case UDATA: break;
-	case STRNG:
-	case RDATA: name = ".rodata"; break;
 	default:
 		cerror("setseg");
 	}
@@ -156,6 +156,10 @@ ejobcode(int flag)
 void
 bjobcode(void)
 {
+	extern char *asspace;
+	/* ".word" is not printed out for pdp11 as */
+	astypnames[INT] = astypnames[UNSIGNED] = "";
+	asspace = ".=.+"; /* advance counter, not .space */
 }
 
 /*
