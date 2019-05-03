@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.5 2019/03/31 20:08:33 ragge Exp $	*/
+/*	$Id: order.c,v 1.13 2019/04/25 17:40:33 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -71,8 +71,10 @@ offstar(NODE *p, int shape)
 	if (isreg(p))
 		return; /* Is already OREG */
 
-	if (p->n_op == UMUL)
-		p = p->n_left; /* double indexed umul */
+	if (p->n_op == UMUL) {
+		if (p->n_type < PTR+LONG || p->n_type > PTR+ULONGLONG)
+			p = p->n_left; /* double indexed umul */
+	}
 
 	if (inctree(p)) /* Do post-inc conversion */
 		return;
@@ -111,9 +113,19 @@ myormake(NODE *p)
 	}
 	if (q->n_op != OREG)
 		return;
+	if (TBLIDX(q->n_su))
+		return; /* got sub-conversion, cannot convert */
+	if (R2TEST(regno(q)))
+		return; /* cannot convert anymore */
+	if (p->n_type >= LONG && p->n_type <= ULONGLONG)
+		return;
 	p->n_op = OREG;
 	setlval(p, getlval(q));
 	p->n_rval = R2PACK(q->n_rval, 0, 0);
+	if (x2debug) {
+		printf("myormake end(%p)\n", p);
+		fwalk(p, e2print, 0);
+	}
 	nfree(q);
 }
 
@@ -123,7 +135,6 @@ myormake(NODE *p)
 int
 shumul(NODE *p, int shape)
 {
-
 	if (x2debug)
 		printf("shumul(%p)\n", p);
 
@@ -173,10 +184,12 @@ nspecial(struct optab *q)
 	switch (q->op) {
 	case MUL:
 		if (q->visit == INAREG) {
-			static struct rspecial s[] = { { NLEFT, R1 }, { 0 } };
+			static struct rspecial s[] = {
+			    { NLEFT, R1 }, { NRES, R1 }, { 0 } };
 			return s;
 		} else if (q->visit == INBREG) {
-			static struct rspecial s[] = { { NRES, R01 }, { 0 } };
+			static struct rspecial s[] = {
+			    { NEVER, R0 }, { NEVER, R1 },{ NRES, R01 }, { 0 } };
 			return s;
 		}
 		break;
@@ -188,10 +201,13 @@ nspecial(struct optab *q)
 			return s;
 		} else if (q->visit == INAREG) {
 			static struct rspecial s[] = {
-			    { NRES, R0 }, { 0 } };
+			    { NEVER, R0 }, { NEVER, R1 }, { NLEFT, R1 },
+			    { NRES, R0 }, { NORIGHT, R0 }, { NORIGHT, R1 },
+			    { 0 } };
 			return s;
 		} else if (q->visit == INBREG) {
-			static struct rspecial s[] = { { NRES, R01 }, { 0 } };
+			static struct rspecial s[] = {
+			    { NEVER, R0 }, { NEVER, R1 },{ NRES, R01 }, { 0 } };
 			return s;
 		}
 		break;
@@ -203,14 +219,26 @@ nspecial(struct optab *q)
 			return s;
 		} else if (q->visit == INAREG) {
 			static struct rspecial s[] = {
-			    { NRES, R1 }, { 0 } };
+			    { NEVER, R0 }, { NEVER, R1 }, { NLEFT, R1 },
+			    { NRES, R1 }, { NORIGHT, R0 }, { NORIGHT, R1 },
+			    { 0 } };
 			return s;
 		} else if (q->visit == INBREG) {
-			static struct rspecial s[] = { { NRES, R01 }, { 0 } };
+			static struct rspecial s[] = {
+			    { NEVER, R0 }, { NEVER, R1 },{ NRES, R01 }, { 0 } };
 			return s;
 		}
 		break;
 
+	case RS:
+		{
+			static struct rspecial s[] = {
+			    { NEVER, R0 }, { NEVER, R1 }, { NLEFT, R1 },
+			    { NRES, R1 }, { NORIGHT, R0 }, { NORIGHT, R1 },
+			    { 0 } };
+			return s;
+		}
+		break;
 	case SCONV:
 		if (q->lshape == SAREG) {
 			static struct rspecial s[] = {
@@ -219,8 +247,18 @@ nspecial(struct optab *q)
 		}
 		break;
 	case STASG: {
+			/* R0 == ESI, R1 == EDI, R2 == ECX */
 			static struct rspecial s[] = {
-			    { NLEFT, R0 }, { NRIGHT, R1 }, 
+			    { NEVER, R1 }, { NEVER, R0 }, { NRIGHT, R0 },
+			    { NOLEFT, R0 }, { NOLEFT, R2 }, { NORIGHT, R2 },
+			    { NEVER, R2 },
+			};
+			return s;
+		}
+		break;
+	case STARG: {
+			static struct rspecial s[] = {
+			    { NEVER, R0 }, { NLEFT, R1 }, 
 			    { NEVER, R2 }, { 0 }
 			};
 			return s;

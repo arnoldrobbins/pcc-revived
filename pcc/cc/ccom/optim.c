@@ -1,4 +1,4 @@
-/*	$Id: optim.c,v 1.65 2016/07/09 15:59:43 ragge Exp $	*/
+/*	$Id: optim.c,v 1.66 2019/04/22 06:41:18 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -288,6 +288,7 @@ again:	o = p->n_op;
 			    strmemb(q->n_right->n_ap)) {
 				p = zapleft(p);
 				p = zapleft(p);
+				break;
 			}
 		}
 		/* FALLTHROUGH */

@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.18 2019/03/31 20:09:18 ragge Exp $	*/
+/*	$Id: local.c,v 1.25 2019/04/23 16:14:39 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -24,7 +24,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+#include "unicode.h"
 #include "pass1.h"
 
 #ifndef LANG_CXX
@@ -52,9 +52,11 @@ NODE *
 clocal(NODE *p)
 {
 
+	CONSZ c;
 	register struct symtab *q;
 	register NODE *r, *l;
 	register int o;
+	TWORD m;
 
 #ifdef PCC_DEBUG
 	if (xdebug) {
@@ -105,17 +107,83 @@ clocal(NODE *p)
 			break;
 		if ((r = l->n_left->n_left)->n_type > INT)
 			break;
+		c = glval(l->n_right);
+		if (c < MIN_INT || c > MAX_UNSIGNED)
+			break;
 		/* compare with constant without casting */
 		nfree(l->n_left);
 		l->n_left = r;
 		l->n_right->n_type = l->n_left->n_type;
 		break;
 
+	case SCONV:
+		if (p->n_left->n_op == COMOP)
+			break;	/* may propagate wrong type later */
+		l = p->n_left;
+
+		if (p->n_type == l->n_type) {
+			p1nfree(p);
+			return l;
+		}
+
+		if ((p->n_type & TMASK) == 0 && (l->n_type & TMASK) == 0 &&
+		    tsize(p->n_type, p->n_df, p->n_ap) ==
+		    tsize(l->n_type, l->n_df, l->n_ap)) {
+			if (p->n_type != FLOAT && p->n_type != DOUBLE &&
+			    l->n_type != FLOAT && l->n_type != DOUBLE &&
+			    l->n_type != LDOUBLE && p->n_type != LDOUBLE) {
+				if (l->n_op == NAME || l->n_op == UMUL ||
+				    l->n_op == TEMP) {
+					l->n_type = p->n_type;
+					p1nfree(p);
+					return l;
+				}
+			}
+		}
+
+		if (DEUNSIGN(p->n_type) == INT && DEUNSIGN(l->n_type) == INT &&
+		    coptype(l->n_op) == BITYPE && l->n_op != COMOP &&
+		    l->n_op != QUEST && l->n_op != ASSIGN && l->n_op != RS) {
+			l->n_type = p->n_type;
+			p1nfree(p);
+			return l;
+		}
+
+		o = l->n_op;
+		m = p->n_type;
+		if (o == ICON) {
+			/*
+			 * Can only end up here if o is an address,
+			 * and in that case the only compile-time conversion
+			 * possible is to int.
+			 */
+
+			if (l->n_sp == 0) {
+				p->n_type = UNSIGNED;
+				concast(l, m);
+			} else if (m != INT && m != UNSIGNED)
+				break;
+			l->n_type = m;
+			l->n_ap = 0;
+			p1nfree(p);
+			return l;
+		}
+
+		if (p->n_type != UCHAR || l->n_type != CHAR ||
+		    l->n_op != UMUL || (l->n_left->n_op != TEMP))
+			break;
+		l->n_type = UCHAR;
+		MODTYPE(l->n_left->n_type, UCHAR);
+		p = nfree(p);
+		break;
+
+#if 0
 	case STASG: /* struct assignment, modify left */
 		l = p->n_left;
-		if (l->n_type == STRTY)
+		if (ISSOU(l->n_type))
 			p->n_left = buildtree(ADDROF, l, NIL);
 		break;
+#endif
 
 	case FORCE:
 		/* put return value in return reg */
@@ -177,9 +245,9 @@ andable(NODE *p)
 int
 cisreg(TWORD t)
 {
-	if (t == FLOAT || t == DOUBLE || t == LDOUBLE ||
-	    t == LONGLONG || t == ULONGLONG)
-		return 0; /* not yet */
+//	if (t == FLOAT || t == DOUBLE || t == LDOUBLE ||
+//	    t == LONGLONG || t == ULONGLONG)
+//		return 0; /* not yet */
 	return 1;
 }
 
@@ -205,6 +273,7 @@ spalloc(NODE *t, NODE *p, OFFSZ off)
 	sp = block(REG, NIL, NIL, PTR+INT, t->n_df, t->n_ap);
 	slval(sp, 0);
 	sp->n_rval = STKREG;
+	sp = buildtree(PLUS, sp, bcon(1));
 	t->n_type = sp->n_type;
 	ecomp(buildtree(ASSIGN, t, sp)); /* Emit! */
 
@@ -218,26 +287,40 @@ spalloc(NODE *t, NODE *p, OFFSZ off)
 void
 instring(struct symtab *sp)
 {
-	char *s;
+	unsigned short sh[2];
 	int val, cnt;
+	TWORD t;
+	char *s;
 
 	defloc(sp);
-
-	for (cnt = 0, s = sp->sname; *s != 0; ) {
-		if (cnt++ == 0)
-			printf(".byte ");
-		if (*s++ == '\\')
-			val = esccon(&s);
-		else
-			val = s[-1];
-		printf("%o", val & 0377);
-		if (cnt > 15) {
-			cnt = 0;
-			printf("\n");
-		} else
-			printf(",");
-	}
-	printf("%s0\n", cnt ? "" : ".byte ");
+	t = BTYPE(sp->stype);
+	s = sp->sname;
+	if (t == UNSIGNED) {
+		/* convert to UTF-16 */
+		while (*s) {
+			cp2u16(u82cp(&s), sh);
+			if (sh[0]) printf("%o\n", sh[0]);
+			if (sh[1]) printf("%o\n", sh[1]);
+		}
+		printf("0\n");
+	} else if (t == CHAR) {
+		for (cnt = 0; *s != 0; ) {
+			if (cnt++ == 0)
+				printf(".byte ");
+			if (*s == '\\')
+				val = esccon(&s);
+			else
+				val = *s++;
+			printf("%o", val & 0377);
+			if (cnt > 15) {
+				cnt = 0;
+				printf("\n");
+			} else
+				printf(",");
+		}
+		printf("%s0\n", cnt ? "" : ".byte ");
+	} else
+		cerror("instring");
 }
 
 /*
@@ -328,6 +411,13 @@ ctype(TWORD type)
 		MODTYPE(type,DOUBLE);
 		break;
 
+	/* XXX remove as soon as 64-bit is added */
+	case LONGLONG:
+		MODTYPE(type,LONG);
+		break;
+	case ULONGLONG:
+		MODTYPE(type,ULONG);
+		break;
 	}
 	return (type);
 }

@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.252 2017/10/03 19:58:10 ragge Exp $	*/
+/*	$Id: regs.c,v 1.253 2019/04/28 18:44:38 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1485,7 +1485,8 @@ deldead(NODE *p, bittype *lvar)
 		q = p->n_right;
 		*p = *q;
 		nfree(q);
-		rv = 1;
+		deldead(p, lvar);
+		return 1;
 	}
 	ty = optype(p->n_op);
 	if (ty != LTYPE)

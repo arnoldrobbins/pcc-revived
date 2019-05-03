@@ -1,4 +1,4 @@
-/*	$Id: softfloat.c,v 1.45 2019/03/28 19:50:53 ragge Exp $	*/
+/*	$Id: softfloat.c,v 1.49 2019/04/18 13:43:55 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 Anders Magnusson. All rights reserved.
@@ -56,6 +56,9 @@ typedef struct FPI {
 	int bias;	/* exponent bias */
 	int minexp;	/* min exponent (except zero/subnormal) */
 	int maxexp;	/* max exponent (except INF) */
+	int min10exp;	/* min base10 exponent (except zero/subnormal) */
+	int max10exp;	/* max base10 exponent (except INF) */
+	int dig;	/* max number of decimal digits in mant */
 	int expadj;	/* adjust for fraction point position */
 
 	/* fp-specific routines */
@@ -137,7 +140,6 @@ ffloat_make(SFP sfp, int typ, int sign, int exp, MINT *m)
 		break; /* no subnormal */
 	}
 	SD(("ffloat_make3: fp %08x\n", sfp->fp[0]));
-	
 }
 
 static int
@@ -157,6 +159,9 @@ FPI fpi_ffloat = {
         .bias = 128,
 	.minexp = FFLOAT_MIN_EXP-1,
 	.maxexp = FFLOAT_MAX_EXP-1,
+	.min10exp = FFLOAT_MIN_10_EXP-1,
+	.max10exp = FFLOAT_MAX_10_EXP-1,
+	.dig = FFLOAT_DIG,
 	.expadj = 0,
 
 	.make = ffloat_make,
@@ -189,7 +194,7 @@ dfloat_make(SFP sfp, int typ, int sign, int exp, MINT *m)
 	    sftyp[typ], sign, exp, m->val[3], m->val[2], m->val[1], m->val[0]));
 	switch (typ) {
 	case SOFT_ZERO:
-		sfp->fp[0] = 0;
+		sfp->fp[0] = sfp->fp[1] = 0;
 		break;
 	case SOFT_INFINITE:
 		sfp->fp[0] |= 0xffff7fff; /* highest possible number */
@@ -236,6 +241,9 @@ FPI fpi_dfloat = {
         .bias = 128,
 	.minexp = DFLOAT_MIN_EXP-1,
 	.maxexp = DFLOAT_MAX_EXP-1,
+	.min10exp = DFLOAT_MIN_10_EXP-1,
+	.max10exp = DFLOAT_MAX_10_EXP-1,
+	.dig = DFLOAT_DIG,
 	.expadj = 0,
 
 	.make = dfloat_make,
@@ -314,7 +322,7 @@ ieee32_make(SFP sfp, int typ, int sign, int exp, MINT *m)
 static int
 ieee32_unmake(SFP sfp, int *sign, int *exp, MINT *m)
 {
-	int v = ieee32_classify(sfp);
+	int t, v = ieee32_classify(sfp);
 
 	*sign = (sfp->fp[0] >> 31) & 1;
 	*exp = ((sfp->fp[0] >> 23) & 0xff) - fpi_binary32.bias;
@@ -323,6 +331,9 @@ ieee32_unmake(SFP sfp, int *sign, int *exp, MINT *m)
 	m->len = 2;
 	if (v == SOFT_SUBNORMAL) {
 		v = SOFT_NORMAL;
+		chomp(m);
+		t = topbit(m);
+		*exp = fpi_binary32.minexp - (fpi_binary32.nbits - t) + 1;
 	} else if (v == SOFT_NORMAL)
 		m->val[1] |= (1 << 7);
 	return v;
@@ -334,6 +345,9 @@ FPI fpi_binary32 = {
         .bias = 127,
 	.minexp = IEEEFP_32_MIN_EXP-1,
 	.maxexp = IEEEFP_32_MAX_EXP-1,
+	.min10exp = IEEEFP_32_MIN_10_EXP-1,
+	.max10exp = IEEEFP_32_MAX_10_EXP-1,
+	.dig = IEEEFP_32_DIG,
 	.expadj = 1,
 
 	.make = ieee32_make,
@@ -368,17 +382,22 @@ ieee64_classify(SFP sfp)
 static int
 ieee64_unmake(SFP sfp, int *sign, int *exp, MINT *m)
 {
-	int v = ieee64_classify(sfp);
+	int t, v = ieee64_classify(sfp);
 
 	*sign = (sfp->fp[1] >> 31) & 1;
 	*exp = ((sfp->fp[1] >> 20) & 0x7ff) - fpi_binary64.bias;
 	minit(m, sfp->fp[0]);
 	m->val[1] = (sfp->fp[0] >> 16);
 	m->val[2] = sfp->fp[1];
-	m->val[3] = ((sfp->fp[1] >> 16) & 0x0f) | (1 << 4);
+	m->val[3] = ((sfp->fp[1] >> 16) & 0x0f);
 	m->len = 4;
-	if (v == SOFT_SUBNORMAL)
+	if (v == SOFT_SUBNORMAL) {
 		v = SOFT_NORMAL;
+		chomp(m);
+		t = topbit(m);
+		*exp = fpi_binary64.minexp - (fpi_binary64.nbits - t) + 1;
+	} else if (v == SOFT_NORMAL)
+		m->val[3] |= (1 << 4);
 	return v;
 }
 
@@ -425,6 +444,9 @@ FPI fpi_binary64 = {
 	.bias = 1023,
 	.minexp = IEEEFP_64_MIN_EXP-1,
 	.maxexp = IEEEFP_64_MAX_EXP-1,
+	.min10exp = IEEEFP_64_MIN_10_EXP-1,
+	.max10exp = IEEEFP_64_MAX_10_EXP-1,
+	.dig = IEEEFP_64_DIG,
 	.expadj = 1,
 
 	.make = ieee64_make,
@@ -503,9 +525,10 @@ ieeex80_make(SFP sfp, int typ, int sign, int exp, MINT *m)
 static int
 ieeex80_unmake(SFP sfp, int *sign, int *exp, MINT *m)
 {
-	int v = ieeex80_classify(sfp);
+	int t, v = ieeex80_classify(sfp);
 
-	SD(("ieeex80_unmake: %04x %08x %08x\n", sfp->fp[2], sfp->fp[1], sfp->fp[0]));
+	SD(("ieeex80_unmake: %s %04x %08x %08x\n", 
+	    sftyp[v], sfp->fp[2], sfp->fp[1], sfp->fp[0]));
 	*sign = (sfp->fp[2] >> 15) & 1;
 	*exp = (sfp->fp[2] & 0x7fff) - fpi_binaryx80.bias;
 	minit(m, sfp->fp[0]);
@@ -513,9 +536,13 @@ ieeex80_unmake(SFP sfp, int *sign, int *exp, MINT *m)
 	m->val[2] = sfp->fp[1];
 	m->val[3] = (sfp->fp[1] >> 16);
 	m->len = 4;
-	if (v == SOFT_SUBNORMAL)
+	if (v == SOFT_SUBNORMAL) {
 		v = SOFT_NORMAL;
-	SD(("ieeex80_unmake: sign %d exp %d m %04x%04x %04x%04x\n",
+		chomp(m);
+		t = topbit(m);
+		*exp = fpi_binaryx80.minexp - (fpi_binaryx80.nbits - t) + 1;
+	}
+	SD(("ieeex80_unmake2: sign %d exp %d m %04x%04x %04x%04x\n",
 	    *sign, *exp, m->val[3], m->val[2], m->val[1], m->val[0]));
 	return v;
 }
@@ -527,6 +554,9 @@ FPI fpi_binaryx80 = {
 	.bias = 16383,
 	.minexp = IEEEFP_X80_MIN_EXP-1,
 	.maxexp = IEEEFP_X80_MAX_EXP-1,
+	.min10exp = IEEEFP_X80_MIN_10_EXP-1,
+	.max10exp = IEEEFP_X80_MAX_10_EXP-1,
+	.dig = IEEEFP_X80_DIG,
 	.expadj = 1,
 
 	.make = ieeex80_make,
@@ -713,7 +743,7 @@ soft_int2fp(SFP rv, CONSZ l, TWORD f, TWORD t)
 	m.val[3] = l >> 48;
 	m.len = 4;
 
-	e = topbit(&m);
+	e = topbit(&m) + 1 - LDBLPTR->expadj;
 
 	LDBLPTR->make(rv, c, s, e, &m);
 	if (t == FLOAT || t == DOUBLE)
@@ -781,7 +811,7 @@ soft_fp2int(SFP sfp, TWORD t)
 	if (m.len > 3)
 		rv |= ((CONSZ)m.val[3] << 48);
 
-	e = e - LDBLPTR->nbits + 1;
+	e = e - LDBLPTR->nbits + LDBLPTR->expadj;
 	while (e > 0)
 		rv <<= 1, e--;
 	while (e < 0)
@@ -1140,29 +1170,6 @@ mround(MINT *d, MINT *q, MINT *r)
 }
 
 /*
- * Sanity check mantissa and exponent.
- * we decide that exponent more than 5 digits is too large.
- */
-static int
-mesanity(MINT *m, char *s)
-{	
-	int i, neg = 0;
-	
-	if (MINTZ(m))
-		return SOFT_ZERO; 
-	if ((*s == '-') || (*s == '+')) {
-		neg = (*s == '-');
-		s++;
-	}
-	for (i = 0; s[i] >= '0' && s[i] <= '9'; i++)
-		;
-	if (i > 4)
-		return (neg ? SOFT_ZERO : SOFT_INFINITE);
-	return 0;
-}
-
-
-/*
  * - [0-9]+[Ee][+-]?[0-9]+				222e-33
  * - [0-9]*.[0-9]+([Ee][+-]?[0-9]+)?			.222e-33
  * - [0-9]+.[0-9]*([Ee][+-]?[0-9]+)?			222.e-33
@@ -1218,14 +1225,18 @@ decbig(char *str, MINT *mmant, MINT *mexp)
 		}
 		break;
 	}
-	str--;
-	if ((ch = mesanity(mmant, str)))
-		return ch;
+	if (MINTZ(mmant))
+		return SOFT_ZERO;
 	if (exp10 < 0) {
+		if (exp10 < LDBLPTR->min10exp - LDBLPTR->dig - 5)
+			return SOFT_ZERO;
 		cur = mexp;
 		exp10 = -exp10;
-	} else
+	} else if (exp10 > 0) {
+		if (exp10 > LDBLPTR->max10exp)
+			return SOFT_INFINITE;
 		cur = mmant;
+	}
 	for (i = 0; i < exp10; i++) {
 		mult(cur, &ten, &b);
 		mcopy(&b, cur);
@@ -1267,13 +1278,18 @@ hexbig(char *str, MINT *mmant, MINT *mexp)
 
 		case 'p':
 		case 'P':
-			if ((ch = mesanity(mmant, str)))
-				return ch;
+			if (MINTZ(mmant))
+				return SOFT_ZERO;
 			exp2 += atoi(str);
-			if (exp2 < 0)
+			if (exp2 < 0) {
+				if (exp2 < LDBLPTR->minexp - LDBLPTR->nbits)
+					return SOFT_ZERO;
 				mshl(mexp, -exp2);
-			else
+			} else if (exp2 > 0) {
+				if (exp2 > LDBLPTR->maxexp)
+					return SOFT_INFINITE;
 				mshl(mmant, exp2);
+			}
 			return SOFT_NORMAL;
 
 		default:
@@ -1448,7 +1464,7 @@ uint32_t * soft_toush(SFP sfp, TWORD t, int *nbits)
 	fpis[MKSF(t)]->make(&sf, typ, sign, exp, &mant);
 
 #ifdef DEBUGFP
-	{ float ldf; double ldd; long double ldt;
+	if (0) { float ldf; double ldd; long double ldt;
 	ldt = (t == FLOAT ? (float)sfp2ld(sfp) :
 	    t == DOUBLE ? (double)sfp2ld(sfp) : (long double)sfp2ld(sfp));
 	ldf = ldt;

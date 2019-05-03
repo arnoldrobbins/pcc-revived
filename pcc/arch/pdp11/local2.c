@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.13 2019/03/31 20:08:33 ragge Exp $	*/
+/*	$Id: local2.c,v 1.20 2019/04/27 20:35:52 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -30,6 +30,7 @@
 
 static int spcoff;
 static int argsiz(NODE *p);
+static void negcon(FILE *fp, int con);
 
 void
 deflab(int label)
@@ -146,14 +147,12 @@ tlen(p) NODE *p;
 static void
 twolcomp(NODE *p)
 {
-	int o = p->n_op;
+	int u;
 	int s = getlab2();
 	int e = p->n_label;
 	int cb1, cb2;
 
-	if (o >= ULE)
-		o -= (ULE-LE);
-	switch (o) {
+	switch (u = p->n_op) {
 	case NE:
 		cb1 = 0;
 		cb2 = NE;
@@ -164,11 +163,19 @@ twolcomp(NODE *p)
 		break;
 	case LE:
 	case LT:
+		u += (ULE-LE);
+		/* FALLTHROUGH */
+	case ULE:
+	case ULT:
 		cb1 = GT;
 		cb2 = LT;
 		break;
 	case GE:
 	case GT:
+		u += (ULE-LE);
+		/* FALLTHROUGH */
+	case UGE:
+	case UGT:
 		cb1 = LT;
 		cb2 = GT;
 		break;
@@ -177,49 +184,46 @@ twolcomp(NODE *p)
 		cb1 = cb2 = 0; /* XXX gcc */
 	}
 	if (p->n_op >= ULE)
-		cb1 += 2, cb2 += 2;
-	expand(p, 0, "cmp	AR,AL\n");
+		cb1 += 4, cb2 += 4;
+	expand(p, 0, "cmp	AL,AR\n");
 	if (cb1) cbgen(cb1, s);
 	if (cb2) cbgen(cb2, e);
-        expand(p, 0, "cmp	UR,UL\n");
-        cbgen(p->n_op, e);
+        expand(p, 0, "cmp	UL,UR\n");
+        cbgen(u, e);
         deflab(s);
 }
 
-
 /*
- * Generate compare code for long instructions when right node is 0.
+ * print out a 32-bit constant as arg.
  */
 static void
-lcomp(NODE *p)
+lconarg(NODE *p)
 {
-	switch (p->n_op) {
-	case EQ:
-		expand(p, FORCC, "tst	AL\n");
-		printf("jne	1f\n");
-		expand(p, FORCC, "tst	UL\n");
-		cbgen(EQ, p->n_label);
-		printf("1:\n");
-		break;
-	case NE:
-		expand(p, FORCC, "tst	AL\n");
-		cbgen(NE, p->n_label);
-		expand(p, FORCC, "tst	UL\n");
-		cbgen(NE, p->n_label);
-		break;
-	case GE:
-		expand(p, FORCC, "tst	AL\n");
-		cbgen(GE, p->n_label);
-		break;
-	default:
-		comperr("lcomp %p", p);
-	} 
+	CONSZ c = getlval(p);
+	char *m = spcoff ? "-" : "";
+
+	spcoff += 4;
+
+	if (c == 0) {
+		printf("clr	%s(sp)\nclr	-(sp)\n", m);
+	} else if (c >= 0 && c < 65536) {
+		printf("mov	$%llo,%s(sp)\nclr	-(sp)\n", c, m);
+	} else if (c >= -32768 && c < 32768) {
+		printf("mov	$%llo,%s(sp)\nsxt	-(sp)\n",
+		    c & 0177777, m);
+	} else {
+		printf("mov	$%llo,%s(sp)\nmov	$%llo,-(sp)\n",
+		    c & 0177777, m, (c >> 16) & 0177777);
+	}
 }
 
 void
 zzzcode(NODE *p, int c)
 {
 	struct attr *ap;
+	NODE *l;
+	char *s;
+	int o;
 
 	switch (c) {
 	case 'A': /* print out - if not first arg */
@@ -230,7 +234,7 @@ zzzcode(NODE *p, int c)
 
 	case 'B': /* arg is pointer to block */
 		expand(p->n_left, FOREFF, "mov	AL,ZA(sp)\n");
-		expand(p->n_left, FOREFF, "sub	CR,(sp)\n");
+		expand(p->n_left, FOREFF, "sub	AR,(sp)\n");
 		break;
 		
 	case 'C': /* subtract stack after call */
@@ -245,12 +249,12 @@ zzzcode(NODE *p, int c)
 			printf("add	$%o,sp\n", (int)p->n_qual);
 		break;
 
-	case 'D': /* long comparisions */
-		lcomp(p);
+	case 'D': /* long constant as arg */
+		lconarg(p->n_left);
 		break;
 
 	case 'E': /* long move */
-		rmove(p->n_right->n_reg, p->n_left->n_reg, p->n_type);
+		rmove(regno(p->n_right), regno(p->n_left), p->n_type);
 		break;
 
 	case 'F': /* long comparision */
@@ -266,35 +270,55 @@ zzzcode(NODE *p, int c)
 		expand(p->n_left->n_left, FOREFF, "inc	AL\n");
 		break;
 
-	case 'I': /* struct assign. Left in R0, right R1, counter R2. */
+	case 'I': /* struct assign. Right in R0, left R1, counter R2. */
 		ap = attr_find(p->n_ap, ATTR_P2STRUCT);
+		l = p->n_left;
+		if (l->n_op == OREG) {
+			int r = l->n_rval;
+			if (R2TEST(r)) {
+				l->n_rval = R2UPK1(r);
+				expand(p, FOREFF, "mov	AL,r1\n");
+				l->n_rval = r;
+			} else {
+				printf("mov	%s,r1\n", rnames[r]);
+				if (getlval(l)) {
+					printf("add	$");
+					negcon(stdout, getlval(l));
+					printf(",r1\n");
+				}
+			}
+		} else
+			printf("mov	$%s,r1\n", l->n_name);
 		printf("mov	$%o,r2\n", (ap->iarg(0)+1) >> 1);
-		printf("1: mov	(r1)+,(r0)+\n");
+		printf("1: mov	(r0)+,(r1)+\n");
 		printf("sob	r2,1b\n");
 		break;
 
-	case 'Q': /* struct assignment, no rv */
-		printf("mov	$%o,", attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0)/2);
-		expand(p, INAREG, "A1\n");
-		printf("1:\n");
-		expand(p, INAREG, "mov	(AR)+,(AL)+\n");
-		expand(p, INAREG, "dec	A1\n");
-		printf("jne	1b\n");
+	case 'J': /* struct argument */
+		ap = attr_find(p->n_ap, ATTR_P2STRUCT);
+		o = (ap->iarg(0) + 1) & ~1;
+		printf("sub	$%o,sp\n", spcoff == 0 ? o-2 : o);
+		printf("mov	sp,r0\n");
+		printf("mov	$%o,r2\n", o >> 1);
+		printf("1: mov	(r1)+,(r0)+\n");
+		printf("sob	r2,1b\n");
+		spcoff += argsiz(p);
 		break;
 
-	case 'R': /* struct assignment with rv */
-		printf("mov	$%o,", attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0)/2);
-		expand(p, INAREG, "A1\n");
-		expand(p, INAREG, "mov	AR,A2\n");
-		printf("1:\n");
-		expand(p, INAREG, "mov	(A2)+,(AL)+\n");
-		expand(p, INAREG, "dec	A1\n");
-		printf("jne	1b\n");
-		break;
-
-	case '1': /* lower part of double regs */
-		p = getlr(p, '1');
-		printf("r%c", rnames[p->n_rval][1]);
+	case 'K': /* long long mul/div */
+		o = spcoff++;
+		if (p->n_right->n_op == ICON) {
+			lconarg(p->n_right);
+		} else
+			expand(p, FOREFF, "mov	UR,-(sp)\nmov	AR,-(sp)\n");
+		if (p->n_left->n_op == ICON) {
+			lconarg(p->n_left);
+		} else
+			expand(p, FOREFF, "mov	UL,-(sp)\nmov	AL,-(sp)\n");
+		s = p->n_op == MUL ? "lmul" :
+		    p->n_type == ULONG ? "uldiv" : "ldiv";
+		printf("jsr	pc,%s\nadd	$10,sp\n", s);
+		spcoff = o;
 		break;
 
 	default:
@@ -342,34 +366,6 @@ int
 shtemp(NODE *p)
 {
 	return 0;
-#if 0
-	int r;
-
-	if (p->n_op == STARG )
-		p = p->n_left;
-
-	switch (p->n_op) {
-	case REG:
-		return (!istreg(p->n_rval));
-
-	case OREG:
-		r = p->n_rval;
-		if (R2TEST(r)) {
-			if (istreg(R2UPK1(r)))
-				return(0);
-			r = R2UPK2(r);
-		}
-		return (!istreg(r));
-
-	case UMUL:
-		p = p->n_left;
-		return (p->n_op != UMUL && shtemp(p));
-	}
-
-	if (optype(p->n_op) != LTYPE)
-		return(0);
-	return(1);
-#endif
 }
 
 static void
@@ -393,7 +389,6 @@ conput(FILE *fp, NODE *p)
 
 	switch (p->n_op) {
 	case ICON:
-		printf("$");
 		if (p->n_name[0] != '\0') {
 			fprintf(fp, "%s", p->n_name);
 			if (val)
@@ -482,6 +477,7 @@ adrput(FILE *io, NODE *p)
 		return;
 	case ICON:
 		/* addressable value of the constant */
+		printf("$");
 		conput(io, p);
 		return;
 
@@ -577,6 +573,7 @@ static void
 fixops(NODE *p, void *arg)
 {
 	static int fltwritten;
+	NODE *r;
 
 	if (!fltwritten && (p->n_type == FLOAT || p->n_type == DOUBLE)) {
 		printf(".globl	fltused\n");
@@ -586,7 +583,13 @@ fixops(NODE *p, void *arg)
 	case AND:
 		if (p->n_right->n_op == ICON) {
 			CONSZ val = getlval(p->n_right);
-			val = ((~val) & 0177777);
+			TWORD t = p->n_right->n_type;
+			if (t == LONGLONG || t == ULONGLONG)
+				val = ~val;
+			else if (t == LONG || t == ULONG)
+				val = ((~val) & 0xffffffff);
+			else
+				val = ((~val) & 0177777);
 			setlval(p->n_right, val);
 		} else if (p->n_right->n_op == COMPL) {
 			NODE *q = p->n_right->n_left;
@@ -596,7 +599,13 @@ fixops(NODE *p, void *arg)
 			p->n_right = mkunode(COMPL, p->n_right, 0, p->n_type);
 		break;
 	case RS:
-		p->n_right = mkunode(UMINUS, p->n_right, 0, p->n_right->n_type);
+		r = p->n_right;
+		if (r->n_op == ICON)
+			setlval(r, -getlval(r));
+		else
+			p->n_right = mkunode(UMINUS, r, 0, r->n_type);
+		if (p->n_type == UNSIGNED || p->n_type == UCHAR)
+			break;
 		p->n_op = LS;
 		break;
 #if 0
@@ -632,10 +641,12 @@ myreader(struct interpass *ipole)
 		printip(ipole);
 	}
 #endif
+#if 0
 	DLIST_FOREACH(ip, ipole, qelem) {
 		if (ip->type == IP_NODE)
 			cvtree(ip->ip_node, ip);
 	}
+#endif
 #ifdef PCC_DEBUG
 	if (x2debug) {
 		printf("myreader after\n");
@@ -685,7 +696,7 @@ rmove(int s, int d, TWORD t)
 	} else if (t == LONG || t == ULONG) {
 		/* avoid trashing double regs */
 		if (d > s)
-			printf("mov     r%c,r%c\nmov    r%c,r%c\n",
+			printf("mov	r%c,r%c\nmov	r%c,r%c\n",
 			    rnames[s][2],rnames[d][2],
 			    rnames[s][1],rnames[d][1]);
 		else
@@ -715,7 +726,7 @@ COLORMAP(int c, int *r)
 		if (r[CLASSA] > 2) return 0;
 		return 1;
 	case CLASSC:
-		return r[CLASSC] < 8;
+		return r[CLASSC] < 4;
 	}
 	return 0;
 }
