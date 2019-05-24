@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.190 2018/12/12 17:43:02 ragge Exp $	*/
+/*	$Id: token.c,v 1.191 2019/05/18 08:11:00 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -1203,7 +1203,10 @@ savln(void)
 			unch(c);
 			break;
 		}
-		putob(ob, c);
+		if (c == '\'' || c == '\"')
+			faststr(c, ob);
+		else
+			putob(ob, c);
 	}
 	ob->buf[ob->cptr] = 0;
 	return ob;
