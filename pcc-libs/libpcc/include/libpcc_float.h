@@ -22,55 +22,44 @@
 
 #define FLT_RADIX 2
 
-/* IEEE float */
-#define FLT_MANT_DIG 24
-#define FLT_DIG 6
-#define FLT_ROUNDS 1
-#define FLT_EPSILON 1.19209290e-07F
-#define FLT_MIN_EXP (-125)
-#define FLT_MIN 1.17549435e-38F
-#define FLT_MIN_10_EXP (-37)
-#define FLT_MAX_EXP 128
-#define FLT_MAX 3.40282347e+38F
-#define FLT_MAX_10_EXP 38
+#define FLT_HAS_SUBNORM	__FLT_HAS_SUBNORM__
+#define FLT_MANT_DIG	__FLT_MANT_DIG__
+#define FLT_DIG		__FLT_DIG__
+#define FLT_ROUNDS	__FLT_ROUNDS__
+#define FLT_EPSILON	__FLT_EPSILON__
+#define FLT_MIN_EXP	__FLT_MIN_EXP__
+#define FLT_MIN		__FLT_MIN__
+#define FLT_MIN_10_EXP	__FLT_MIN_10_EXP__
+#define FLT_MAX_EXP	__FLT_MAX_EXP__
+#define FLT_MAX		__FLT_MAX__
+#define FLT_MAX_10_EXP	__FLT_MAX_10_EXP__
+#define FLT_TRUE_MIN	__FLT_TRUE_MIN__
 
-/* IEEE double */
-#define DBL_MANT_DIG 53
-#define DBL_DIG 15
-#define DBL_EPSILON 2.2204460492503131e-16
-#define DBL_MIN_EXP (-1021)
-#define DBL_MIN 2.2250738585072014e-308
-#define DBL_MIN_10_EXP (-307)
-#define DBL_MAX_EXP 1024
-#define DBL_MAX 1.7976931348623157e+308
-#define DBL_MAX_10_EXP 308
+#define DBL_HAS_SUBNORM	__DBL_HAS_SUBNORM__
+#define DBL_MANT_DIG	__DBL_MANT_DIG__
+#define DBL_DIG		__DBL_DIG__
+#define DBL_ROUNDS	__DBL_ROUNDS__
+#define DBL_EPSILON	__DBL_EPSILON__
+#define DBL_MIN_EXP	__DBL_MIN_EXP__
+#define DBL_MIN		__DBL_MIN__
+#define DBL_MIN_10_EXP	__DBL_MIN_10_EXP__
+#define DBL_MAX_EXP	__DBL_MAX_EXP__
+#define DBL_MAX		__DBL_MAX__
+#define DBL_MAX_10_EXP	__DBL_MAX_10_EXP__
+#define DBL_TRUE_MIN	__DBL_TRUE_MIN__
 
-#if defined(__i386__) || defined(__x86_64__)
+#define LDBL_HAS_SUBNORM	__LDBL_HAS_SUBNORM__
+#define LDBL_MANT_DIG	__LDBL_MANT_DIG__
+#define LDBL_DIG	__LDBL_DIG__
+#define LDBL_ROUNDS	__LDBL_ROUNDS__
+#define LDBL_EPSILON	__LDBL_EPSILON__
+#define LDBL_MIN_EXP	__LDBL_MIN_EXP__
+#define LDBL_MIN	__LDBL_MIN__
+#define LDBL_MIN_10_EXP	__LDBL_MIN_10_EXP__
+#define LDBL_MAX_EXP	__LDBL_MAX_EXP__
+#define LDBL_MAX	__LDBL_MAX__
+#define LDBL_MAX_10_EXP	__LDBL_MAX_10_EXP__
+#define LDBL_TRUE_MIN	__LDBL_TRUE_MIN__
 
-/* intel long double */
-#define LDBL_MANT_DIG 64
-#define LDBL_DIG 18
-#define LDBL_EPSILON 1.08420217248550443401e-19L
-#define LDBL_MIN_EXP (-16381)
-#define LDBL_MIN 3.36210314311209350626e-4932L
-#define LDBL_MIN_10_EXP (-4931)
-#define LDBL_MAX_EXP 16384
-#define LDBL_MAX 1.18973149535723176502e+4932L
-#define LDBL_MAX_10_EXP 4932
-
-#else
-
-/* same as IEEE double */
-#define LDBL_MANT_DIG 53
-#define LDBL_DIG 15
-#define LDBL_EPSILON 2.2204460492503131e-16
-#define LDBL_MIN_EXP (-1021)
-#define LDBL_MIN 2.2250738585072014e-308
-#define LDBL_MIN_10_EXP (-307)
-#define LDBL_MAX_EXP 1024
-#define LDBL_MAX 1.7976931348623157e+308
-#define LDBL_MAX_10_EXP 308
-
-#endif
 
 #endif

@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.420 2018/12/02 18:40:46 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.422 2019/09/08 09:30:51 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -257,6 +257,7 @@ struct savbc {
 	char *strp;
 	struct bks *bkp;
 	struct flt flt;
+	struct lexint li;
 	struct genlist *g;
 }
 
@@ -286,7 +287,7 @@ struct savbc {
 
 %type <type>	C_TYPE C_QUALIFIER C_CLASS C_FUNSPEC
 
-%type <nodep>   C_ICON
+%type <li>   C_ICON
 
 %type <flt>	C_FCON 
 
@@ -1236,7 +1237,7 @@ term:		   term C_INCOP {  $$ = biop($2, $1, bcon(1)); }
 			$3 = block(NAME, NULL, NULL, ENUNSIGN(INTPTR), 0, 0);
 			$$ = biop(CAST, $3, $$);
 		}
-		|  C_ICON { $$ = $1; }
+		|  C_ICON { $$ = bdty(ICON, &($1)); }
 		|  C_FCON { $$ = bdty(FCON, &($1)); }
 		|  svstr { $$ = bdty(STRING, $1, styp()); }
 		|  '(' e ')' { $$=$2; }
@@ -1296,6 +1297,7 @@ mkty(TWORD t, union dimfun *d, struct attr *sue)
 P1ND *
 bdty(int op, ...)
 {
+	struct lexint *li;
 	FLT *f2;
 	CONSZ c;
 	va_list ap;
@@ -1317,6 +1319,12 @@ bdty(int op, ...)
 		q->n_scon = sfallo();
 		*q->n_scon = f2->sf;
 		q->n_type = f2->t;
+		break;
+
+	case ICON:
+		li = va_arg(ap, struct lexint *);
+		slval(q, li->val);
+		q->n_type = li->t;
 		break;
 
 	case CALL:
@@ -1825,7 +1833,7 @@ fundef(P1ND *tp, P1ND *p)
 		argoff = ARGINIT;
 		if (oldstyle == 0)
 			q->n_right = listfw(q->n_right, funargs);
-		ftnarg(q);
+		p1listf(q->n_right, argsave);
 		blevel = 0;
 	}
 
@@ -1918,11 +1926,6 @@ olddecl(P1ND *p, P1ND *a)
 	s->stype = p->n_type;
 	s->sdf = p->n_df;
 	s->sap = p->n_ap;
-	if (ISARY(s->stype)) {
-		s->stype += (PTR-ARY);
-		s->sdf++;
-	} else if (s->stype == FLOAT)
-		s->stype = DOUBLE;
 	if (a)
 		attr_add(s->sap, gcc_attr_wrapper(a));
 	p1nfree(p);

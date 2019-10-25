@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.108 2019/04/14 20:17:10 ragge Exp $	*/
+/*	$Id: init.c,v 1.109 2019/08/18 09:45:09 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -1139,6 +1139,8 @@ asginit(NODE *p)
 				pstk->in_fl = 1; /* simulate ilbrace */
 
 			strcvt(p);
+			if (pstk->in_df->ddim == NOOFFSET)
+				asginit(bcon(0));
 			if (g == 0)
 				irbrace(); /* will fill with zeroes */
 			return;

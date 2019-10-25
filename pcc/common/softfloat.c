@@ -1,4 +1,4 @@
-/*	$Id: softfloat.c,v 1.49 2019/04/18 13:43:55 ragge Exp $	*/
+/*	$Id: softfloat.c,v 1.57 2019/09/22 07:59:29 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 Anders Magnusson. All rights reserved.
@@ -39,13 +39,14 @@
 #define assert(e) (!(e)?cerror("assertion failed " #e " at softfloat:%d",__LINE__):(void)0)
 #endif
 
+#define SFDEBUG
 #ifdef SFDEBUG
-int sfdebug;
+int sfdebug=0;
 #define	SD(x)	if (sfdebug) printf x
 #else
 #define SD(x)
-#define sfp2ld(x) (x)->debugfp
 #endif
+#define sfp2ld(x) (x)->debugfp
 
 /*
  * Description of a floating point format.
@@ -867,12 +868,13 @@ soft_plus(SFP x1p, SFP x2p, TWORD t)
 
 	c1 = LDBLPTR->unmake(x1p, &s1, &e1, &m1);
 	c2 = LDBLPTR->unmake(x2p, &s2, &e2, &m2);
-	SD(("soft_plus: s1 %d s2 %d e1 %d e2 %d\n", s1, s2, e1, e2));
+	SD(("soft_plus: c1 %s c2 %s s1 %d s2 %d e1 %d e2 %d\n", 
+	    sftyp[c1], sftyp[c2], s1, s2, e1, e2));
 
 	ediff = e1 - e2;
 	if (c1 == SOFT_INFINITE && c2 == SOFT_INFINITE) {
 		if (s1 != s2)
-			c1 = SOFT_NAN;
+			c1 = SOFT_NAN, s1 ^= s2;
 	} else if (c1 == SOFT_NAN || c1 == SOFT_INFINITE) {
 		;
 	} else if (c2 == SOFT_NAN || c2 == SOFT_INFINITE) {
@@ -885,6 +887,11 @@ soft_plus(SFP x1p, SFP x2p, TWORD t)
 			*x1p = *x2p;
 			return; /* result x2 */
 		}
+		if ((d = topbit(&m1)) < LDBLPTR->nbits-1)
+			mshl(&m1, LDBLPTR->nbits-1 - d);
+		if ((d = topbit(&m2)) < LDBLPTR->nbits-1)
+			mshl(&m2, LDBLPTR->nbits-1 - d);
+
 		if (e1 > e2)
 			mshl(&m1, ediff), mtop = LDBLPTR->nbits-1+ediff;
 		else
@@ -899,8 +906,11 @@ soft_plus(SFP x1p, SFP x2p, TWORD t)
 	LDBLPTR->make(&rv, c1, s1, ediff > 0 ? e1 : e2, &a);
 
 #ifdef DEBUGFP
-	if (sfp2ld(x1p) + sfp2ld(x2p) != sfp2ld(&rv))
-		fpwarn("soft_plus", sfp2ld(&rv), sfp2ld(x1p) + sfp2ld(x2p));
+	{ long double ldd = sfp2ld(x1p) + sfp2ld(x2p);
+	  long double sp = sfp2ld(&rv);
+	if (memcmp(&ldd, &sp, SZLD))
+	  fpwarn("soft_plus", sfp2ld(&rv), ldd);
+	}
 #endif
 	*x1p = rv;
 }
@@ -912,6 +922,11 @@ soft_minus(SFP x1, SFP x2, TWORD t)
 	return soft_plus(x1, x2, t);
 }
 
+#if defined(mach_i386) || defined(mach_amd64)
+#define	MULSIGN	1	/* 0 * INF == -NAN on x87 */
+#else
+#define	MULSIGN 0
+#endif
 /*
  * Multiply two softfloats.
  */
@@ -919,7 +934,7 @@ void
 soft_mul(SFP x1p, SFP x2p, TWORD t)
 {
 	MINT a, m1, m2;
-	int ee, c1, c2, s1, s2, e1, e2;
+	int ee, c1, c2, s1, s2, e1, e2, d;
 	SF rv;
 
 	MINTDECL(a);
@@ -938,14 +953,18 @@ soft_mul(SFP x1p, SFP x2p, TWORD t)
 		s1 = s1 == s2;
 	} else if (c1 == SOFT_INFINITE && c2 == SOFT_ZERO) {
 		c1 = SOFT_NAN;
-		s1 = 0;
+		s1 = MULSIGN;
 	} else if (c2 == SOFT_INFINITE && c1 == SOFT_ZERO) {
 		c1 = SOFT_NAN;
-		s1 = 0;
+		s1 = MULSIGN;
 	} else if (c1 == SOFT_INFINITE || c2 == SOFT_INFINITE) {
 		c1 = SOFT_INFINITE;
 		s1 = s1 == s2;
 	} else {
+		if ((d = topbit(&m1)) < LDBLPTR->nbits-1)
+			mshl(&m1, LDBLPTR->nbits-1 - d);
+		if ((d = topbit(&m2)) < LDBLPTR->nbits-1)
+			mshl(&m2, LDBLPTR->nbits-1 - d);
 		mult(&m1, &m2, &a);
 		ee = topbit(&a) - (2 * (LDBLPTR->nbits-1));
 		e1 += (e2 + ee) -1 + LDBLPTR->expadj;
@@ -953,8 +972,11 @@ soft_mul(SFP x1p, SFP x2p, TWORD t)
 	}
 	LDBLPTR->make(&rv, c1, s1, e1, &a);
 #ifdef DEBUGFP
-	if (sfp2ld(x1p) * sfp2ld(x2p) != sfp2ld(&rv))
-		fpwarn("soft_mul", sfp2ld(&rv), sfp2ld(x1p) * sfp2ld(x2p));
+	{ long double ldd = sfp2ld(x1p) * sfp2ld(x2p);
+	  long double sp = sfp2ld(&rv);
+	if (memcmp(&ldd, &sp, SZLD))
+	  fpwarn("soft_mul", sfp2ld(&rv), ldd);
+	}
 #endif
         *x1p = rv;
 }
@@ -963,7 +985,7 @@ void
 soft_div(SFP x1p, SFP x2p, TWORD t)
 {
 	MINT m1, m2, q, r, e, f;
-	int sh, c1, c2, s1, s2, e1, e2;
+	int sh, c1, c2, s1, s2, e1, e2, d;
 	SF rv;
 
 	MINTDECL(m1);
@@ -987,18 +1009,27 @@ soft_div(SFP x1p, SFP x2p, TWORD t)
 			c1 = SOFT_INFINITE, s1 = s1 != s2;
 	} else if (c1 == SOFT_ZERO) {
 		if (c2 == SOFT_ZERO)
-			c1 = SOFT_NAN, s1 = s1 == s2;
+			c1 = SOFT_NAN, s1 = 1;
 		else
-			c1 = SOFT_ZERO, s1 = s1 == s2;
+			c1 = SOFT_ZERO, s1 = s1 != s2;
 	} else if (c2 == SOFT_ZERO) {
 		c1 = SOFT_INFINITE, s1 = s1 != s2;
 	} else if (c2 == SOFT_INFINITE) {
 		c1 = SOFT_ZERO, s1 = s1 == s2;
 	} else {
+		if ((d = topbit(&m1)) < LDBLPTR->nbits-1)
+			mshl(&m1, LDBLPTR->nbits-1 - d);
+		if ((d = topbit(&m2)) < LDBLPTR->nbits-1)
+			mshl(&m2, LDBLPTR->nbits-1 - d);
 		/* get quot and remainder of divided mantissa */
 		mshl(&m1, LDBLPTR->nbits);
 		mdiv(&m1, &m2, &q, &r);
 		sh = topbit(&q) - LDBLPTR->nbits;
+		if (sh < -1) {
+			int s = -1 - sh;
+			mshl(&q, s);
+			e1 += s;
+		}
 
 		/* divide remainder as well, for use in rounding */
 		mshl(&r, LDBLPTR->nbits);
@@ -1063,7 +1094,7 @@ soft_clcmp(int c1, int c2, int s1, int s2)
 		return s1 ? SFLEFTLESS : SFLEFTGTR;
 
 	if (c1 == SOFT_ZERO)
-		return s1 ? SFLEFTLESS : SFLEFTGTR;
+		return s1 ? SFLEFTGTR : SFLEFTLESS;
 
 	if (c1 == SOFT_NORMAL) {
 		if (c2 == SOFT_INFINITE)
@@ -1086,6 +1117,9 @@ soft_cmp(SFP v1p, SFP v2p, int v)
 
 	c1 = LDBLPTR->unmake(v1p, &s1, &e1, &m1);
 	c2 = LDBLPTR->unmake(v2p, &s2, &e2, &m2);
+
+	SD(("soft_cmp: v1 %s v1s %d v2 %s v2s %d\n",
+            sftyp[c1], s1, sftyp[c2], s2));
 
 	if (c1 != SOFT_NORMAL || c2 != SOFT_NORMAL) {
 		if (c1 == SOFT_NAN || c2 == SOFT_NAN)
@@ -1117,6 +1151,7 @@ soft_cmp(SFP v1p, SFP v2p, int v)
 	}
 
 	yrv = 0;
+	SD(("soft_cmp2: xrv %d\n", xrv));
 	switch (v) {
 	case GT: yrv = xrv == SFLEFTGTR; break;
 	case LT: yrv = xrv == SFLEFTLESS; break;
@@ -1255,7 +1290,7 @@ static int
 hexbig(char *str, MINT *mmant, MINT *mexp)
 {
 	int exp2 = 0, gotdot = 0;
-	int ch;
+	int ch, e3 = 0;
 
 	while ((ch = *str++)) {
 		switch (ch) {
@@ -1269,7 +1304,7 @@ hexbig(char *str, MINT *mmant, MINT *mexp)
 			mshl(mmant, 4);
 			mmant->val[0] |= (ch - '0');
 			if (gotdot)
-				exp2 -= 4;
+				e3 -= 4;
 			continue;
 	
 		case '.':
@@ -1280,9 +1315,9 @@ hexbig(char *str, MINT *mmant, MINT *mexp)
 		case 'P':
 			if (MINTZ(mmant))
 				return SOFT_ZERO;
-			exp2 += atoi(str);
+			exp2 = atoi(str) + e3;
 			if (exp2 < 0) {
-				if (exp2 < LDBLPTR->minexp - LDBLPTR->nbits)
+				if (exp2 < LDBLPTR->minexp - LDBLPTR->nbits + e3)
 					return SOFT_ZERO;
 				mshl(mexp, -exp2);
 			} else if (exp2 > 0) {
@@ -1355,6 +1390,8 @@ str2num(char *str, int *exp, MINT *m, struct FPI *fpi)
 		if (topbit(m) == fpi->nbits) {
 			mshr(m, 1, 0);
 			scale--;
+			if (sub)
+				sub = 0;
 		}
 
 		if (sub)
@@ -1401,11 +1438,14 @@ strtosf(SFP sfp, char *str, TWORD tw)
 	SD(("strtosf: rv %d, expt %d, m %04x%04x, %04x%04x\n",
 	    rv, e, m.val[3], m.val[2], m.val[1], m.val[0]));
 
+
 	LDBLPTR->make(sfp, rv, 0, e, &m);
+//	soft_fp2fp(sfp, tw);
 
 #ifdef DEBUGFP
 	{
 		long double ld = strtold(str, NULL);
+//		ld = tw == DOUBLE ? (double)ld : tw == FLOAT ? (float)ld : ld;
 		if (ld != sfp2ld(sfp))
 			fpwarn("strtosf", sfp2ld(sfp), ld);
 	}
@@ -1448,9 +1488,11 @@ uint32_t * soft_toush(SFP sfp, TWORD t, int *nbits)
 
 	MINTDECL(mant);
 
+#ifdef DEBUGFP
 	SD(("soft_toush: sfp %Lf %La t %d\n", sfp->debugfp, sfp->debugfp, t));
+#endif
 	SD(("soft_toushLD: %x %x %x\n", sfp->fp[2], sfp->fp[1], sfp->fp[0]));
-#ifdef SFDEBUG
+#ifdef DEBUGFP
 	if (sfdebug) {
 	double d = sfp->debugfp;
 	printf("soft_toush-D: d %08x %08x\n", *(((int *)&d)+1), *(int *)&d);
@@ -1578,9 +1620,10 @@ mdump(char *c, MINT *a)
 	int i;
 
 	printf("%s: ", c);
-	printf("len %d sign %d:\n", a->len, (unsigned)a->sign);
-	for (i = 0; i < a->len; i++)
-		printf("%05d: %04x\n", i, a->val[i]);
+	printf("len %d sign %d: ", a->len, (unsigned)a->sign);
+	for (i = a->len-1; i >= 0; i--)
+		printf("%04x ", a->val[i]);
+	printf("\n");
 }
 
 

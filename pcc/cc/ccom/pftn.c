@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.430 2018/12/02 18:40:46 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.433 2019/09/24 19:57:31 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -112,29 +112,28 @@ struct rstack {
 } *rpole;
 
 /*
- * Linked list for parameter (and struct elements) declaration.
+ * Array for parameter declarations.
  */
-static struct params {
-	struct params *prev;
-	struct symtab *sym;
-} *lparam;
+#define	ARGSZ	16
+static int maxastore = ARGSZ;
+static struct symtab *argstore[ARGSZ];
+static struct symtab **argptr = argstore;
+
 static int nparams;
 
 /* defines used for getting things off of the initialization stack */
 
+#define	MAXDF		12	/* 5.2.4.1 */
 NODE *arrstk[10];
-int arrstkp;
 static int intcompare;
 NODE *parlink;
 
 void fixtype(NODE *p, int class);
 int fixclass(int class, TWORD type);
 static void dynalloc(struct symtab *p, int *poff);
-static void evalidx(struct symtab *p);
 int isdyn(struct symtab *p);
 void inforce(OFFSZ n);
 void vfdalign(int n);
-static void ssave(struct symtab *);
 #ifdef PCC_DEBUG
 static void alprint(union arglist *al, int in);
 #endif
@@ -436,9 +435,6 @@ defid2(NODE *q, int class, char *astr)
 	if (ISFTN(type) && oldstyle)
 		p->sdf->dfun = NULL;
 
-	if (arrstkp)
-		evalidx(p);
-
 	/* allocate offsets */
 	if (class&FIELD) {
 		cerror("field2");  /* new entry */
@@ -531,17 +527,6 @@ done:
 #endif
 }
 
-void
-ssave(struct symtab *sym)
-{
-	struct params *p;
-
-	p = tmpalloc(sizeof(struct params));
-	p->prev = lparam;
-	p->sym = sym;
-	lparam = p;
-}
-
 /*
  * end of function
  */
@@ -577,8 +562,6 @@ ftnend(void)
 	if (nerrors == 0) {
 		if (savbc != NULL)
 			cerror("bcsave error");
-		if (lparam != NULL)
-			cerror("parameter reset error");
 		if (swpole != NULL)
 			cerror("switch error");
 	}
@@ -605,7 +588,6 @@ ftnend(void)
 	}
 #endif
 	savbc = NULL;
-	lparam = NULL;
 	cftnsp = NULL;
 	maxautooff = autooff = AUTOINIT;
 	reached = 1;
@@ -626,27 +608,22 @@ dclargs(void)
 {
 	union dimfun *df;
 	union arglist *al;
-	struct params *a;
-	struct symtab *p, **parr = NULL; /* XXX gcc */
+	struct symtab *p; /* XXX gcc */
 	int i;
 
 	/*
 	 * Deal with fun(void) properly.
 	 */
-	if (nparams == 1 && lparam->sym && lparam->sym->stype == VOID)
+	if (nparams == 1 && argptr[0]->stype == VOID)
 		goto done;
 
 	/*
 	 * Generate a list for bfcode().
 	 * Parameters were pushed in reverse order.
 	 */
-	if (nparams != 0)
-		parr = FUNALLO(sizeof(struct symtab *) * nparams);
 
-	if (nparams)
-	    for (a = lparam, i = 0; a != NULL; a = a->prev) {
-		p = a->sym;
-		parr[i++] = p;
+	for (i = 0; i < nparams; i++) {
+		p = argptr[i];
 		if (p == NULL) {
 			uerror("parameter %d name missing", i);
 			p = &nulsym; /* empty symtab */
@@ -656,6 +633,8 @@ dclargs(void)
 		if (ISARY(p->stype)) {
 			p->stype += (PTR-ARY);
 			p->sdf++;
+		} else if (p->stype == FLOAT && oldstyle) {
+			p->stype = DOUBLE;
 		} else if (ISFTN(p->stype)) {
 			werror("function declared as argument");
 			p->stype = INCREF(p->stype);
@@ -673,14 +652,14 @@ dclargs(void)
 
 		alb = al2 = FUNALLO(sizeof(union arglist) * nparams * 3 + 1);
 		for (i = 0; i < nparams; i++) {
-			TWORD type = parr[i]->stype;
+			TWORD type = argptr[i]->stype;
 			(al2++)->type = type;
 			if (ISSOU(BTYPE(type)))
-				(al2++)->sap = parr[i]->sap;
+				(al2++)->sap = argptr[i]->sap;
 			while (!ISFTN(type) && !ISARY(type) && type > BTMASK)
 				type = DECREF(type);
 			if (type > BTMASK)
-				(al2++)->df = parr[i]->sdf;
+				(al2++)->df = argptr[i]->sdf;
 		}
 		al2->type = TNULL;
 		intcompare = 1;
@@ -695,8 +674,8 @@ dclargs(void)
 		/* Must recalculate offset for oldstyle args here */
 		argoff = ARGINIT;
 		for (i = 0; i < nparams; i++) {
-			parr[i]->soffset = NOOFFSET;
-			oalloc(parr[i], &argoff);
+			argptr[i]->soffset = NOOFFSET;
+			oalloc(argptr[i], &argoff);
 		}
 	}
 
@@ -704,19 +683,17 @@ done:	autooff = AUTOINIT;
 
 	plabel(prolab); /* after prolog, used in optimization */
 	retlab = getlab();
-	bfcode(parr, nparams);
+	bfcode(argptr, nparams);
 	if (fun_inline && (xinline
 #ifdef GCC_COMPAT
  || attr_find(cftnsp->sap, GCC_ATYP_ALW_INL)
 #endif
 		))
-		inline_args(parr, nparams);
-	FUNFREE(parr);
+		inline_args(argptr, nparams);
 	plabel(getlab()); /* used when spilling */
 	if (parlink)
 		ecomp(parlink);
 	parlink = NIL;
-	lparam = NULL;
 	nparams = 0;
 	symclear(1);	/* In case of function pointer args */
 }
@@ -1113,53 +1090,21 @@ yyaccpt(void)
 	ftnend();
 }
 
+
 /*
- * p is top of type list given to tymerge later.
- * Find correct CALL node and declare parameters from there.
+ * Save argument symtab entry pointers in an array for later use in dclargs.
  */
 void
-ftnarg(NODE *p)
+argsave(P1ND *p)
 {
-	NODE *q;
-
-#ifdef PCC_DEBUG
-	if (ddebug > 2)
-		printf("ftnarg(%p)\n", p);
-#endif
-	/*
-	 * Push argument symtab entries onto param stack in reverse order,
-	 * due to the nature of the stack it will be reclaimed correct.
-	 */
-	for (; p->n_op != NAME; p = p->n_left) {
-		if (p->n_op == UCALL && p->n_left->n_op == NAME)
-			return;	/* Nothing to enter */
-		if (p->n_op == CALL && p->n_left->n_op == NAME)
-			break;
+	if (p->n_op == ELLIPSIS || p->n_type == VOID)
+		return;
+	if (nparams == maxastore) {
+		argptr = memcpy(tmpalloc(maxastore*2 * sizeof(struct symtab *)),
+		    argptr, maxastore * sizeof(struct symtab *));
+		maxastore*=2;
 	}
-
-	p = p->n_right;
-	while (p->n_op == CM) {
-		q = p->n_right;
-		if (q->n_op != ELLIPSIS) {
-			ssave(q->n_sp);
-			nparams++;
-#ifdef PCC_DEBUG
-			if (ddebug > 2)
-				printf("	saving sym %s (%p) from (%p)\n",
-				    q->n_sp->sname, q->n_sp, q);
-#endif
-		}
-		p = p->n_left;
-	}
-	ssave(p->n_sp);
-	if (p->n_type != VOID)
-		nparams++;
-
-#ifdef PCC_DEBUG
-	if (ddebug > 2)
-		printf("	saving sym %s (%p) from (%p)\n",
-		    nparams ? p->n_sp->sname : "<noname>", p->n_sp, p);
-#endif
+	argptr[nparams++] = p->n_sp;
 }
 
 /*
@@ -1434,38 +1379,6 @@ edelay(NODE *p)
 			parlink = block(COMOP, parlink, p, 0, 0, 0);
 	} else
 		ecomp(p);
-}
-
-/*
- * Traverse through the array args, evaluate them and put the 
- * resulting temp numbers in the dim fields.
- */
-static void
-evalidx(struct symtab *sp)
-{
-	union dimfun *df;
-	NODE *p;
-	TWORD t;
-	int astkp = 0;
-
-	if (arrstk[0] == NIL)
-		astkp++; /* for parameter arrays */
-
-	if (isdyn(sp))
-		sp->sflags |= SDYNARRAY;
-
-	df = sp->sdf;
-	for (t = sp->stype; t > BTMASK; t = DECREF(t)) {
-		if (!ISARY(t))
-			continue;
-		if (df->ddim == -1) {
-			p = tempnode(0, INT, 0, 0);
-			df->ddim = -regno(p);
-			edelay(buildtree(ASSIGN, p, arrstk[astkp++]));
-		}
-		df++;
-	}
-	arrstkp = 0;
 }
 
 /*
@@ -2094,14 +2007,14 @@ arglist(NODE *n)
 	return al;
 }
 
+static int numdfs;
+
 static void
-tylkadd(union dimfun dim, struct tylnk **tylkp, int *ntdim)
+tylkadd(union dimfun dim, union dimfun *df)
 {
-	(*tylkp)->next = tmpalloc(sizeof(struct tylnk));
-	*tylkp = (*tylkp)->next;
-	(*tylkp)->next = NULL;
-	(*tylkp)->df = dim;
-	(*ntdim)++;
+	df[numdfs++] = dim;
+	if (numdfs == MAXDF)
+		uerror("too many dimensions (C11 5.2.4.1)");
 }
 
 /*
@@ -2110,7 +2023,7 @@ tylkadd(union dimfun dim, struct tylnk **tylkp, int *ntdim)
  * the type is build top down, the dimensions bottom up
  */
 static void
-tyreduce(NODE *p, struct tylnk **tylkp, int *ntdim)
+tyreduce(NODE *p, union dimfun *df)
 {
 	union dimfun dim;
 	NODE *r = NULL;
@@ -2149,19 +2062,26 @@ tyreduce(NODE *p, struct tylnk **tylkp, int *ntdim)
 #endif
 		}
 		break;
+	case UMUL:
+		break;
+	default:
+		cerror("bad node %d\n", o);
 	}
 
 	p->n_left->n_type = t;
 	p->n_left->n_qual = INCQAL(q) | p->n_left->n_qual;
-	tyreduce(p->n_left, tylkp, ntdim);
+	tyreduce(p->n_left, df);
 
 	if (o == LB || o == UCALL || o == CALL)
-		tylkadd(dim, tylkp, ntdim);
+		tylkadd(dim, df);
 	if (o == RB) {
-		dim.ddim = -1;
-		tylkadd(dim, tylkp, ntdim);
-		arrstk[arrstkp++] = r;
+		P1ND *qq = tempnode(0, INT, 0, 0);
+		dim.ddim = -regno(qq);
+		tylkadd(dim, df);
+		edelay(buildtree(ASSIGN, qq, r));
 	}
+	if (p->n_op == LB || p->n_op == CALL)
+		p->n_op = RB;
 
 	p->n_sp = p->n_left->n_sp;
 	p->n_type = p->n_left->n_type;
@@ -2179,11 +2099,8 @@ NODE *
 tymerge(NODE *typ, NODE *idp)
 {
 	TWORD t;
-	NODE *p;
+	union dimfun dfs[MAXDF];
 	union dimfun *j;
-	struct tylnk *base, tylnk, *tylkp;
-	struct attr *bap;
-	int ntdim, i;
 
 #ifdef PCC_DEBUG
 	if (ddebug > 2) {
@@ -2196,48 +2113,33 @@ tymerge(NODE *typ, NODE *idp)
 	if (typ->n_op != TYPE)
 		cerror("tymerge: arg 1");
 
-	bap = typ->n_ap;
-
 	idp->n_type = typ->n_type;
 	idp->n_qual |= typ->n_qual;
 
-	tylkp = &tylnk;
-	tylkp->next = NULL;
-	ntdim = 0;
+	numdfs = 0;
 
-	tyreduce(idp, &tylkp, &ntdim);
+	tyreduce(idp, dfs);
 
 	for (t = typ->n_type, j = typ->n_df; t&TMASK; t = DECREF(t))
 		if (ISARY(t) || ISFTN(t))
-			tylkadd(*j++, &tylkp, &ntdim);
+			tylkadd(*j++, dfs);
 
-	if (ntdim) {
-		union dimfun *a = permalloc(sizeof(union dimfun) * ntdim);
-		dimfuncnt += ntdim;
-		for (i = 0, base = tylnk.next; base; base = base->next, i++)
-			a[i] = base->df;
-		idp->n_df = a;
+	dimfuncnt += numdfs;
+	if (numdfs) {
+		union dimfun *a = permalloc(sizeof(union dimfun) * numdfs);
+		idp->n_df = memcpy(a, dfs, sizeof(union dimfun) * numdfs);
 	} else
 		idp->n_df = NULL;
 
 	/* now idp is a single node: fix up type */
-	if ((t = ctype(idp->n_type)) != idp->n_type)
-		idp->n_type = t;
+	idp->n_type = ctype(idp->n_type);
 	
-	if (idp->n_op != NAME) {
-		for (p = idp->n_left; p->n_op != NAME; p = nfree(p))
-			;
-		nfree(p);
-		idp->n_op = NAME;
-	}
+	if (idp->n_op != NAME)
+		p1tfree(idp->n_left);
+	idp->n_op = NAME;
+
 	/* carefully not destroy any type attributes */
-	if (idp->n_ap != NULL) {
-		struct attr *ap = idp->n_ap;
-		while (ap->next)
-			ap = ap->next;
-		ap->next = bap;
-	} else
-		idp->n_ap = bap;
+	idp->n_ap = attr_add(typ->n_ap, idp->n_ap);
 
 	return(idp);
 }

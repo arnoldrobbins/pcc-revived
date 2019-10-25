@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.316 2018/12/02 18:40:46 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.319 2019/09/08 09:57:48 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -303,8 +303,7 @@ OFFSZ	tsize(TWORD, union dimfun *, struct attr *),
 P1ND *	typenode(P1ND *new);
 void	spalloc(P1ND *, P1ND *, OFFSZ);
 char	*exname(char *);
-struct flt floatcon(char *);
-struct flt fhexcon(char *);
+void	floatcon(char *);
 P1ND	*bdty(int op, ...);
 extern struct rstack *rpole;
 
@@ -319,7 +318,7 @@ void inline_ref(struct symtab *);
 void inline_prtout(void);
 void inline_args(struct symtab **, int);
 P1ND *inlinetree(struct symtab *, P1ND *, P1ND *);
-void ftnarg(P1ND *);
+void argsave(P1ND *p);
 struct rstack *bstruct(char *, int, P1ND *);
 void moedef(char *);
 void beginit(struct symtab *);
@@ -450,6 +449,11 @@ struct flt {
 };	
 typedef struct flt FLT;	
 #define	sfallo()		stmtalloc(sizeof(struct softfloat))
+
+struct lexint {
+	CONSZ val;
+	TWORD t;
+};
 
 /*
  * Only allowed to do float evaluation if either doing

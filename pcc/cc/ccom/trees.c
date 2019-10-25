@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.387 2018/12/02 18:40:46 ragge Exp $	*/
+/*	$Id: trees.c,v 1.391 2019/09/24 19:57:31 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -167,7 +167,6 @@ buildtree(int o, P1ND *l, P1ND *r)
 	int opty, n;
 	struct symtab *sp = NULL; /* XXX gcc */
 	P1ND *lr, *ll;
-	int evalflt = CAN_EVAL_FLOAT();
 
 #ifdef PCC_DEBUG
 	if (bdebug) {
@@ -205,7 +204,7 @@ buildtree(int o, P1ND *l, P1ND *r)
 		}
 	} else if (o == NOT && l->n_op == FCON) {
 		l = clocal(block(SCONV, l, NULL, INT, 0, 0));
-	} else if( o == UMINUS && l->n_op == FCON && evalflt){
+	} else if( o == UMINUS && l->n_op == FCON){
 			FLOAT_NEG(l->n_scon);
 			return(l);
 
@@ -275,7 +274,7 @@ buildtree(int o, P1ND *l, P1ND *r)
 		}
 	} else if (opty == BITYPE && (l->n_op == FCON || l->n_op == ICON) &&
 	    (r->n_op == FCON || r->n_op == ICON) && (o == PLUS || o == MINUS ||
-	    o == MUL || o == DIV || (o >= EQ && o <= GT) ) && evalflt) {
+	    o == MUL || o == DIV || (o >= EQ && o <= GT) )) {
 		/* at least one side is FCON */
 
 #ifndef CC_DIV_0
@@ -803,7 +802,6 @@ int
 concast(P1ND *p, TWORD t)
 {
 	extern short sztable[];
-	int evalflt = CAN_EVAL_FLOAT();
 	CONSZ val;
 
 	if (p->n_op != ICON && p->n_op != FCON) /* only constants */
@@ -819,7 +817,7 @@ concast(P1ND *p, TWORD t)
 		return 0;
 
 //printf("concast till %d\n", t);
-//fwalk(p, eprint, 0);
+//p1fwalk(p, eprint, 0);
 
 #define	TYPMSK(y) ((((1LL << (y-1))-1) << 1) | 1)
 	if (p->n_op == ICON) {
@@ -835,15 +833,11 @@ concast(P1ND *p, TWORD t)
 					slval(p, glval(p) | ~TYPMSK(sztable[t]));
 			}
 		} else if (t <= LDOUBLE) {
-			if (!evalflt)
-				return 0;
 			p->n_op = FCON;
 			p->n_scon = sfallo();
 			FLOAT_INT2FP(p->n_scon, val, p->n_type);
 		}
 	} else { /* p->n_op == FCON */
-		if (!evalflt)
-			return 0;
 		if (t == BOOL) {
 			p->n_op = ICON;
 			slval(p, !FLOAT_ISZERO(p->n_scon));
@@ -1459,7 +1453,8 @@ oconvert(register P1ND *p)
 	case MINUS:
 		p->n_type = INTPTR;
 		p->n_ap = NULL;
-		return(clocal(VBLOCK(p, bpsize(p->n_left), INT, 0, 0)));
+		p = (clocal(VBLOCK(p, bpsize(p->n_left), INT, 0, 0)));
+		return( p );
 		}
 
 	cerror( "illegal oconvert: %d", p->n_op );
@@ -1655,7 +1650,7 @@ P1ND *
 makety(P1ND *p, TWORD t, TWORD q, union dimfun *d, struct attr *ap)
 {
 
-	if (t == p->n_type) {
+	if (t == p->n_type && t != FLOAT && t != DOUBLE) {
 		p->n_df = d;
 		p->n_ap = ap;
 		p->n_qual = q;
@@ -1928,12 +1923,9 @@ tempnode(int nr, TWORD type, union dimfun *df, struct attr *ap)
 P1ND *
 doszof(P1ND *p)
 {
-	extern P1ND *arrstk[10];
-	extern int arrstkp;
 	union dimfun *df;
 	TWORD ty;
 	P1ND *rv, *q;
-	int astkp;
 
 	if (p->n_op == FLD)
 		uerror("can't apply sizeof to bit-field");
@@ -1945,15 +1937,11 @@ doszof(P1ND *p)
 	rv = bcon(1);
 	df = p->n_df;
 	ty = p->n_type;
-	astkp = 0;
 	while (ISARY(ty)) {
 		if (df->ddim == NOOFFSET)
 			uerror("sizeof of incomplete type");
 		if (df->ddim < 0) {
-			if (arrstkp)
-				q = arrstk[astkp++];
-			else
-				q = tempnode(-df->ddim, INT, 0, 0);
+			q = tempnode(-df->ddim, INT, 0, 0);
 		} else
 			q = bcon(df->ddim);
 		rv = buildtree(MUL, rv, q);
@@ -1963,7 +1951,6 @@ doszof(P1ND *p)
 	rv = buildtree(MUL, rv, 
 	    xbcon(tsize(ty, p->n_df, p->n_ap)/SZCHAR, NULL, INTPTR));
 	p1tfree(p);
-	arrstkp = 0; /* XXX - may this fail? */
 	return rv;
 }
 
@@ -3307,7 +3294,6 @@ cdope(int op)
 	case STRING:
 	case QUALIFIER:
 	case CLASS:
-	case RB:
 	case ELLIPSIS:
 	case TYPE:
 	case ALIGN:
@@ -3328,6 +3314,7 @@ cdope(int op)
 	case ATTRIB:
 	case LABEL:
 	case UPLUS:
+	case RB:
 		return UTYPE;
 	case ANDAND:
 	case OROR:
