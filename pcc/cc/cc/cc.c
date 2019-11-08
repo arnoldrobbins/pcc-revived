@@ -1790,8 +1790,8 @@ static char *gcppflags[] = {
 #ifndef os_win32
 #ifdef GCC_COMPAT
 	"-D__GNUC__=4",
-	"-D__GNUC_MINOR__=3",
-	"-D__GNUC_PATCHLEVEL__=1",
+	"-D__GNUC_MINOR__=2",
+	"-D__GNUC_PATCHLEVEL__=4",
 	"-D__REGISTER_PREFIX__=" REGISTER_PREFIX,
 	"-D__USER_LABEL_PREFIX__=" USER_LABEL_PREFIX,
 #if SZLONG == 64
