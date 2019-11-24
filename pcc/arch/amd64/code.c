@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.91 2018/12/01 17:18:55 ragge Exp $	*/
+/*	$Id: code.c,v 1.93 2019/11/23 15:58:47 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -568,6 +568,19 @@ bjobcode(void)
 	defid(p, TYPEDEF);
 	nfree(q);
 	nfree(p);
+
+#ifdef GCC_COMPAT
+	/*
+	 * gcc defines __float128 on amd64.  We handcraft a typedef 
+	 * of long double here to make glibc happy. (size is same).
+	 */
+	p = bdty(NAME, c = addname("__float128"));
+	p = tymerge(q = mkty(LDOUBLE, 0, 0), p);
+	p->n_sp = lookup(c, 0);
+	defid(p, TYPEDEF);
+	nfree(q);
+	nfree(p);
+#endif
 
 	/* for the static varargs functions */
 #define	MKN(vn, rn) \

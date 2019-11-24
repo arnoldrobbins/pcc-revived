@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.20 2018/12/02 10:37:21 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.21 2019/11/13 16:25:10 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -274,3 +274,4 @@ NODE *arm_builtin_va_copy(const struct bitable *bt, NODE *a);
 #define USE_IEEEFP_64
 #define DBL_PREFIX	IEEEFP_64
 #define LDBL_PREFIX	IEEEFP_64
+#define DEFAULT_FPI_DEFS { &fpi_binary32, &fpi_binary64, &fpi_binary64 }
