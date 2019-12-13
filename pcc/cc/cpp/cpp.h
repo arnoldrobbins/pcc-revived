@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.111 2016/12/04 12:55:05 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.112 2019/12/12 17:47:29 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -160,8 +160,8 @@ struct symtab {
 	mvtyp valoff;
 	const usch *file;
 	int line;
-	unsigned char type:4,	/* macro type */
-		      wraps:1;	/* macro wraps in buffer */
+	char type:4,	/* macro type */
+	      wraps:1;	/* macro wraps in buffer */
 	unsigned char narg;	/* # of args (if feasible) */
 };
 
@@ -199,7 +199,7 @@ void include(void);
 void include_next(void);
 void line(void);
 
-int pushfile(const usch *fname, const usch *fn, int idx, void *incs);
+void pushfile(const usch *fname, const usch *fn, int idx, void *incs);
 void prtline(int nl);
 int yylex(void);
 void cunput(int);

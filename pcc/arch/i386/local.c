@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.207 2018/11/21 18:22:33 ragge Exp $	*/
+/*	$Id: local.c,v 1.209 2019/12/10 19:13:23 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -154,7 +154,6 @@ int argstacksize;
 static P1ND *
 picext(P1ND *p)
 {
-	struct attr *ap;
 
 #if defined(ELFABI)
 	P1ND *q, *r;
@@ -165,6 +164,7 @@ picext(P1ND *p)
 	name = getexname(p->n_sp);
 
 #ifdef GCC_COMPAT
+	struct attr *ap;
 	if ((ap = attr_find(p->n_sp->sap, GCC_ATYP_VISIBILITY)) &&
 	    strcmp(ap->sarg(0), "hidden") == 0) {
 		/* For hidden vars use GOTOFF */
@@ -263,8 +263,7 @@ picstatic(P1ND *p)
 	struct symtab *sp;
 	char buf2[256];
 
-	snprintf(buf2, 256, "-L%s$pb",
-	    cftnsp->soname ? cftnsp->soname : cftnsp->sname);
+	snprintf(buf2, 256, "-L%s$pb", getexname(cftnsp));
 
 	if (p->n_sp->slevel > 0) {
 		char buf1[32];
@@ -552,7 +551,7 @@ clocal(P1ND *p)
 			break;
 
 		r = tempnode(0, p->n_type, p->n_df, p->n_ap);
-		l = tcopy(r);
+		l = p1tcopy(r);
 		p = buildtree(COMOP, buildtree(ASSIGN, r, p), l);
 #endif
 			
@@ -760,7 +759,10 @@ fixnames(P1ND *p, void *arg)
 #if defined(ELFABI) || defined(MACHOABI)
 
 	struct symtab *sp;
-	struct attr *ap, *ap2;
+	struct attr *ap;
+#if defined(ELFABI)
+	struct attr *ap2;
+#endif
 	P1ND *q;
 	char *c;
 	int isu;
@@ -798,17 +800,12 @@ fixnames(P1ND *p, void *arg)
 
 #elif defined(MACHOABI)
 
-		if (sp->soname == NULL ||
-		    ((c = strstr(sp->soname, "$non_lazy_ptr")) == NULL &&
-		    (c = strstr(sp->soname, "-L")) == NULL))
-				cerror("fixnames2");
-
 		if (!ISFTN(sp->stype))
 			return; /* function pointer */
 
 		if (isu) {
 			*c = 0;
-			addstub(&stublist, sp->soname+1);
+			addstub(&stublist, getexname(sp)+1);
 			memcpy(c, "$stub", sizeof("$stub"));
 		} else 
 			*c = 0;
@@ -910,17 +907,17 @@ spalloc(P1ND *t, P1ND *p, OFFSZ off)
 #ifdef MACHOABI	
 	/* align to 16 bytes */
 	sp = block(REG, NIL, NIL, p->n_type, 0, 0);
-	sp->n_lval = 0;
+	slval(sp, 0);
 	sp->n_rval = STKREG;
 	ecomp(buildtree(PLUSEQ, sp, bcon(15)));
 	
 	sp = block(REG, NIL, NIL, p->n_type, 0, 0);
-	sp->n_lval = 0;
+	slval(sp, 0);
 	sp->n_rval = STKREG;
 	ecomp(buildtree(RSEQ, sp, bcon(4)));
 	
 	sp = block(REG, NIL, NIL, p->n_type, 0, 0);
-	sp->n_lval = 0;
+	slval(sp, 0);
 	sp->n_rval = STKREG;
 	ecomp(buildtree(LSEQ, sp, bcon(4)));
 #endif
