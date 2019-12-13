@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.208 2019/11/08 12:47:44 ragge Exp $	*/
+/*	$Id: local.c,v 1.209 2019/12/10 19:13:23 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -154,9 +154,6 @@ int argstacksize;
 static P1ND *
 picext(P1ND *p)
 {
-#ifndef GCC_COMPAT
-	struct attr *ap;
-#endif
 
 #if defined(ELFABI)
 	P1ND *q, *r;
@@ -167,6 +164,7 @@ picext(P1ND *p)
 	name = getexname(p->n_sp);
 
 #ifdef GCC_COMPAT
+	struct attr *ap;
 	if ((ap = attr_find(p->n_sp->sap, GCC_ATYP_VISIBILITY)) &&
 	    strcmp(ap->sarg(0), "hidden") == 0) {
 		/* For hidden vars use GOTOFF */
