@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.194 2019/12/13 09:10:58 ragge Exp $	*/
+/*	$Id: token.c,v 1.197 2019/12/19 21:11:15 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -870,6 +870,7 @@ yylex(void)
 			while (ISID(*yyinp))
 				yyinp++;
 			yynode.nd_val = 0;
+			yynode.op = NUMBER;
 			return NUMBER;
 		}
 		return ch;
@@ -969,7 +970,8 @@ prtline(int nl)
 		if (ifiles->idx == SYSINC)
 			strtobuf((usch *)" 3", &pb);
 		if (nl) strtobuf((usch *)"\n", &pb);
-	}
+	} else
+		putob(&pb, '\n');
 }
 
 void
@@ -1358,7 +1360,7 @@ again:		switch (ch) {
 				if (ch == '\\')
 					qcchar();
 				if (ch == '\n')
-					return;
+					goto again;
 			}
 			break;
 		case '\"':
@@ -1371,8 +1373,7 @@ again:		switch (ch) {
 					incmnt = 0;
 					break;
 				case '\n':
-					unch(ch);
-					/* FALLTHROUGH */
+					goto again;
 				case 0:
 					instr = 0;
 					return;
