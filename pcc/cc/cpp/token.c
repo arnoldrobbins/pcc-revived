@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.197 2019/12/19 21:11:15 ragge Exp $	*/
+/*	$Id: token.c,v 1.198 2020/01/13 09:55:50 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -169,12 +169,13 @@ inpbuf(int n)
 	if (ifiles->infil == -1)
 		return 0;
 #if LIBVMF
-	len = (int)read(ifiles->infil, ib->buf+PBMAX, BYTESPERSEG-PBMAX);
+	len = (int)read(ifiles->infil, ib->buf+PBMAX, BYTESPERSEG-PBMAX-2);
 #else
-	len = (int)read(ifiles->infil, ib->buf+PBMAX, CPPBUF-PBMAX);
+	len = (int)read(ifiles->infil, ib->buf+PBMAX, CPPBUF-PBMAX-2);
 #endif
 	if (len == -1)
 		error("read error on file %s", ifiles->orgfn);
+	ib->buf[PBMAX + len + 1] = 0; /* keep buffer terminated */
 	if (len > 0) {
 		ib->cptr = PBMAX - sz;
 		ib->bsz = PBMAX + len;
@@ -304,7 +305,7 @@ chktg2(int ch)
 static void
 fastcmnt2(int ch)
 {
-
+	register struct iobuf *ib = ifiles->ib;
 	int lastline = ifiles->lineno;
 
 	incmnt = 1;
@@ -314,8 +315,12 @@ fastcmnt2(int ch)
 		unch(ch);
 	} else if (ch == '*') {
 		for (;;) {
-			if ((ch = qcchar()) == 0)
-				break;
+			ch = ib->buf[ib->cptr++];
+			if (ISCQ(ch)) {
+				ib->cptr--;
+				if ((ch = qcchar()) == 0)
+					break;
+			}
 			if (ch == '*') {
 				if ((ch = qcchar()) == '/') {
 					break;
