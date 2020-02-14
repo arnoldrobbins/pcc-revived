@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.161 2019/08/24 13:34:13 ragge Exp $	*/
+/*	$Id: scan.l,v 1.162 2020/02/02 09:52:31 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -201,7 +201,7 @@ extern void yyset_lineno (int);
 
 %%
 
-int lineno, issyshdr;
+int issyshdr;
 
 int
 yywrap(void)

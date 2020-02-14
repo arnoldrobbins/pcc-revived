@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.198 2020/01/13 09:55:50 ragge Exp $	*/
+/*	$Id: token.c,v 1.208 2020/02/13 12:24:35 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -57,22 +57,42 @@
  *	3) Tokenize.
  *	   Remove comments (fastcmnt)
  */
+/*  (low address)                                             (high address)
+ *  pbeg                                                                pend
+ *  |                                                                     |
+ *  _______________________________________________________________________
+ * |_______________________________________________________________________|
+ *          |               |               |
+ *          |<-- waiting -->|               |<-- waiting -->
+ *          |    to be      |<-- current -->|    to be
+ *          |    written    |    token      |    scanned
+ *          |               |               |
+ *          outp            inp             p
+ *
+ *  *outp   first char not yet written to output file
+ *  *inp    first char of current token
+ *  *p      first char not yet scanned
+ */
 
+#ifndef pdp11
 #include "config.h"
+#endif
 
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_UNISTD_H
+#if defined(HAVE_UNISTD_H) || defined(pdp11)
 #include <unistd.h>
 #endif
 #include <fcntl.h>
 
+#ifndef pdp11
 #include "compat.h"
+#endif
 #include "cpp.h"
 
-static void cvtdig(usch **);
+static void cvtdig(int);
 static int dig2num(int);
-static int charcon(usch **);
+static int charcon(void);
 static void elsestmt(void);
 static void ifdefstmt(void);
 static void ifndefstmt(void);
@@ -84,9 +104,8 @@ static void undefstmt(void);
 static void pragmastmt(void);
 static void elifstmt(void);
 
-static void unch(int c);
+#define	unch(x)	*--inp = x
 
-#define	UNCH(ib, ch)	ib->buf[--ib->cptr] = ch
 /* protection against recursion in #include */
 #define MAX_INCLEVEL	100
 int inclevel;
@@ -94,59 +113,234 @@ int incmnt, instr;
 extern int skpows;
 
 struct includ *ifiles;
+usch *pbeg, *outp, *inp, *pend;
 
-static void ucn(int n);
+/* used by yylex() buffer expansion */
+static struct iobuf *lb;
+static usch *lpbeg, *lpend, *linp;
+static int lif;
+
+static usch *ucn(usch *p, usch *q);
 static void fastcmnt2(int);
 static int chktg2(int ch);
 
-/* some common special combos for init */
-#define C_NL	(C_SPEC|C_WSNL)
-#define C_DX	(C_SPEC|C_ID|C_DIGIT|C_HEX)
-#define C_I	(C_SPEC|C_ID|C_ID0)
-#define C_IX	(C_SPEC|C_ID|C_ID0|C_HEX)
+/* some common special combos for initialization */
+#define C_NL	(C_SPEC|C_WSNL|C_PACK)
+#define C_DX	(C_SPEC|C_ID0|C_DIGIT|C_HEX)
+#define C_I	(C_SPEC|C_ID0)
+#define C_IX	(C_SPEC|C_ID0|C_HEX)
+#define C_NBS	(C_SPEC|C_Q|C_PACK)
 
-usch spechr[256] = {
-	C_SPEC|C_Q, 0,	0,	0,	C_SPEC,	C_SPEC,	0,	0,
-	0,	C_WSNL,	C_NL,	0,	0,	C_WSNL|C_Q, 0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-
-	C_WSNL,	C_2,	C_SPEC,	0,	0,	0,	C_2,	C_SPEC,
-	0,	0,	0,	C_2,	0,	C_2,	0,	C_SPEC|C_Q,
-	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,
-	C_DX,	C_DX,	0,	0,	C_2,	C_2,	C_2,	C_SPEC|C_Q,
-
-	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	0,	C_SPEC|C_Q, 0,	0,	C_I,
-
-	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+#define FIRST_128							\
+	C_NBS,	0,	0,	0,	C_SPEC,	C_SPEC,	0,	0,	\
+	0,	C_WSNL,	C_NL,	0,	0,	C_PACK, 0,	0,	\
+	0,	0,	0,	0,	0,	0,	0,	0,	\
+	0,	0,	0,	0,	0,	0,	0,	0,	\
+	\
+	C_WSNL,	C_2,	C_SPEC,	0,	0,	0,	C_2,	C_SPEC,	\
+	0,	0,	0,	C_2,	0,	C_2,	0,	C_SPEC|C_Q, \
+	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	\
+	C_DX,	C_DX,	0,	0,	C_2,	C_2,	C_2,	C_PACK,	\
+	\
+	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	0,	C_PACK,	0,	0,	C_I,	\
+	\
+	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
 	C_I,	C_I,	C_I,	0,	C_2,	0,	0,	0,
 
 /* utf-8 */
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+#define LAST_128							\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
+	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
 
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
-	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
+usch spechr[256] = {
+#ifdef CHAR_UNSIGNED
+	FIRST_128 LAST_128
+#else
+	LAST_128 FIRST_128
+#endif
 };
+
+#define	ENDFREE	4	/* space left at end of buffer */
+
+#if LIBVMF
+#define	INFLIRD	(BYTESPERSEG-PBMAX-ENDFREE)
+#else
+#define	INFLIRD	(CPPBUF-PBMAX-ENDFREE)
+#endif
+
+static int numnl;
+
+/*
+ * Convert trigraphs and remove \\n from input stream.
+ */
+static void
+packbuf(void)
+{
+	static usch pbb[10];
+	register usch *p, *q;
+	register int l;
+	usch *rq;
+
+#ifdef PCC_DEBUG
+	if (*inp == 0 && pend > inp)
+		error("*inp == 0");
+#endif
+
+	q = pbeg + PBMAX;
+	/* if we found potential trigraph */
+	if (pbb[9]) {
+		p = pbb+10;
+		while ((*--inp = *--p))
+			q--;
+		inp++;
+		pbb[9] = 0;
+	}
+
+	p = inp;
+	rq = q;
+	if (numnl == 0) {
+		for (;;) {
+			while (ISPACK(*p++) == 0)
+				;
+			if (--p >= pend)
+				return;
+	
+			switch (*p) {
+			case '?':
+				if (p[1] == '?'&& chktg2(p[2]))
+					goto slow;
+psave:				if (pend-p < 3) {
+					/* Save for future use */
+					q = pbb+10;
+					while (pend > p)
+						*--q = *--pend;
+					*--q = 0;
+					*pend = 0;
+					return;
+				}
+				break;
+
+			case '\r':
+				goto slow;
+
+			case '\\':
+				if (p[1] == 0)
+					goto psave;
+				if (p[1] == '\n' || (p[1] | 040) == 'u')
+					goto slow;
+				break;
+
+			default:
+				break;
+			}
+			p++;
+		}
+slow:		q = p;
+	} 
+
+/* need to pack, so we must write as well */
+
+	for (;;) {
+		while (ISPACK(*q++ = *p++) == 0)
+			;
+		if (--p >= pend) {
+			*--q = 0;
+			pend = q;
+			inp = rq;
+			return;
+		}
+		q--;
+
+		switch (*p) {
+		case '\\':
+			if ((l = p[1]) == 0)
+				goto psave2;
+			if (l == '\n') {
+				p += 2;
+				numnl++;
+			} else if (l == 'u') {
+				if (pend-p < 6)
+					goto psave2;
+				q = ucn(p, q);
+				p += 6;
+			} else if (l == 'U') {
+				if (pend-p < 10)
+					goto psave2;
+				q = ucn(p, q);
+				p += 10;
+			} else
+				p++, q++;
+			break;
+
+		case '\r':
+			p++;
+			break;
+
+		case '\n':
+			p++, q++;
+			while (numnl > 0)
+				*q++ = '\n', numnl--;
+			break;
+
+		case '?':
+			if (pend-p < 3)
+				goto psave2;
+			if (p[1] == '?' && (l = chktg2(p[2]))) {
+				/* found trigraph */
+				p += 2;
+				*p = l;
+			} else
+				p++, q++;
+			break;
+
+		case 0:
+			error("stray 0");
+		default:
+			p++, q++;
+			break;
+		}
+
+	}
+
+psave2:	
+	/* Save for future use */
+#ifdef PCC_DEBUG
+	if (pend-p > 9)
+		error("pend-p > 9");
+#endif
+
+	inp = rq;
+	rq = pend;
+	pend = q;
+	*q = 0;
+	q = pbb+10;
+	while (rq > p)
+		*--q = *--rq;
+	*--q = 0;
+	return;
+}
 
 /*
  * fill up the input buffer
@@ -154,34 +348,79 @@ usch spechr[256] = {
  * 0 if EOF, != 0 if something could fill up buf.
  */
 static int
-inpbuf(int n)
+inpbuf(void)
 {
-	struct iobuf *ib = ifiles->ib;
-	int len, sz = 0;
-
-	if (n > 0) {
-		if (ib->bsz > ib->cptr + n)
-			return 1; /* enough in buffer */
-		sz = ib->bsz - ib->cptr;
-		memcpy(ib->buf+PBMAX - sz, ib->buf + ib->cptr, sz);
-	}
+	register usch *ninp, *oinp;
+	register int len;
 
 	if (ifiles->infil == -1)
 		return 0;
-#if LIBVMF
-	len = (int)read(ifiles->infil, ib->buf+PBMAX, BYTESPERSEG-PBMAX-2);
-#else
-	len = (int)read(ifiles->infil, ib->buf+PBMAX, CPPBUF-PBMAX-2);
-#endif
-	if (len == -1)
+
+	if (inp < pend)
+		error("inp < pend");
+
+	ninp = pbeg + PBMAX + numnl;
+	oinp = inp;
+	while (oinp < pend)
+		*ninp++ = *oinp++;
+	pend = pbeg + INFLIRD + PBMAX;
+	inp = pbeg+PBMAX+numnl;
+
+	if ((len = (int)read(ifiles->infil, ninp, pend - ninp)) < 0)
 		error("read error on file %s", ifiles->orgfn);
-	ib->buf[PBMAX + len + 1] = 0; /* keep buffer terminated */
-	if (len > 0) {
-		ib->cptr = PBMAX - sz;
-		ib->bsz = PBMAX + len;
-	}
-	return len + sz;
+
+	ninp += len;
+	pend = ninp;
+	*pend = 0;
+
+#if 0
+{ usch *w = inp; while (w < pend) { if (*w == 0) error("*w == 0"); w++; } }
+#endif
+	packbuf();
+#if 0
+{ usch *w = inp; while (w < pend) { if (*w == 0) error("*w == 0-2"); w++; } }
+#endif
+	return pend-inp;
 }
+
+#ifdef notyet
+/*
+ * moves data from inp to p to beginning of buffer.
+ * fill up the input buffer from p to INFLIRD-numnl
+ * update pointers (pend, inp, outp, p)
+ */
+static usch *
+refill(usch *p)
+{
+	register usch *ninp, *oinp;
+	register int len;
+
+	/* dump(); */
+	ninp = pbeg+PBMAX;
+	oinp = inp;
+	while (oinp < pend)
+		*ninp++ = *oinp++;
+	p -= (oinp - ninp);
+	pend -= (oinp - ninp);
+	outp = inp = pbeg+PBMAX;
+
+	if (ifiles->infil == -1)
+		return 0;
+
+	ninp = pbeg + PBMAX + INFLIRD - numnl;
+	do {
+		if ((len = (int)read(ifiles->infil, pend, ninp-pend)) < 0)
+			error("read error on file %s", ifiles->orgfn);
+		if (len == 0)
+			break;
+		pend += len;
+	} while (pend < ninp);
+
+	*pend = 0;
+	packbuf();
+	return p;
+}
+#endif
 
 /*
  * Return a quick-cooked character.
@@ -190,58 +429,24 @@ inpbuf(int n)
 static int
 qcchar(void)
 {
-	struct iobuf *ib = ifiles->ib;
-	int ch;
+	register int ch;
 
-newone:	do {
-		if (ib->cptr < ib->bsz) {
-			if (!ISCQ(ch = ib->buf[ib->cptr++]))
-				return ch;
-			break;
-		}
-	} while ((ch = inpbuf(0)) > 0);
+newone:	if (ISCQ(ch = *inp++) == 0)
+		return ch;
 
 	switch (ch) {
 	case 0:
-		return 0; /* end of file */
-
-	case '\r':
-		goto newone;
-
-	case '\\':
-		if (ib->cptr == ib->bsz)
-			inpbuf(0);
-		switch (ch = ib->buf[ib->cptr]) {
-		case 'u':
-		case 'U': 
-			if (incmnt) 
-				return '\\';
-			ib->cptr++;
-			ucn(ch == 'u' ? 4 : 8);
-			break;
-		case '\r':
-			ib->cptr++;
-			if (ib->cptr == ib->bsz)
-				inpbuf(0);
-			/* FALLTHROUGH */
-		case '\n':
-			ib->cptr++;
-			ifiles->escln++;
-			break;
-		default:
-			return '\\';
-		}
-		goto newone;
-
-	case '?':
-		inpbuf(2);
-		if (ib->buf[ib->cptr] == '?') {
-			if ((ch = chktg2(ib->buf[ib->cptr+1])) == 0)
-				return '?';
-			ib->buf[++ib->cptr] = ch;
+		inp--;
+		if (lb) {
+			pend = lpend, pbeg = lpbeg, inp = linp;
+			ifiles->infil = lif;
+			bufree(lb);
+			lb = 0;
 			goto newone;
 		}
-		return '?';
+		if (inpbuf())
+			goto newone;
+		return 0; /* end of file */
 
 	case '/':
 		if (Cflag || incmnt || instr)
@@ -255,7 +460,7 @@ newone:	do {
 			if (n == ifiles->lineno)
 				return ' ';
 		} else {
-			ib->buf[--ib->cptr] = ch;
+			*--inp = ch;
 			return '/';
 		}
 		goto newone;
@@ -265,25 +470,10 @@ newone:	do {
 }
 
 /*
- * push a character back to the input stream
- */
-static void
-unch(int c)
-{
-	if (c == -1)
-		return;
-
-	ifiles->ib->cptr--;
-	if (ifiles->ib->cptr < 0)
-		error("pushback buffer full");
-	ifiles->ib->buf[ifiles->ib->cptr] = (usch)c;
-}
-
-/*
  * Return trigraph mapping char or 0.
  */
 static int
-chktg2(int ch)
+chktg2(register int ch)
 {
 	switch (ch) {
 	case '=':  return '#';
@@ -303,10 +493,9 @@ chktg2(int ch)
  * deal with comments in the fast scanner.
  */
 static void
-fastcmnt2(int ch)
+fastcmnt2(register int ch)
 {
-	register struct iobuf *ib = ifiles->ib;
-	int lastline = ifiles->lineno;
+	register int lastline = ifiles->lineno;
 
 	incmnt = 1;
 	if (ch == '/') { /* C++ comment */
@@ -315,9 +504,9 @@ fastcmnt2(int ch)
 		unch(ch);
 	} else if (ch == '*') {
 		for (;;) {
-			ch = ib->buf[ib->cptr++];
+			ch = *inp++;
 			if (ISCQ(ch)) {
-				ib->cptr--;
+				--inp;
 				if ((ch = qcchar()) == 0)
 					break;
 			}
@@ -342,45 +531,48 @@ fastcmnt2(int ch)
  * check for universal-character-name on input, and
  * unput to the pushback buffer encoded as UTF-8.
  */
-static void
-ucn(int n)
+static usch *
+ucn(register usch *p, register usch *q)
 {
 	unsigned long cp, m;
-	int ch;
+	register int ch;
+	usch bs[6];
+	int n;
 
-	if (incmnt) {
-		struct iobuf *ib = ifiles->ib;
-		ib->cptr--; /* [uU] */
-		ib->buf[--ib->cptr] = '\\';
-		return;
-	}
-
+	p++;
+	n = *p++ == 'u' ? 4 : 8;
 	cp = 0;
 	while (n-- > 0) {
-		if ((ch = qcchar()) == 0 || (spechr[ch] & C_HEX) == 0) {
+		if ((ch = (unsigned char)*p++) == 0 || (ISHEX(ch)) == 0) {
+#if 0 			/* leave untouched */
 			warning("invalid universal character name");
-			/* XXX should actually unput the chars and return 0 */
-			unch(ch); /* XXX eof */
-			break;
+#endif
+			return q;
 		}
 		cp = cp * 16 + dig2num(ch);
 	}
 
+#if 0
 	if ((cp < 0xa0 && cp != 0x24 && cp != 0x40 && cp != 0x60)
 	    || (cp >= 0xd800 && cp <= 0xdfff))	/* 6.4.3.2 */
 		error("universal character name cannot be used");
 
 	if (cp > 0x7fffffff)
 		error("universal character name out of range");
+#endif
 
 	n = 0;
 	m = 0x7f;
+	p = bs;
 	while (cp > m) {
-		unch(0x80 | (cp & 0x3f));
+		*p++ = (0x80 | (cp & 0x3f));
 		cp >>= 6;
 		m >>= (n++ ? 1 : 2);
 	}
-	unch(((m << 1) ^ 0xfe) | cp);
+	*p++ = (((m << 1) ^ 0xfe) | cp);
+	while (p > bs)
+		*q++ = *--p;
+	return q;
 }
 
 /*
@@ -388,7 +580,7 @@ ucn(int n)
  * Save comments in expanded macros???
  */
 void
-Ccmnt2(struct iobuf *ob, int ch)
+Ccmnt2(register struct iobuf *ob, register int ch)
 {
 
 	if (skpows)
@@ -425,7 +617,7 @@ Ccmnt2(struct iobuf *ob, int ch)
 static int
 fastspc(void)
 {
-	int ch;
+	register int ch;
 
 	while ((ch = qcchar()), ISWS(ch))
 		;
@@ -436,9 +628,9 @@ fastspc(void)
  * readin chars and store in buf. Warn about too long names.
  */
 usch *
-bufid(int ch, struct iobuf *ob)
+bufid(int ch, register struct iobuf *ob)
 {
-	int n = ob->cptr;
+	register int n = ob->cptr;
 
 	do {
 		if (ob->cptr - n == MAXIDSZ)
@@ -447,7 +639,7 @@ bufid(int ch, struct iobuf *ob)
 			ob->buf[ob->cptr++] = ch;
 		else
 			putob(ob, ch);
-	} while (spechr[ch = qcchar()] & C_ID);
+	} while (ISID(ch = qcchar()));
 	ob->buf[ob->cptr] = 0; /* legal */
 	unch(ch);
 	return ob->buf+n;
@@ -460,7 +652,7 @@ usch idbuf[MAXIDSZ+1];
 usch *
 readid(int ch)
 {
-	int p = 0;
+	register int p = 0;
 
 	do {
 		if (p == MAXIDSZ)
@@ -468,7 +660,7 @@ readid(int ch)
 		if (p < MAXIDSZ)
 			idbuf[p] = ch;
 		p++;
-	} while (spechr[ch = qcchar()] & C_ID);
+	} while (ISID(ch = qcchar()));
 	idbuf[p] = 0;
 	unch(ch);
 	return idbuf;
@@ -478,30 +670,28 @@ readid(int ch)
  * get a string or character constant and save it as given by d.
  */
 struct iobuf *
-faststr(int bc, struct iobuf *ob)
+faststr(int bc, register struct iobuf *ob)
 {
-	struct iobuf *ib = ifiles->ib;
-	int ch;
+	register int ch;
 
-	if (ob == NULL)
-		ob = getobuf(BNORMAL);
-
+#define	FSPCH(c) if (ob == NULL) putch(c); else putob(ob, c);
 	instr = 1;
-	putob(ob, bc);
+	FSPCH(bc);
 	for (;;) {
-		if (ib->bsz == ib->cptr)
+		if (inp == pend)
 			ch = qcchar();
-		else if (ISCQ(ch = ib->buf[ib->cptr]))
+		else if (ISCQ(ch = *inp))
 			ch = qcchar();
 		else
-			ib->cptr++;
+			inp++;
 		switch (ch) {
 		case '\\':
-			putob(ob, ch);
-			if (ib->cptr == ib->bsz)
-				inpbuf(0);
+			FSPCH(ch);
+			if (inp == pend)
+				inpbuf();
 			incmnt = 1;
-			putob(ob, qcchar());
+			ch = qcchar();
+			FSPCH(ch);
 			incmnt = 0;
 			continue;
 		case '\n':
@@ -510,56 +700,16 @@ faststr(int bc, struct iobuf *ob)
 			unch(ch);
 			return ob;
 		}
-		putob(ob, ch);
+		FSPCH(ch);
 		if (ch == bc)
 			break;
 	}
-	putob(ob, 0);
-	ob->cptr--;
+	if (ob) {
+		putob(ob, 0);
+		ob->cptr--;
+	}
 	instr = 0;
 	return ob;
-}
-
-/*
- * get a preprocessing number and save it as given by ob.
- * returns first non-pp-number char.
- * We know that this is a valid number already.
- *
- *	pp-number:	digit
- *			. digit
- *			pp-number digit
- *			pp-number identifier-nondigit
- *			pp-number e sign
- *			pp-number E sign
- *			pp-number p sign
- *			pp-number P sign
- *			pp-number .
- */
-int
-fastnum(int ch, struct iobuf *ob)
-{
-	int c2;
-
-	if (ch == '.') { /* not digit, dot */
-		putob(ob, ch);
-		ch = qcchar();
-	}
-	for (;;) {
-		putob(ob, ch);
-		if ((ch = qcchar()) == 0)
-			break;
-		if ((spechr[ch] & C_ID) == 0 && ch != '.')
-			break;
-		if (ch == 'e' || ch == 'E' || ch == 'p' || ch == 'P') {
-			if ((c2 = qcchar()) == '-' || c2 == '+') {
-				putob(ob, ch);
-				ch = c2;
-				continue;
-			}
-			unch(c2);
-		}
-	}
-	return ch;
 }
 
 /*
@@ -575,17 +725,10 @@ fastnum(int ch, struct iobuf *ob)
 void
 fastscan(void)
 {
-	struct iobuf *ob, rbs, *rb = &rbs;
-	extern struct iobuf pb;
-	struct iobuf *ib = ifiles->ib;
+	struct iobuf *ob;
 	struct symtab *nl;
-	int ch, c2;
-	usch *dp;
-
-#define	IDSIZE	128
-	rb->buf = xmalloc(IDSIZE+1);
-	rb->cptr = 0;
-	rb->bsz = IDSIZE;
+	register int ch, c2;
+	register usch *dp;
 
 	goto run;
 
@@ -593,19 +736,18 @@ fastscan(void)
 		/* tight loop to find special chars */
 		/* should use getchar/putchar here */
 		for (;;) {
-			if (ib->cptr < ib->bsz)
-				ch = ib->buf[ib->cptr++];
+			if (inp < pend)
+				ch = *inp++;
 			else
 				ch = qcchar();
-xloop:			if (ch < 0) ch = 0; /* XXX */
-			if ((spechr[ch] & C_SPEC) != 0)
+
+			if ((ISSPEC(ch)) != 0)
 				break;
 			putch(ch);
 		}
 
 		switch (ch) {
 		case 0:
-			free(rb->buf);
 			return;
 
 		case WARN:
@@ -623,11 +765,16 @@ xloop:			if (ch < 0) ch = 0; /* XXX */
 					fastcmnt2(ch);
 					if (n == ifiles->lineno)
 						putch(' '); /* 5.1.1.2 p3 */
-				} else
-					Ccmnt2(&pb, ch);
+				} else {
+					ob = getobuf(BNORMAL);
+					Ccmnt2(ob, ch);
+					ob->buf[ob->cptr] = 0;
+					putstr(ob->buf);
+					bufree(ob);
+				}
 			} else {
 				putch('/');
-				goto xloop;
+				unch(ch);
 			}
 			break;
 
@@ -653,19 +800,7 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 			if (ch  == '#')
 				ppdir();
 			else
-				goto xloop;
-			break;
-
-		case '?':
-			if (ib->cptr+1 >= ib->bsz)
-				inpbuf(2);
-			if (ib->buf[ib->cptr] == '?') {
-				ib->cptr++;
-				if ((ch = chktg2(ib->buf[ib->cptr++])))
-					goto xloop;
-				ib->cptr -= 2;
-			}
-			putch('?');
+				unch(ch);
 			break;
 
 		case '\'': /* character constant */
@@ -677,53 +812,70 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 		case '\"': /* strings */
 			if (skpows)
 				cntline();
-			faststr(ch, &pb);
+			faststr(ch, NULL);
 			break;
 
-		case '.':  /* for pp-number */
-			if ((spechr[c2 = qcchar()] & C_DIGIT) == 0) {
-				putch('.');
-				goto xloop;
-			}
-			unch(c2);
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7': case '8': case '9':
 			if (skpows)
 				cntline();
-			ch = fastnum(ch, &pb);
-			goto xloop;
+			for (;;) {
+				putch(ch);
+				if (*inp == 0 || *inp == '\\')
+					ch = qcchar();
+				else
+					ch = *inp++;
+				if (ch == 0)
+					break;
+				if ((ISID(ch)) == 0 && ch != '.')
+					break;
+				if ((ch|040) == 'e' || (ch|040) == 'p') {
+					if ((c2 = qcchar()) == '-' || c2 == '+') {
+						putch(ch);
+						ch = c2;
+					} else
+						unch(c2);
+				}
+			}
+			*--inp = ch;
+			break;
 
 		case 'L':
 		case 'U':
 		case 'u':
-			if (ib->cptr+2 >= ib->bsz)
-				inpbuf(2);
-			if ((c2 = ib->buf[ib->cptr]) == '\"' || c2 == '\'') {
+			if (*inp == 0)
+				inpbuf();
+			if ((c2 = *inp) == '\"' || c2 == '\'') {
 				putch(ch);
 				break;
-			} else if (c2 == '8' && ch == 'u' &&
-			    ib->buf[ib->cptr+1] == '\"') {
-				ib->cptr++;
-				putstr((usch *)"u8");
-				break;
+			}
+			if (c2 == '8' && ch == 'u') {
+				if (inp[1] == 0)
+					inpbuf();
+				if (inp[1] == '\"') {
+					inp++;
+					putstr((usch *)"u8");
+					break;
+				}
 			}
 			/* FALLTHROUGH */
 		default:
 #ifdef PCC_DEBUG
-			if ((spechr[ch] & C_ID) == 0)
+			if ((ISID(ch)) == 0)
 				error("fastscan");
 #endif
 			if (flslvl)
 				error("fastscan flslvl");
-			rb->cptr = 0;
-			dp = bufid(ch, rb);
+
+			dp = readid(ch);
 			if ((nl = lookup(dp, FIND)) != NULL) {
 				if ((ob = kfind(nl)) != NULL) {
 					if (*ob->buf == '-' || *ob->buf == '+')
 						putch(' ');
 					if (skpows)
 						cntline();
-					buftobuf(ob, &pb);
+					ob->buf[ob->cptr] = 0;
+					putstr(ob->buf);
 					if (ob->cptr > 0 &&
 					    (ob->buf[ob->cptr-1] == '-' ||
 					    ob->buf[ob->cptr-1] == '+'))
@@ -734,153 +886,124 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 				putstr(dp);
 			}
 			break;
-
-		case '\\':
-			ib->buf[--ib->cptr] = '\\';
-			if ((ch = qcchar()) != '\\')
-				goto xloop;
-			putch('\\');
-			break;
 		}
 	}
 }
 
 /*
- * Store an if/elif line on heap for parsing, evaluate macros and 
- * call yyparse().
  */
-static usch *yyinp;
-int inexpr;
-static int
-exprline(void)
-{
-	extern int nbufused;
-	struct iobuf *ob, *rb;
-	struct symtab *nl;
-	int oCflag = Cflag;
-	usch *dp;
-	int c, d, ifdef;
-
-	rb = getobuf(BNORMAL);
-	nbufused--;
-	Cflag = ifdef = 0;
-
-	for (;;) {
-		c = qcchar();
-xloop:		if (c == '\n')
-			break;
-		if (c == '.') {
-			putob(rb, '.');
-			if ((spechr[c = qcchar()] & C_DIGIT) == 0)
-				goto xloop;
-		}
-		if (ISDIGIT(c)) {
-			c = fastnum(c, rb);
-			goto xloop;
-		}
-		if (c == '\'' || c == '\"') {
-			faststr(c, rb);
-			continue;
-		}
-		if (c == 'L' || c == 'u' || c == 'U') {
-			unch(d = qcchar());
-			if (d == '\'')	/* discard wide designator */
-				continue;
-		}
-		if (ISID0(c)) {
-			dp = readid(c);
-			nl = lookup(dp, FIND);
-			if (nl && nl->type == DEFLOC) {
-				ifdef = 1;
-			} else if (ifdef) {
-				putob(rb, nl ? '1' : '0');
-				ifdef = 0;
-			} else if (nl != NULL) {
-				inexpr = 1;
-				if ((ob = kfind(nl))) {
-					ob->buf[ob->cptr] = 0;
-					strtobuf(ob->buf, rb);
-					bufree(ob);
-				} else
-					putob(rb, '0');
-				inexpr = 0;
-			} else
-				putob(rb, '0');
-		} else
-			putob(rb, c);
-	}
-	rb->buf[rb->cptr] = 0;
-	unch('\n');
-	yyinp = rb->buf;
-	c = yyparse();
-	bufree(rb);
-	nbufused++;
-	Cflag = oCflag;
-	return c;
-}
-
 int
 yylex(void)
 {
-	int ch, c2, t;
+	register int ch, c2, t;
+	struct iobuf *ob;
+	struct symtab *nl;
 
-	while ((ch = *yyinp++) == ' ' || ch == '\t')
+igen:	while ((ch = qcchar()) == ' ' || ch == '\t')
 		;
 	t = ISDIGIT(ch) ? NUMBER : ch;
-	if (ch < 128 && (spechr[ch] & C_2))
-		c2 = *yyinp++;
+	if (ch < 128 && (ISC2(ch)))
+		c2 = qcchar();
 	else
 		c2 = 0;
 
 	switch (t) {
-	case 0: return WARN;
 	case '=':
-		if (c2 == '=') return EQ;
+		if (c2 == '=') ch = EQ;
+		else goto pb;
 		break;
 	case '!':
-		if (c2 == '=') return NE;
+		if (c2 == '=') ch = NE;
+		else goto pb;
 		break;
 	case '|':
-		if (c2 == '|') return OROR;
+		if (c2 == '|') ch = OROR;
+		else goto pb;
 		break;
 	case '&':
-		if (c2 == '&') return ANDAND;
+		if (c2 == '&') ch = ANDAND;
+		else goto pb;
 		break;
 	case '<':
-		if (c2 == '<') return LS;
-		if (c2 == '=') return LE;
+		if (c2 == '<') ch = LS; else
+		if (c2 == '=') ch = LE;
+		else goto pb;
 		break;
 	case '>':
-		if (c2 == '>') return RS;
-		if (c2 == '=') return GE;
+		if (c2 == '>') ch = RS; else
+		if (c2 == '=') ch = GE;
+		else goto pb;
 		break;
 	case '+':
 	case '-':
 		if (ch == c2)
 			error("invalid preprocessor operator %c%c", ch, c2);
-		break;
+		goto pb;
 
 	case '\'':
 		yynode.op = NUMBER;
-		yynode.nd_val = charcon(&yyinp);
-		return NUMBER;
+		yynode.nd_val = charcon();
+		ch = NUMBER;
+		break;
 
 	case NUMBER:
-		cvtdig(&yyinp);
-		return NUMBER;
+		cvtdig(ch);
+		ch = NUMBER;
+		break;
+
+	case '\n':
+		*--inp = t;
+		ch = WARN;
+		break;
 
 	default:
-		if (ISID0(t)) {
-			yyinp--;
-			while (ISID(*yyinp))
-				yyinp++;
-			yynode.nd_val = 0;
-			yynode.op = NUMBER;
-			return NUMBER;
+		if (ISID0(t) == 0)
+			break;
+
+		yynode.op = NUMBER;
+		yynode.nd_val = 0;
+		ch = NUMBER;
+		if ((nl = lookup(readid(t), FIND))) {
+			if (nl->type == DEFLOC) {
+				c2 = 0;
+				while ((t = qcchar()), ISWS(t))
+					;
+				if (t == '(')
+					c2++, t = qcchar();
+				yynode.nd_val = lookup(readid(t), FIND) != NULL;
+				while ((t = qcchar()), ISWS(t))
+					;
+				if (c2) {
+					if (t != ')')
+						error("bad defined");
+				} else
+					*--inp = t;
+			} else /* if (nl) */ {
+				if (nl->type == FUNLIKE) {
+					while ((t = qcchar()), ISWS(t))
+						;
+					*--inp = t;
+					if (t != '(')
+						break;
+				}
+				if ((ob = kfind(nl))) {
+					ob->buf[ob->cptr] = 0;
+					lpbeg = pbeg, lpend = pend, linp = inp;
+					lif = ifiles->infil, ifiles->infil = -1;
+					lb = ob;
+					inp = pbeg = ob->buf,
+					    pend = pbeg + ob->cptr;
+					goto igen;
+				}
+			}
 		}
-		return ch;
+		break;
 	}
-	yyinp--;
+//fprintf(stderr, "uulex1: ch '%c' %d val=%lld '%s'\n", ch, ch, yynode.nd_val, inp);
+	return ch;
+
+pb:	*--inp = c2;
+//fprintf(stderr, "uulex2: ch '%c' %d val=%lld '%s'\n", ch, ch, yynode.nd_val, inp);
 	return ch;
 }
 
@@ -892,8 +1015,8 @@ void
 pushfile(const usch *file, const usch *fn, int idx, void *incs)
 {
 	struct includ ibuf;
-	struct includ *ic;
-	int otrulvl;
+	register struct includ *ic;
+	register int otrulvl;
 
 	ic = &ibuf;
 	ic->next = ifiles;
@@ -917,10 +1040,19 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 	vmlock(ic->vseg);
 #endif
 	ifiles = ic;
-	ic->ib = getobuf(BINBUF);
+
+	ic->opend = pend - pbeg;
+	ic->oinp = inp - pbeg;
+	ic->opbeg = pbeg;
+	/* dump(); */
+#if LIBVMF
+	pend = inp = pbeg = (usch *)ifiles->vseg->s_cinfo;
+#else
+	pend = inp = pbeg = xmalloc(CPPBUF);
+	*inp = 0;
+#endif
 	ic->lineno = 1;
 	ic->escln = 0;
-	ic->maxread = ic->curptr;
 	ic->idx = idx;
 	ic->incs = incs;
 	ic->fn = fn;
@@ -937,16 +1069,22 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 #if LIBVMF
 	vmmodify(ic->vseg);
 	vmunlock(ic->vseg);
-	ic->ib->ro = 1; /* XXX no free */
 	if (ifiles) {
 		ifiles->vseg = vmmapseg(&ibspc, inclevel);
 		vmlock(ifiles->vseg);
 
-		ifiles->ib->buf = (usch *)ifiles->vseg->s_cinfo;
+		pbeg = (usch *)ifiles->vseg->s_cinfo;
+		pend = pbeg + ic->opend;
+		inp = pbeg + ic->oinp;
+		/* XXX adjust offsets */
 	}
-#endif
+#else /* LIBVMF */
+	free(pbeg);
+	pbeg = ic->opbeg;
+	pend = pbeg + ic->opend;
+	inp = pbeg + ic->oinp;
+#endif /* LIBVMF */
 	close(ic->infil);
-	bufree(ic->ib);
 }
 
 /*
@@ -955,7 +1093,7 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 void
 prtline(int nl)
 {
-	struct iobuf *ob;
+	register struct iobuf *ob;
 
 	if (Mflag) {
 		if (dMflag)
@@ -971,25 +1109,20 @@ prtline(int nl)
 		}
 	} else if (!Pflag) {
 		skpows = 0;
-		bsheap(&pb, "\n# %d \"%s\"", ifiles->lineno, ifiles->fname);
+		ob = getobuf(BNORMAL);
+		bsheap(ob, "\n# %d \"%s\"", ifiles->lineno, ifiles->fname);
 		if (ifiles->idx == SYSINC)
-			strtobuf((usch *)" 3", &pb);
-		if (nl) strtobuf((usch *)"\n", &pb);
+			strtobuf((usch *)" 3", ob);
+		if (nl) putob(ob, '\n');
+		ob->buf[ob->cptr] = 0;
+		putstr(ob->buf);
+		bufree(ob);
 	} else
-		putob(&pb, '\n');
-}
-
-void
-cunput(int c)
-{
-#ifdef PCC_DEBUG
-/*	if (dflag)printf(": '%c'(%d)\n", c > 31 ? c : ' ', c); */
-#endif
-	unch(c);
+		putch('\n');
 }
 
 static int
-dig2num(int c)
+dig2num(register int c)
 {
 	if (c >= 'a')
 		c = c - 'a' + 10;
@@ -1004,49 +1137,54 @@ dig2num(int c)
  * Convert string numbers to unsigned long long and check overflow.
  */
 static void
-cvtdig(usch **yyp)
+cvtdig(register int c)
 {
 	unsigned long long rv = 0;
 	unsigned long long rv2 = 0;
-	usch *y = *yyp;
-	int rad;
+	register int rad;
 
-	y--;
-	rad = *y != '0' ? 10 : y[1] == 'x' ||  y[1] == 'X' ? 16 : 8;
-	if (rad == 16)
-		y += 2;
-	while ((spechr[*y] & C_HEX)) {
-		rv = rv * rad + dig2num(*y);
+	if (c == '0') {
+		rad = 8;
+		if (((c = qcchar()) | 0x20) == 'x') {
+			rad <<= 1;
+			c = qcchar();
+		} else
+			*--inp = c, c = '0';
+	} else
+		rad = 10;
+
+	while ((ISHEX(c))) {
+		rv = rv * rad + dig2num(c);
 		/* check overflow */
 		if (rv / rad < rv2)
 			error("constant is out of range");
 		rv2 = rv;
-		y++;
+		c = qcchar();
 	}
+
 	yynode.op = NUMBER;
-	while (*y == 'l' || *y == 'L' || *y == 'u' || *y == 'U') {
-		if (*y == 'u' || *y == 'U')
+	while ((c | 0x20) == 'l' || (c | 0x20) == 'u') {
+		if ((c | 0x20) == 'u')
 			yynode.op = UNUMBER;
-		y++;
+		c = qcchar();
 	}
+	*--inp = c;
 	yynode.nd_uval = rv;
 	if ((rad == 8 || rad == 16) && yynode.nd_val < 0)
 		yynode.op = UNUMBER;
 	if (yynode.op == NUMBER && yynode.nd_val < 0)
 		/* too large for signed, see 6.4.4.1 */
 		error("constant is out of range");
-	*yyp = y;
 }
 
 static int
-charcon(usch **yyp)
+charcon(void)
 {
-	int val, c;
-	usch *p = *yyp;
+	register int val, c;
 
 	val = 0;
-	if (*p++ == '\\') {
-		switch (*p++) {
+	if ((c = qcchar()) == '\\') {
+		switch (c = qcchar()) {
 		case 'a': val = '\a'; break;
 		case 'b': val = '\b'; break;
 		case 'f': val = '\f'; break;
@@ -1058,40 +1196,38 @@ charcon(usch **yyp)
 		case '\'': val = '\''; break;
 		case '\\': val = '\\'; break;
 		case 'x':
-			while ((spechr[c = *p] & C_HEX)) {
+			while ((ISHEX(c = qcchar())))
 				val = val * 16 + dig2num(c);
-				p++;
-			}
 			break;
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7':
-			p--;
-			while ((spechr[c = *p] & C_DIGIT)) {
+			do
 				val = val * 8 + (c - '0');
-				p++;
-			}
+			while ((ISDIGIT(c = qcchar())));
+			*--inp = c;
 			break;
-		default: val = p[-1];
+		default: val = c;
 		}
 
 	} else
-		val = p[-1];
-	if (*p != '\'')
+		val = c;
+	if (qcchar() != '\'')
 		error("bad charcon");
-	*yyp = ++p;
 	return val;
 }
 
 static void
 chknl(int ignore)
 {
-	void (*f)(const char *, ...);
-	int t;
+	register void (*f)(const char *, ...);
+	register int t;
 
 	f = ignore ? warning : error;
 	if ((t = fastspc()) != '\n') {
 		if (t) {
+#ifndef pdp11
 			f("newline expected");
+#endif
 			/* ignore rest of line */
 			while ((t = qcchar()) > 0 && t != '\n')
 				;
@@ -1125,8 +1261,8 @@ elsestmt(void)
 static void
 ifdefstmt(void)
 {
-	usch *bp;
-	int ch;
+	register usch *bp;
+	register int ch;
 
 	if (!ISID0(ch = fastspc()))
 		error("bad #ifdef");
@@ -1142,8 +1278,8 @@ ifdefstmt(void)
 static void
 ifndefstmt(void)
 {
-	usch *bp;
-	int ch;
+	register usch *bp;
+	register int ch;
 
 	if (!ISID0(ch = fastspc()))
 		error("bad #ifndef");
@@ -1173,12 +1309,19 @@ endifstmt(void)
 static void
 ifstmt(void)
 {
-	exprline() ? trulvl++ : flslvl++;
+	register int oCflag = Cflag;
+
+	Cflag = 0;
+	yyparse() ? trulvl++ : flslvl++;
+	Cflag = oCflag;
 }
 
 static void
 elifstmt(void)
 {
+	register int oCflag = Cflag;
+
+	Cflag = 0;
 	if (flslvl == 0)
 		elflvl = trulvl;
 	if (flslvl) {
@@ -1186,7 +1329,7 @@ elifstmt(void)
 			;
 		else if (--flslvl!=0)
 			flslvl++;
-		else if (exprline())
+		else if (yyparse())
 			trulvl++;
 		else
 			flslvl++;
@@ -1195,14 +1338,15 @@ elifstmt(void)
 		trulvl--;
 	} else
 		error("#elif in non-conditional section");
+	Cflag = oCflag;
 }
 
 /* save line into iobuf */
 struct iobuf *
 savln(void)
 {
-	struct iobuf *ob = getobuf(BNORMAL);
-	int c;
+	register struct iobuf *ob = getobuf(BNORMAL);
+	register int c;
 
 	while ((c = qcchar()) != 0) {
 		if (c == '\n') {
@@ -1221,7 +1365,7 @@ savln(void)
 static void
 cpperror(void)
 {
-	struct iobuf *ob = savln();
+	register struct iobuf *ob = savln();
 	error("#error%s", ob->buf);
 	bufree(ob);
 }
@@ -1229,7 +1373,7 @@ cpperror(void)
 static void
 cppwarning(void)
 {
-	struct iobuf *ob = savln();
+	register struct iobuf *ob = savln();
 	warning("#warning%s", ob->buf);
 	bufree(ob);
 }
@@ -1237,9 +1381,9 @@ cppwarning(void)
 static void
 undefstmt(void)
 {
-	struct symtab *np;
-	usch *bp;
-	int ch;
+	register struct symtab *np;
+	register usch *bp;
+	register int ch;
 
 	if (!ISID0(ch = fastspc()))
 		error("bad #undef");
@@ -1266,7 +1410,9 @@ identstmt(void)
 		if (ob)
 			bufree(ob);
 	} else if (ch == '\"') {
-		bufree(faststr(ch, NULL));
+		ob = getobuf(BNORMAL);
+		faststr(ch, ob);
+		bufree(ob);
 		
 	} else
 		goto bad;
@@ -1279,7 +1425,7 @@ bad:
 static void
 pragmastmt(void)
 {
-	int ch;
+	register int ch;
 
 	putstr((const usch *)"\n#pragma");
 	while ((ch = qcchar()) != '\n' && ch > 0)
@@ -1325,7 +1471,7 @@ static struct {
 static void
 skpln(void)
 {
-	int ch;
+	register int ch;
 
 	/* just ignore the rest of the line */
 	while ((ch = qcchar()) != 0) {
@@ -1343,7 +1489,7 @@ skpln(void)
 static void
 flscan(void)
 {
-	int ch;
+	register int ch;
 
 	for (;;) {
 		ch = qcchar();
@@ -1403,7 +1549,7 @@ again:		switch (ch) {
 void
 ppdir(void)
 {
-	int ch, i, oldC;
+	register int ch, i, oldC;
 	usch *bp;
 
 	oldC = Cflag;
@@ -1414,7 +1560,7 @@ redo:	Cflag = 0;
 		return;
 	}
 	Cflag = oldC;
-	if ((spechr[ch] & C_ID0) == 0)
+	if ((ISID0(ch)) == 0)
 		goto out;
 	bp = readid(ch);
 
