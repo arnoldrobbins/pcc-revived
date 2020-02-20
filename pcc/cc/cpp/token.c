@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.208 2020/02/13 12:24:35 ragge Exp $	*/
+/*	$Id: token.c,v 1.210 2020/02/16 11:19:36 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -111,6 +111,7 @@ static void elifstmt(void);
 int inclevel;
 int incmnt, instr;
 extern int skpows;
+int escln;
 
 struct includ *ifiles;
 usch *pbeg, *outp, *inp, *pend;
@@ -125,11 +126,11 @@ static void fastcmnt2(int);
 static int chktg2(int ch);
 
 /* some common special combos for initialization */
-#define C_NL	(C_SPEC|C_WSNL|C_PACK)
-#define C_DX	(C_SPEC|C_ID0|C_DIGIT|C_HEX)
+#define C_NL	(C_SPEC|C_WSNL|C_PACK|C_ESTR)
+#define C_DX	(C_SPEC|C_ID0|C_DIGIT)
 #define C_I	(C_SPEC|C_ID0)
-#define C_IX	(C_SPEC|C_ID0|C_HEX)
-#define C_NBS	(C_SPEC|C_Q|C_PACK)
+#define C_IX	(C_SPEC|C_ID0)
+#define C_NBS	(C_SPEC|C_Q|C_PACK|C_ESTR)
 
 #define FIRST_128							\
 	C_NBS,	0,	0,	0,	C_SPEC,	C_SPEC,	0,	0,	\
@@ -137,7 +138,7 @@ static int chktg2(int ch);
 	0,	0,	0,	0,	0,	0,	0,	0,	\
 	0,	0,	0,	0,	0,	0,	0,	0,	\
 	\
-	C_WSNL,	C_2,	C_SPEC,	0,	0,	0,	C_2,	C_SPEC,	\
+	C_WSNL,	C_2,	C_SPEC|C_ESTR, 0, 0,	0,	C_2,	C_SPEC|C_ESTR, \
 	0,	0,	0,	C_2,	0,	C_2,	0,	C_SPEC|C_Q, \
 	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	C_DX,	\
 	C_DX,	C_DX,	0,	0,	C_2,	C_2,	C_2,	C_PACK,	\
@@ -145,7 +146,7 @@ static int chktg2(int ch);
 	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_I,	\
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
-	C_I,	C_I,	C_I,	0,	C_PACK,	0,	0,	C_I,	\
+	C_I,	C_I,	C_I,	0,	C_PACK|C_ESTR,	0, 0,	C_I,	\
 	\
 	0,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_IX,	C_I,	\
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
@@ -174,7 +175,7 @@ static int chktg2(int ch);
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	\
 	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,	C_I,
 
-usch spechr[256] = {
+short spechr[256] = {
 #ifdef CHAR_UNSIGNED
 	FIRST_128 LAST_128
 #else
@@ -347,7 +348,7 @@ psave2:
  * n tells how nany chars at least.  0 == standard.
  * 0 if EOF, != 0 if something could fill up buf.
  */
-static int
+int
 inpbuf(void)
 {
 	register usch *ninp, *oinp;
@@ -543,7 +544,8 @@ ucn(register usch *p, register usch *q)
 	n = *p++ == 'u' ? 4 : 8;
 	cp = 0;
 	while (n-- > 0) {
-		if ((ch = (unsigned char)*p++) == 0 || (ISHEX(ch)) == 0) {
+		if ((ch = (unsigned char)*p++) == 0 ||
+		    (ISDIGIT(ch) || ((ch|040) >= 'a' && (ch|040) <= 'f')) == 0) {
 #if 0 			/* leave untouched */
 			warning("invalid universal character name");
 #endif
@@ -667,52 +669,6 @@ readid(int ch)
 }
 
 /*
- * get a string or character constant and save it as given by d.
- */
-struct iobuf *
-faststr(int bc, register struct iobuf *ob)
-{
-	register int ch;
-
-#define	FSPCH(c) if (ob == NULL) putch(c); else putob(ob, c);
-	instr = 1;
-	FSPCH(bc);
-	for (;;) {
-		if (inp == pend)
-			ch = qcchar();
-		else if (ISCQ(ch = *inp))
-			ch = qcchar();
-		else
-			inp++;
-		switch (ch) {
-		case '\\':
-			FSPCH(ch);
-			if (inp == pend)
-				inpbuf();
-			incmnt = 1;
-			ch = qcchar();
-			FSPCH(ch);
-			incmnt = 0;
-			continue;
-		case '\n':
-			warning("unterminated literal");
-			instr = 0;
-			unch(ch);
-			return ob;
-		}
-		FSPCH(ch);
-		if (ch == bc)
-			break;
-	}
-	if (ob) {
-		putob(ob, 0);
-		ob->cptr--;
-	}
-	instr = 0;
-	return ob;
-}
-
-/*
  * Scan quickly the input file searching for:
  *	- '#' directives
  *	- keywords (if not flslvl)
@@ -728,7 +684,7 @@ fastscan(void)
 	struct iobuf *ob;
 	struct symtab *nl;
 	register int ch, c2;
-	register usch *dp;
+	register usch *p;
 
 	goto run;
 
@@ -780,9 +736,9 @@ fastscan(void)
 
 		case '\n': /* newlines, for pp directives */
 			/* take care of leftover \n */
-			while (ifiles->escln > 0) {
+			while (escln > 0) {
 				putch('\n');
-				ifiles->escln--;
+				escln--;
 				ifiles->lineno++;
 			}
 			putch('\n');
@@ -812,7 +768,28 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 		case '\"': /* strings */
 			if (skpows)
 				cntline();
-			faststr(ch, NULL);
+			p = inp;
+			*--inp = ch;
+			for (;;) {
+				while (ISESTR(*p++) == 0)
+					;
+				if ((c2 = *--p) == 0) {
+					putstr(inp);
+					inp = p;
+					inpbuf();
+					p = inp-1;
+				} else if (c2 == '\\') {
+					p++;
+				} else if (c2 == '\n') {
+					warning("unterminated literal");
+					p--;
+					break;
+				} else if (c2 == ch) 
+					break;
+				p++;
+			}
+			while (inp <= p)
+				putch(*inp++);
 			break;
 
 		case '0': case '1': case '2': case '3': case '4':
@@ -867,8 +844,8 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 			if (flslvl)
 				error("fastscan flslvl");
 
-			dp = readid(ch);
-			if ((nl = lookup(dp, FIND)) != NULL) {
+			p = readid(ch);
+			if ((nl = lookup(p, FIND)) != NULL) {
 				if ((ob = kfind(nl)) != NULL) {
 					if (*ob->buf == '-' || *ob->buf == '+')
 						putch(' ');
@@ -883,7 +860,7 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 					bufree(ob);
 				}
 			} else {
-				putstr(dp);
+				putstr(p);
 			}
 			break;
 		}
@@ -895,6 +872,7 @@ run:			while ((ch = qcchar()) == '\t' || ch == ' ')
 int
 yylex(void)
 {
+	extern int readinc;
 	register int ch, c2, t;
 	struct iobuf *ob;
 	struct symtab *nl;
@@ -925,6 +903,11 @@ igen:	while ((ch = qcchar()) == ' ' || ch == '\t')
 		else goto pb;
 		break;
 	case '<':
+		if (readinc) {
+			unch(c2);
+			t = '>';
+			goto str;
+		}
 		if (c2 == '<') ch = LS; else
 		if (c2 == '=') ch = LE;
 		else goto pb;
@@ -949,6 +932,23 @@ igen:	while ((ch = qcchar()) == ' ' || ch == '\t')
 	case NUMBER:
 		cvtdig(ch);
 		ch = NUMBER;
+		break;
+
+	case '\"':
+str:		ob = getobuf(BNORMAL);
+		do {
+			putob(ob, ch);
+			if ((ch = qcchar()) == '\\') {
+				putob(ob, ch);
+				ch = qcchar();
+			} else if (ch == '\n')
+				error("bad lex string");
+		} while (ch != t);
+		putob(ob, ch);
+		putob(ob, 0);
+		ob->cptr--;
+		yynode.nd_ob = ob;
+		ch = STRING;
 		break;
 
 	case '\n':
@@ -1052,7 +1052,7 @@ pushfile(const usch *file, const usch *fn, int idx, void *incs)
 	*inp = 0;
 #endif
 	ic->lineno = 1;
-	ic->escln = 0;
+	escln = 0;
 	ic->idx = idx;
 	ic->incs = incs;
 	ic->fn = fn;
@@ -1153,7 +1153,7 @@ cvtdig(register int c)
 	} else
 		rad = 10;
 
-	while ((ISHEX(c))) {
+	while (ISDIGIT(c) || ((c|040) >= 'a' && (c|040) <= 'f')) {
 		rv = rv * rad + dig2num(c);
 		/* check overflow */
 		if (rv / rad < rv2)
@@ -1196,7 +1196,8 @@ charcon(void)
 		case '\'': val = '\''; break;
 		case '\\': val = '\\'; break;
 		case 'x':
-			while ((ISHEX(c = qcchar())))
+			while (ISDIGIT(c = qcchar()) ||
+			    ((c|040) >= 'a' && (c|040) <= 'f'))
 				val = val * 16 + dig2num(c);
 			break;
 		case '0': case '1': case '2': case '3': case '4':
@@ -1342,40 +1343,48 @@ elifstmt(void)
 }
 
 /* save line into iobuf */
-struct iobuf *
-savln(void)
+static void
+prwoe(void)
 {
-	register struct iobuf *ob = getobuf(BNORMAL);
-	register int c;
+	register usch *p;
 
-	while ((c = qcchar()) != 0) {
-		if (c == '\n') {
-			unch(c);
+	p = inp;
+	for (;;) {
+		while (ISESTR(*p++) == 0)
+			;
+		if (*--p == 0) {
+			fprintf(stderr, "%s", inp);
+			inp = p;
+			inpbuf();
+			p = inp-1;
+		} else if (*p == '\n')
 			break;
-		}
-		if (c == '\'' || c == '\"')
-			faststr(c, ob);
-		else
-			putob(ob, c);
+		p++;
 	}
-	ob->buf[ob->cptr] = 0;
-	return ob;
+	*p = 0;
+	fprintf(stderr, "%s\n", inp);
+	*p = '\n';
+	inp = p;
 }
 
 static void
 cpperror(void)
 {
-	register struct iobuf *ob = savln();
-	error("#error%s", ob->buf);
-	bufree(ob);
+	write(1, pbbeg, pbinp-pbbeg);
+
+	fprintf(stderr, "#error");
+	prwoe();
+	exit(1);
 }
 
 static void
 cppwarning(void)
 {
-	register struct iobuf *ob = savln();
-	warning("#warning%s", ob->buf);
-	bufree(ob);
+	extern int warnings;
+
+	fprintf(stderr, "#warning");
+	prwoe();
+	warnings++;
 }
 
 static void
@@ -1396,30 +1405,14 @@ undefstmt(void)
 static void
 identstmt(void)
 {
-	struct iobuf *ob = NULL;
-	struct symtab *sp;
-	usch *bp;
-	int ch;
+	int x = 0;
 
-	if (ISID0(ch = fastspc())) {
-		bp = readid(ch);
-		if ((sp = lookup(bp, FIND)))
-			ob = kfind(sp);
-		if (ob->buf[0] != '\"')
-			goto bad;
-		if (ob)
-			bufree(ob);
-	} else if (ch == '\"') {
-		ob = getobuf(BNORMAL);
-		faststr(ch, ob);
-		bufree(ob);
-		
-	} else
-		goto bad;
-	chknl(1);
-	return;
-bad:
-	error("bad #ident directive");
+	if (yylex() == STRING) {
+		bufree(yynode.nd_ob);
+		x = yylex();
+	}
+	if (x != WARN)
+		error("bad #ident directive");
 }
 
 static void
