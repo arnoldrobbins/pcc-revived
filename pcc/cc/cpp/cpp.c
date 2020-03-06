@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.323 2020/02/16 11:19:36 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.324 2020/02/26 17:58:19 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -866,49 +866,6 @@ prem(void)
 {
 	error("premature EOF");
 }
-
-#if 0
-static struct iobuf *
-incfn(void)
-{
-	register struct iobuf *ob;
-	struct symtab *nl;
-	register usch *dp;
-	int c;
-	register int oCflag;
-
-	oCflag = Cflag;
-	Cflag = 0;
-	if (ISID0(c = skipws(NULL))) {
-		dp = readid(c);
-		if ((nl = lookup(dp, FIND)) == NULL)
-			return NULL;
-
-		if ((ob = kfind(nl)) == 0)
-			return NULL;
-	} else {
-		ob = getobuf(BNORMAL);
-		putob(ob, c);
-		while ((c = cinput()) && c != '\n')
-			putob(ob, c);
-		if (c != '\n')
-			return NULL;
-		cunput(c);
-	}
-	Cflag = oCflag;
-
-	/* now we have an (expanded?) filename in obuf */
-	while (0 < ob->cptr && ISWS(ob->buf[ob->cptr-1]))
-		ob->cptr--;
-
-	if (ob->buf[0] != '\"' && ob->buf[0] != '<')
-		return NULL;
-	if (ob->buf[ob->cptr-1] != '\"' && ob->buf[ob->cptr-1] != '>')
-		return NULL;
-	ob->buf[ob->cptr-1] = 0;
-	return ob;
-}
-#endif
 
 /*
  * concatenate n1 with n2 and see if the result is an accessible file.
