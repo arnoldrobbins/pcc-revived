@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.324 2019/08/24 13:39:49 ragge Exp $	*/
+/*	$Id: cc.c,v 1.325 2020/04/11 16:10:22 plunky Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -88,9 +88,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifdef HAVE_LIBGEN_H
-#include <libgen.h>
-#endif
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
