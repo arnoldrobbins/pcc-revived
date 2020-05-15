@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.192 2018/11/21 18:20:31 ragge Exp $	*/
+/*	$Id: local2.c,v 1.193 2020/05/13 19:32:22 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -326,7 +326,7 @@ fcomp(NODE *p)
 		expand(p, 0, "\tfstp %st(0)\n");	/* pop fromstack */
 	} else {
 		expand(p, 0, "\tfucompp\n");
-		expand(p, 0, "\tfnstsw %%ax\n");
+		expand(p, 0, "\tfnstsw %ax\n");
 		expand(p, 0, "\tsahf\n");
 	}
 	switch (p->n_op) {
