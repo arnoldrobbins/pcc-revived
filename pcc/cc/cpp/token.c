@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.211 2020/02/26 17:58:19 ragge Exp $	*/
+/*	$Id: token.c,v 1.212 2020/05/13 19:04:48 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -1206,6 +1206,7 @@ charcon(void)
 			while (ISDIGIT(c = qcchar()) ||
 			    ((c|040) >= 'a' && (c|040) <= 'f'))
 				val = val * 16 + dig2num(c);
+			*--inp = c;
 			break;
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7':
