@@ -1,4 +1,4 @@
-/*	$Id: cxmuldiv.c,v 1.3 2015/12/29 10:19:52 ragge Exp $	*/
+/*	$Id: cxmuldiv.c,v 1.4 2020/06/13 14:54:58 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -428,7 +428,7 @@ union ul {
 #define	dlh	i[3]
 #endif
 
-#if defined(mach_amd64) || defined(mach_i386) || defined(mach_mips)
+#if defined(mach_aarch64) || defined(mach_amd64) || defined(mach_i386) || defined(mach_mips)
 #define	LDBL_SIGN	0x8000U
 #define	LDBL_EXP	0x7fffU
 #define	LDBL_MANT	0x0U
