@@ -48,6 +48,7 @@ case "$target_os" in
 	    i?86) targmach=i386 ;;
 	    powerpc*) targmach=powerpc endian=big ;;
 	    x86_64) targmach=amd64 ;;
+	    aarch64) targmach=aarch64 ;;
 	esac
 	;;
 

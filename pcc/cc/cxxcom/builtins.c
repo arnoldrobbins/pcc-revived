@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.7 2016/03/05 15:31:25 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.8 2020/06/13 14:55:53 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -361,7 +361,6 @@ builtin_va_arg(const struct bitable *bt, NODE *a)
 #ifdef BACKAUTO
 	rv = buildtree(COMOP, rv , buildtree(PLUSEQ, a->n_left, bcon(sz)));
 #else
-#error fix wrong eval order in builtin_va_arg
 	ecomp(buildtree(MINUSEQ, a->n_left, bcon(sz)));
 #endif
 
