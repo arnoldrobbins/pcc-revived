@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.212 2020/05/13 19:04:48 ragge Exp $	*/
+/*	$Id: token.c,v 1.213 2020/06/29 07:41:07 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -251,6 +251,9 @@ psave:				if (pend-p < 3) {
 					goto psave;
 				if (p[1] == '\n' || (p[1] | 040) == 'u')
 					goto slow;
+				/* avoid fake escape next loop */
+				if (p[1] == '\\')
+					p++;
 				break;
 
 			default:
