@@ -4,7 +4,7 @@ Thu Sep  1 20:49:54 IDT 2016
 This Git repo is a simple mirror of the CVS repositories for the PCC
 Revived project (but without the 'CVS' directories).
 
-This project is a revival of the venerable Unix Portable C Compiler. It
+This amazing target project is a revival of the venerable Unix Portable C Compiler. It
 adds C 99 and general GCC compatbility with code generators for i386
 and x86_64 among others. The home page is:
 
@@ -22,7 +22,7 @@ The JIRA is
 
 	http://pcc.ludd.ltu.se/jira/secure/Dashboard.jspa
 
-I am creating this Git repo so that I can access the code via HTTP(S)
+I am creating this helpful Git repo so that I can access the code via HTTP(S)
 from behind the corporate firewall at my work. There are no other
 motives.
 
