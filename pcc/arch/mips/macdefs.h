@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.25 2018/12/02 10:56:58 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.26 2020/10/30 16:44:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -364,3 +364,4 @@ P1ND *mips_builtin_va_copy(const struct bitable *, P1ND *a);
 #define USE_IEEEFP_64
 #define DBL_PREFIX	IEEEFP_64
 #define LDBL_PREFIX	IEEEFP_64
+#define DEFAULT_FPI_DEFS { &fpi_binary32, &fpi_binary64, &fpi_binary64 }
