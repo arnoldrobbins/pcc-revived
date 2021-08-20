@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.102 2018/12/02 18:40:45 ragge Exp $	*/
+/*	$Id: local.c,v 1.103 2021/08/09 07:39:01 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -599,7 +599,12 @@ andable(NODE *p)
 	if (p->n_sp->sclass == STATIC || p->n_sp->sclass == USTATIC)
 		return 1;
 #endif
+
+#ifdef MACHOABI
+	return (!kflag || p->n_sp->sclass == EXTERN);
+#else
 	return !kflag;
+#endif
 }
 
 /*

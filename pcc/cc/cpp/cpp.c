@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.325 2021/06/07 12:11:00 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.327 2021/08/09 03:08:39 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -182,7 +182,7 @@ static int getyp(usch *s);
 static void macsav(int ch);
 static void fstrstr(struct iobuf *ib, struct iobuf *ob);
 static usch *chkfile(const usch *n1, const usch *n2);
-static usch *addname(usch *str);
+static usch *addname(const usch *str);
 static void *addblock(int sz);
 
 int
@@ -802,8 +802,7 @@ fsrch_macos_framework(const usch *fn, const usch *dir)
 	free(nm);
 	nm = addname(ob->buf);
 	bufree(ob);
-	if (pushfile(nm, fn, SYSINC, NULL) == 0)
-		return 1;
+	pushfile(nm, fn, SYSINC, NULL);
 
 	return 0;
 }
@@ -846,7 +845,6 @@ fsrch(const usch *fn, int idx, register struct incs *w)
 			if (fsrch_macos_framework(fn, dir) == 1)
 				return 1;
 		}
-		free(dir);
 
 		if (fsrch_macos_framework(fn,
 		    (const usch *)"/Library/Frameworks/") == 1)
@@ -2703,12 +2701,13 @@ xrealloc(void *p, int sz)
  *
  */
 static usch *
-addname(register usch *str)
+addname(const usch *str)
 {
 	static usch *nbase;
 	static int nsz;
-	register usch *w = str;
-	register int len;
+	const usch *w = str;
+	usch *p;
+	int len;
 
 	while (*w++)
 		;
@@ -2718,10 +2717,10 @@ addname(register usch *str)
 		nsz = MINBUF;
 	}
 	nsz -= len;
-	w = nbase;
+	p = nbase;
 	while ((*nbase++ = *str++))
 		;
-	return w;
+	return p;
 }
 
 /*

@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.29 2020/06/13 14:55:53 ragge Exp $	*/
+/*	$Id: ccconfig.h,v 1.30 2021/08/08 23:50:10 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -37,7 +37,10 @@
 
 #define STARTLABEL "_start"
 
-#if defined(mach_i386)
+#if defined(mach_arm)
+#define CPPMDADD	{ "-D__arm__", NULL, }
+#define	DYNLINKLIB	"/lib/ld-linux.so.2"
+#elif defined(mach_i386)
 #define CPPMDADD	{ "-D__i386__", NULL, }
 #define	DYNLINKLIB	"/lib/ld-linux.so.2"
 #define MUSL_DYLIB	"/lib/ld-musl-i386.so.1"
