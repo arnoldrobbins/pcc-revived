@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.38 2018/09/11 11:24:08 ragge Exp $
+#	$Id: Makefile.in,v 1.39 2021/09/04 10:38:37 gmcgarry Exp $
 #
 # Makefile.in for the cc part of pcc.
 #
@@ -32,6 +32,7 @@ CPPFLAGS = @CPPFLAGS@ -DLIBEXECDIR=\"$(libexecdir)/\" \
 	-Dos_$(TARGOS) -Dmach_$(TARGMACH) -DTARGOSVER=$(TARGOSVER) \
 	-DCXXPROGNAME=\"$(BINPREFIX)p++$(EXEEXT)\" \
 	-DCPPROGNAME=\"$(BINPREFIX)pcpp$(EXEEXT)\" \
+	-DCC0=\"$(BINPREFIX)cc0$(EXEEXT)\" -DCC1=\"$(BINPREFIX)cc1$(EXEEXT)\" \
 	-I$(top_srcdir)/cc/driver -I$(top_builddir) \
 	-I$(top_srcdir)/os/$(TARGOS) -I$(MIPDIR) -I$(MDIR) -I$(COMMONDIR)
 LIBS = @LIBS@

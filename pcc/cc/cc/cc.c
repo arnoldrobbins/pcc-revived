@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.326 2021/08/09 07:47:11 gmcgarry Exp $	*/
+/*	$Id: cc.c,v 1.327 2021/09/04 10:38:37 gmcgarry Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -148,6 +148,20 @@
 #ifndef LINKER
 #define LINKER		"ld"
 #endif
+
+#ifndef CC0
+#define CC0	"cc0"
+#endif
+#ifndef CC1
+#define CC1	"cc1"
+#endif
+#ifndef CXX0
+#define CXX0	"cxx0"
+#endif
+#ifndef CXX1
+#define CXX1	"cxx1"
+#endif
+
 char	*passp = PREPROCESSOR;
 char	*pass0 = COMPILER;
 char	*passxx0 = CXXCOMPILER;
@@ -1271,7 +1285,7 @@ compile_input(char *input, char *output)
 	strlist_append(&args, input);
 	strlist_append(&args, tfile);
 	strlist_prepend(&args,
-	    find_file(cxxflag ? "cxx0" : "cc0", &progdirs, X_OK));
+	    find_file(cxxflag ? CXX0 : CC0, &progdirs, X_OK));
 	retval = strlist_exec(&args);
 	strlist_free(&args);
 	if (retval)
@@ -1282,7 +1296,7 @@ compile_input(char *input, char *output)
 	strlist_append(&args, tfile);
 	strlist_append(&args, output);
 	strlist_prepend(&args,
-	    find_file(cxxflag ? "cxx1" : "cc1", &progdirs, X_OK));
+	    find_file(cxxflag ? CXX1: CC1, &progdirs, X_OK));
 	retval = strlist_exec(&args);
 	strlist_free(&args);
 	return retval;
