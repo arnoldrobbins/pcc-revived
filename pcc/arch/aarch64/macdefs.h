@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.1 2020/06/13 14:55:53 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.2 2021/09/04 10:38:37 gmcgarry Exp $	*/
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -82,12 +82,10 @@ typedef	long long CONSZ;
 typedef	unsigned long long U_CONSZ;
 typedef long long OFFSZ;
 
-#define CONFMT	"#%lld"		/* format for printing constants */
+#define CONFMT	"%lld"		/* format for printing constants */
 #define LABFMT	".L%d"		/* format for printing labels */
 #define	STABLBL	"LL%d"		/* format for stab (debugging) labels */
 #define STAB_LINE_ABSOLUTE	/* S_LINE fields use absolute addresses */
-
-#undef	FIELDOPS		/* no bit-field instructions */
 
 /* Definitions mostly used in pass2 */
 

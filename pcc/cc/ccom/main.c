@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.136 2018/11/23 14:43:06 ragge Exp $	*/
+/*	$Id: main.c,v 1.137 2021/08/29 09:21:56 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -105,6 +105,7 @@ xopt(char *str)
 static void
 fflags(char *str)
 {
+#ifndef PASS2
 	int flagval = 1;
 
 	if (strncmp("no-", str, 3) == 0) {
@@ -112,7 +113,6 @@ fflags(char *str)
 		flagval = 0;
 	}
 
-#ifndef PASS2
 	if (strcmp(str, "stack-protector") == 0)
 		sspflag = flagval;
 	else if (strcmp(str, "stack-protector-all") == 0)
@@ -132,7 +132,10 @@ fflags(char *str)
 int
 main(int argc, char *argv[])
 {
-	int ch, sdflag;
+	int ch;
+#ifndef PASS2
+	int sdflag;
+#endif
 
 //kflag = 1;
 #ifdef TIMING
@@ -224,11 +227,11 @@ main(int argc, char *argv[])
 		case 'k': /* PIC code */
 			++kflag;
 			break;
-
+#ifndef PASS1
 		case 'm': /* Target-specific */
 			mflags(optarg);
 			break;
-
+#endif
 		case 'p': /* Profiling */
 			++pflag;
 			break;

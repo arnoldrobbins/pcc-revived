@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.302 2017/03/11 09:22:09 ragge Exp $	*/
+/*	$Id: reader.c,v 1.303 2021/08/29 09:21:56 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -507,7 +507,6 @@ mainp2()
 			    &ipp->ipp_vis, &ip->ip_lbl, &ipp->ip_tmpnum,
 			    &ipp->ip_lblnum, nam);
 			ipp->ipp_name = xstrdup(nam);
-			memset(ipp->ipp_regs, -1, sizeof(ipp->ipp_regs));
 			ipp->ipp_autos = -1;
 			ipp->ip_labels = foo;
 #ifdef TARGET_IPP_MEMBERS
@@ -531,7 +530,6 @@ mainp2()
 			ipp->ip_tmpnum = rdint(&p);
 			ipp->ip_lblnum = rdint(&p);
 			ipp->ipp_name = rdstr(&p);
-			memset(ipp->ipp_regs, 0, sizeof(ipp->ipp_regs));
 			SKIPWS(p);
 			if (*p == '+') {
 				int num, i;

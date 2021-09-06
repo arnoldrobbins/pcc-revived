@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.325 2020/04/11 16:10:22 plunky Exp $	*/
+/*	$Id: cc.c,v 1.327 2021/09/04 10:38:37 gmcgarry Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -148,6 +148,20 @@
 #ifndef LINKER
 #define LINKER		"ld"
 #endif
+
+#ifndef CC0
+#define CC0	"cc0"
+#endif
+#ifndef CC1
+#define CC1	"cc1"
+#endif
+#ifndef CXX0
+#define CXX0	"cxx0"
+#endif
+#ifndef CXX1
+#define CXX1	"cxx1"
+#endif
+
 char	*passp = PREPROCESSOR;
 char	*pass0 = COMPILER;
 char	*passxx0 = CXXCOMPILER;
@@ -227,7 +241,7 @@ char *cppmdadd[] = CPPMDADD;
 #define	DEFCXXLIBS	{ "-lp++", "-lpcc", "-lc", "-lpcc", 0 }
 #endif
 #ifndef STARTLABEL
-#define STARTLABEL "__start"
+#define STARTLABEL	"__start"
 #endif
 #ifndef DYNLINKARG
 #define DYNLINKARG	"-dynamic-linker"
@@ -1271,7 +1285,7 @@ compile_input(char *input, char *output)
 	strlist_append(&args, input);
 	strlist_append(&args, tfile);
 	strlist_prepend(&args,
-	    find_file(cxxflag ? "cxx0" : "cc0", &progdirs, X_OK));
+	    find_file(cxxflag ? CXX0 : CC0, &progdirs, X_OK));
 	retval = strlist_exec(&args);
 	strlist_free(&args);
 	if (retval)
@@ -1282,7 +1296,7 @@ compile_input(char *input, char *output)
 	strlist_append(&args, tfile);
 	strlist_append(&args, output);
 	strlist_prepend(&args,
-	    find_file(cxxflag ? "cxx1" : "cc1", &progdirs, X_OK));
+	    find_file(cxxflag ? CXX1: CC1, &progdirs, X_OK));
 	retval = strlist_exec(&args);
 	strlist_free(&args);
 	return retval;
@@ -1928,7 +1942,7 @@ struct flgcheck ccomflgcheck[] = {
 #if !defined(os_sunos) && !defined(mach_i386)
 	{ &vflag, 1, "-v" },
 #endif
-#ifdef os_darwin
+#if defined(os_darwin)
 	{ &Bstatic, 0, "-k" },
 #elif defined(os_sunos) && defined(mach_i386)
 	{ &kflag, 1, "-K" },
@@ -2061,8 +2075,10 @@ setup_ld_flags(void)
 			strlist_append(&early_linker_flags, dynlinkarg);
 			strlist_append(&early_linker_flags, dynlinklib);
 		}
+#ifndef os_darwin
 		strlist_append(&early_linker_flags, "-e");
 		strlist_append(&early_linker_flags, STARTLABEL);
+#endif
 	}
 	if (shared == 0 && rflag)
 		strlist_append(&early_linker_flags, "-r");
@@ -2131,7 +2147,9 @@ setup_ld_flags(void)
 				b = RCRT0;
 			else
 				b = CRT0;
+#ifndef os_darwin
 			strap(&middle_linker_flags, &crtdirs, b, 'p');
+#endif
 		}
 #endif
 	}

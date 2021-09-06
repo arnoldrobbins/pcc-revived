@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.433 2019/09/24 19:57:31 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.434 2021/08/29 09:21:56 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -442,6 +442,7 @@ defid2(NODE *q, int class, char *astr)
 
 	case REGISTER:
 		p->sclass = class = AUTO;
+#ifndef PASS1
 		if (astr != NULL) {
 #ifdef GCC_COMPAT
 			if (blevel == 0)
@@ -463,6 +464,7 @@ defid2(NODE *q, int class, char *astr)
 			}
 #endif
 		}
+#endif
 		/* FALLTHROUGH */
 	case AUTO:
 		if (isdyn(p)) {

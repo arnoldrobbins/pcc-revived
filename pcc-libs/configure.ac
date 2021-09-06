@@ -45,6 +45,7 @@ case "$target_os" in
     linux*)
 	targos=linux
 	case "$target_cpu" in
+	    arm*) targmach=arm ;;
 	    i?86) targmach=i386 ;;
 	    powerpc*) targmach=powerpc endian=big ;;
 	    x86_64) targmach=amd64 ;;
