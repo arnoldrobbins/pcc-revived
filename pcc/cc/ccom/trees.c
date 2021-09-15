@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.391 2019/09/24 19:57:31 ragge Exp $	*/
+/*	$Id: trees.c,v 1.392 2021/09/12 10:52:58 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2713,7 +2713,7 @@ p2print(NODE *p)
 	if (ty != BITYPE) {
 		if (p->n_op != NAME && p->n_op != ICON)
 			printf("%d ", p->n_rval);
-		}
+	}
 
 	/* handle special cases */
 	if (p->n_op == NAME || p->n_op == ICON ||
@@ -2778,7 +2778,16 @@ pass2_compile(struct interpass *ip)
 		printf("^ %d\n", ip->ip_lbl);
 		break;
 	case IP_ASM:
-		printf("$ %s\n", ip->ip_asm);
+		{
+			const char *s = ip->ip_asm;
+			printf("$ ");
+			while (*s != '\0') {
+				putchar(*s);
+				if (*s++ == '\n') 
+					printf("$ ");
+			}
+			printf("\n");
+		}
 		break;
 	case IP_EPILOG:
 		ipp = (struct interpass_prolog *)ip;
