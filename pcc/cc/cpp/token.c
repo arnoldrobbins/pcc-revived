@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.213 2020/06/29 07:41:07 ragge Exp $	*/
+/*	$Id: token.c,v 1.214 2021/09/12 12:06:30 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -663,8 +663,7 @@ readid(int ch)
 		if (p == MAXIDSZ)
 			warning("identifier exceeds C99 5.2.4.1, truncating");
 		if (p < MAXIDSZ)
-			idbuf[p] = ch;
-		p++;
+			idbuf[p++] = ch;
 	} while (ISID(ch = qcchar()));
 	idbuf[p] = 0;
 	unch(ch);
