@@ -1,4 +1,4 @@
-/*	$Id: crt0.c,v 1.4 2009/02/14 21:02:58 gmcgarry Exp $	*/
+/*	$Id: crt0.c,v 1.5 2021/09/16 21:39:34 gmcgarry Exp $	*/
 /*-
  * Copyright (c) 2008 Gregory McGarry <g.mcgarry@ieee.org>
  *
@@ -25,12 +25,11 @@ int NXArgc;
 char **NXArgv;
 
 asm(
-#ifdef DYNAMIC
 	"	.text\n"
+#ifdef DYNAMIC
 	"	.symbol_stub\n"
 	"	.picsymbol_stub\n"
 #endif
-	"	.text\n"
 	"	.globl start\n"
 	"	.globl _start\n"
 	"	.p2align 2\n"
@@ -149,4 +148,4 @@ asm("\t.subsections_via_symbols\n");
 
 #include "common.c"
 
-IDENT("$Id: crt0.c,v 1.4 2009/02/14 21:02:58 gmcgarry Exp $");
+IDENT("$Id: crt0.c,v 1.5 2021/09/16 21:39:34 gmcgarry Exp $");

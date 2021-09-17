@@ -1,4 +1,4 @@
-/*	$Id: crtbegin.c,v 1.8 2014/09/28 08:25:21 ragge Exp $	*/
+/*	$Id: crtbegin.c,v 1.9 2021/09/16 21:39:34 gmcgarry Exp $	*/
 /*-
  * Copyright (c) 1998, 2001, 2002 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -48,7 +48,10 @@ asm(	"	.section .ctors,\"aw\",@progbits\n"
 #else
 	"	.long -1\n"
 #endif
-	"	.section .dtors,\"aw\",@progbits\n"
+	"	.previous\n"
+);
+
+asm(	"	.section .dtors,\"aw\",@progbits\n"
 	"	.align 4\n"
 	"__DTOR_LIST__:\n"
 #ifdef __x86_64__
@@ -56,6 +59,7 @@ asm(	"	.section .ctors,\"aw\",@progbits\n"
 #else
 	"	.long -1\n"
 #endif
+	"	.previous\n"
 );
 
 
@@ -122,4 +126,4 @@ void __call_##func(void)						\
 MD_CALL_STATIC_FUNCTION(.init, __do_global_ctors_aux)
 MD_CALL_STATIC_FUNCTION(.fini, __do_global_dtors_aux)
 
-IDENT("$Id: crtbegin.c,v 1.8 2014/09/28 08:25:21 ragge Exp $");
+IDENT("$Id: crtbegin.c,v 1.9 2021/09/16 21:39:34 gmcgarry Exp $");
