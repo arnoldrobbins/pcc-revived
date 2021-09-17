@@ -1,4 +1,4 @@
-/*      $Id: crtend.c,v 1.4 2011/04/12 04:44:19 gmcgarry Exp $	*/
+/*      $Id: crtend.c,v 1.5 2021/09/16 21:39:34 gmcgarry Exp $	*/
 /*-
  * Copyright (c) 2008 Gregory McGarry <g.mcgarry@ieee.org>
  *
@@ -23,6 +23,7 @@ asm(	"	.section .ctors,\"aw\",@progbits\n"
 #else
 	"	.long 0\n"
 #endif
+	"	.previous\n"
 );
 
 asm(	"	.section .dtors,\"aw\",@progbits\n"
@@ -31,6 +32,7 @@ asm(	"	.section .dtors,\"aw\",@progbits\n"
 #else
 	"	.long 0\n"
 #endif
+	"	.previous\n"
 );
 
-IDENT("$Id: crtend.c,v 1.4 2011/04/12 04:44:19 gmcgarry Exp $");
+IDENT("$Id: crtend.c,v 1.5 2021/09/16 21:39:34 gmcgarry Exp $");
