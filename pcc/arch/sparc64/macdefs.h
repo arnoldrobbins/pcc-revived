@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.18 2016/03/05 15:53:04 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.19 2021/10/08 15:59:07 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 David Crawshaw <david@zentus.com>
@@ -98,8 +98,7 @@ typedef long long OFFSZ;
 #define LABFMT  "L%d"
 #define STABLBL "LL%d"
 
-#define BACKAUTO 		/* Stack grows negatively for automatics. */
-#define BACKTEMP 		/* Stack grows negatively for temporaries. */
+#define STACK_DOWN 		/* Stack grows negatively for automatics. */
 
 #undef	FIELDOPS
 #define TARGET_ENDIAN TARGET_BE

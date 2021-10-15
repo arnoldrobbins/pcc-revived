@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.253 2019/04/28 18:44:38 ragge Exp $	*/
+/*	$Id: regs.c,v 1.254 2021/10/09 12:46:09 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -3226,6 +3226,7 @@ onlyperm: /* XXX - should not have to redo all */
 		ip = ipnode(p);
 		DLIST_INSERT_BEFORE(ipole->qelem.q_back, ip, qelem);
 	}
-	stktemp = freetemp(ntsz);
+	if (ntsz)
+		stktemp = freetemp(ntsz);
 	/* Done! */
 }

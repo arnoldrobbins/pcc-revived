@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.19 2016/06/27 11:47:06 ragge Exp $	*/
+/*	$Id: local.c,v 1.20 2021/10/08 15:47:36 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -431,25 +431,10 @@ mypragma(char *str)
 
 /*
  * Called when a identifier has been declared, to give target last word.
- * On Nova we put symbols over the size of an int above 24 bytes in
- * offset and leave zeropage for small vars.
  */
 void
 fixdef(struct symtab *sp)
 {
-#if 0
-	if (sp->sclass != AUTO)
-		return; /* not our business */
-	if (ISPTR(sp->stype) || sp->stype < LONG)
-		return;
-	if (sp->soffset >= (MAXZP * SZINT))
-		return; /* already above */
-	/* have to move */
-	/* XXX remember old autooff for reorg of smaller vars */
-	if (autooff < MAXZP * SZINT)
-		autooff = MAXZP * SZINT;
-	oalloc(sp, &autooff);
-#endif
 }
 
 void

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.100 2019/03/24 20:43:21 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.101 2021/10/08 15:59:06 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -132,8 +132,7 @@ typedef long long OFFSZ;
 #define	MYALIGN			/* user power-of-2 alignment */
 #endif
 
-#define BACKAUTO 		/* stack grows negatively for automatics */
-#define BACKTEMP 		/* stack grows negatively for temporaries */
+#define STACK_DOWN 		/* stack grows negatively for automatics */
 
 #undef	FIELDOPS		/* no bit-field instructions */
 #define TARGET_ENDIAN TARGET_LE

@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.305 2021/09/20 10:37:51 gmcgarry Exp $	*/
+/*	$Id: reader.c,v 1.307 2021/10/09 12:46:09 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1608,10 +1608,15 @@ freetemp(int k)
 {
 	int t, al, sz;
 
+#ifdef WORD_ADDRESSED
+	sz = k;	/* temps is in "words" */
+	al = k;
+#else
 	al = (k > 1 ? ALDOUBLE/ALCHAR : ALINT/ALCHAR);
 	sz = k * (SZINT/SZCHAR);
+#endif
 
-#ifndef BACKTEMP
+#ifndef STACK_DOWN
 	SETOFF(p2autooff, al);
 	t = p2autooff;
 	p2autooff += sz;

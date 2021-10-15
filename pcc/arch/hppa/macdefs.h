@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.22 2016/03/05 15:53:04 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.23 2021/10/08 15:59:06 ragge Exp $	*/
 
 /*
  * Copyright (c) 2007 Michael Shalayeff
@@ -96,8 +96,7 @@ typedef long long OFFSZ;
 #define	LABFMT	".L%d"		/* format for printing labels */
 #define	STABLBL	".LL%d"		/* format for stab (debugging) labels */
 
-#undef	BACKAUTO	/* stack grows upwards */
-#undef	BACKTEMP	/* stack grows upwards */
+#undef	STACK_DOWN	/* stack grows upwards */
 
 #define	FIELDOPS	/* have bit field ops */
 #define	TARGET_ENDIAN	TARGET_BE

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.23 2016/03/05 15:53:04 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.24 2021/10/08 15:59:07 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -103,8 +103,7 @@ typedef long long OFFSZ;
 
 
 /* show stack grows negatively */
-#define BACKAUTO
-#define BACKTEMP
+#define STACK_DOWN
 
 /* show field hardware support on VAX */
 /* XXX notyet */
