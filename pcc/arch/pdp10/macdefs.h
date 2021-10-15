@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.36 2016/03/05 15:53:04 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.37 2021/10/08 15:59:07 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -107,8 +107,7 @@ typedef long long OFFSZ;
 #define LABFMT	".L%d"		/* format for printing labels */
 #define STABLBL ".LL%d"		/* format for stab (debugging) labels */
 
-#undef BACKAUTO 		/* stack grows negatively for automatics */
-#undef BACKTEMP 		/* stack grows negatively for temporaries */
+#undef STACK_DOWN 		/* stack grows negatively for automatics */
 
 #undef	FIELDOPS		/* no bit-field instructions */
 #define TARGET_ENDIAN TARGET_BE

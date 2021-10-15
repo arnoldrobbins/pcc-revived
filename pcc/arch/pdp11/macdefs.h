@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.17 2019/04/22 09:21:55 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.18 2021/10/08 15:59:07 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -110,8 +110,7 @@ typedef long long OFFSZ;
 #define ARGOFFSET 8
 #endif
 
-#define BACKAUTO 		/* stack grows negatively for automatics */
-#define BACKTEMP 		/* stack grows negatively for temporaries */
+#define STACK_DOWN 		/* stack grows negatively for automatics */
 
 #undef	FIELDOPS		/* no bit-field instructions */
 #define TARGET_ENDIAN TARGET_LE /* XXX TARGET_PDP */

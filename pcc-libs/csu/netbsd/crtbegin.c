@@ -1,4 +1,4 @@
-/*	$Id: crtbegin.c,v 1.4 2021/09/16 21:39:34 gmcgarry Exp $	*/
+/*	$Id: crtbegin.c,v 1.5 2021/10/14 20:08:26 gmcgarry Exp $	*/
 /*-
  * Copyright (c) 1998, 2001, 2002 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -37,8 +37,8 @@
 extern void (*__CTOR_LIST__[1])(void);
 extern void (*__DTOR_LIST__[1])(void);
 
-asm(	"	.section .ctors\n"
-	"	.align 2\n"
+asm(	"	.section .ctors,\"aw\",@progbits\n"
+	"	.align 4\n"
 	"__CTOR_LIST__:\n"
 #if defined(__x86_64__) || (__sparc64__)
 	"	.quad -1\n"
@@ -48,8 +48,8 @@ asm(	"	.section .ctors\n"
 	"	.previous\n"
 );
 
-asm(	"	.section .dtors\n"
-	"	.align 2\n"
+asm(	"	.section .dtors,\"aw\",@progbits\n"
+	"	.align 4\n"
 	"__DTOR_LIST__:\n"
 #if defined(__x86_64__) || (__sparc64__)
 	"	.quad -1\n"
@@ -120,4 +120,4 @@ void __call_##func(void)						\
 MD_CALL_STATIC_FUNCTION(.init, __do_global_ctors_aux)
 MD_CALL_STATIC_FUNCTION(.fini, __do_global_dtors_aux)
 
-IDENT("$Id: crtbegin.c,v 1.4 2021/09/16 21:39:34 gmcgarry Exp $");
+IDENT("$Id: crtbegin.c,v 1.5 2021/10/14 20:08:26 gmcgarry Exp $");

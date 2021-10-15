@@ -1,4 +1,4 @@
-/*      $Id: crtend.c,v 1.3 2021/09/16 21:39:34 gmcgarry Exp $	*/
+/*      $Id: crtend.c,v 1.4 2021/10/14 20:08:26 gmcgarry Exp $	*/
 /*-
  * Copyright (c) 2008 Gregory McGarry <g.mcgarry@ieee.org>
  *
@@ -17,7 +17,7 @@
 
 #include "common.h"
 
-asm(	"	.section .ctors\n"
+asm(	"	.section .ctors,\"aw\",@progbits\n"
 #if defined(__x86_64__) || defined(__sparc64__)
 	"	.quad 0\n"
 #else
@@ -26,7 +26,7 @@ asm(	"	.section .ctors\n"
 	"	.previous\n"
 );
 
-asm(	"	.section .dtors\n"
+asm(	"	.section .dtors,\"aw\",@progbits\n"
 #if defined(__x86_64__) || defined(__sparc64__)
 	"	.quad 0\n"
 #else
@@ -35,4 +35,4 @@ asm(	"	.section .dtors\n"
 	"	.previous\n"
 );
 
-IDENT("$Id: crtend.c,v 1.3 2021/09/16 21:39:34 gmcgarry Exp $");
+IDENT("$Id: crtend.c,v 1.4 2021/10/14 20:08:26 gmcgarry Exp $");

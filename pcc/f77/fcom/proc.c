@@ -1,4 +1,4 @@
-/*	$Id: proc.c,v 1.14 2008/12/24 17:40:41 sgk Exp $	*/
+/*	$Id: proc.c,v 1.15 2021/10/08 15:59:07 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -593,7 +593,7 @@ autovar(int nelt, int t, bigptr lengp)
 		q->vleng = MKICON(leng);
 	q->vstg = STGAUTO;
 	q->b_addr.ntempelt = nelt;
-#ifdef BACKAUTO
+#ifdef STACK_DOWN
 	/* stack grows downward */
 	autoleng += nelt*leng;
 	q->b_addr.memoffset = MKICON( - autoleng );

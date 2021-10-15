@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.22 2021/09/04 10:38:37 gmcgarry Exp $	*/
+/*	$Id: macdefs.h,v 1.23 2021/10/08 15:59:06 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -203,8 +203,7 @@ typedef long long OFFSZ;
 	{ -1, },					\
 	{ -1, },					\
 
-#define BACKTEMP 		/* stack grows negatively for temporaries */
-#define BACKAUTO 		/* stack grows negatively for automatics */
+#define STACK_DOWN 		/* stack grows negatively for temporaries */
 
 #define ARGINIT		(4*8)	/* # bits above fp where arguments start */
 #define AUTOINIT	(12*8)	/* # bits above fp where automatics start */

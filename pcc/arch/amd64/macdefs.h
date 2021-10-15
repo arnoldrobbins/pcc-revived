@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.41 2019/03/27 13:31:44 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.42 2021/10/08 15:59:06 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -114,8 +114,7 @@ typedef long long OFFSZ;
 #endif
 #define	TARGET_TIMODE		/* has TI/TF/TC types (128 bit) */
 
-#define BACKAUTO 		/* stack grows negatively for automatics */
-#define BACKTEMP 		/* stack grows negatively for temporaries */
+#define STACK_DOWN 		/* stack grows negatively for automatics */
 
 #undef	FIELDOPS		/* no bit-field instructions */
 #define	TARGET_ENDIAN TARGET_LE	/* little-endian only */

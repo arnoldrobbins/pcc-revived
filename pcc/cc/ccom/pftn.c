@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.434 2021/08/29 09:21:56 gmcgarry Exp $	*/
+/*	$Id: pftn.c,v 1.438 2021/10/13 17:07:03 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -172,7 +172,7 @@ defid2(NODE *q, int class, char *astr)
 	struct symtab *p;
 	TWORD type, qual;
 	TWORD stp, stq;
-	int scl;
+	int scl, i;
 	union dimfun *dsym, *ddef;
 	int slev, temp, changed;
 
@@ -448,8 +448,6 @@ defid2(NODE *q, int class, char *astr)
 			if (blevel == 0)
 				werror("no register assignment (yet)");
 			else if (astr != NULL) {
-				int i;
-
 				for (i = 0; i < MAXREGS; i++) {
 					extern char *rnames[]; /* XXX */
 					if (strcmp(rnames[i], astr) == 0) {
@@ -470,6 +468,9 @@ defid2(NODE *q, int class, char *astr)
 		if (isdyn(p)) {
 			p->sflags |= SDYNARRAY;
 			dynalloc(p, &autooff);
+		} else if ((i = tnodenr(p)) != 0) {
+			p->soffset = i;
+			p->sflags |= STNODE;
 		} else
 			oalloc(p, &autooff);
 		break;
@@ -543,6 +544,7 @@ ftnend(void)
 	extern struct savbc *savbc;
 	extern struct swdef *swpole;
 	extern int tvaloff;
+	int stack_usage;
 	char *c;
 
 	if (retlab != NOLAB && nerrors == 0) { /* inside a real function */
@@ -551,8 +553,12 @@ ftnend(void)
 			ecomp(buildtree(FORCE, p1tcopy(cftnod), NIL));
 		efcode(); /* struct return handled here */
 		c = getexname(cftnsp);
-		SETOFF(maxautooff, ALCHAR);
-		send_passt(IP_EPILOG, maxautooff/SZCHAR, c,
+#ifndef STACK_TYPE
+#define	STACK_TYPE	CHAR
+#endif
+		SETOFF(maxautooff, talign(STACK_TYPE, NULL));
+		stack_usage = maxautooff / (int)tsize(STACK_TYPE, NULL, NULL);
+		send_passt(IP_EPILOG, stack_usage, c,
 		    cftnsp->stype, cftnsp->sclass == EXTDEF,
 		    retlab, tvaloff, mkclabs());
 	}
@@ -1310,7 +1316,11 @@ upoff(int size, int alignment, int *poff)
 }
 
 /*
- * allocate p with offset *poff, and update *poff
+ * allocate p with offset *poff, and update *poff.
+ * This routine is used to create stack reference for arguments and automatics.
+ * poff is always increasing even if the stack goes downwards, hence 
+ * the off must must be calculated before/after the increase/decrease
+ * of the stack pointer.
  */
 int
 oalloc(struct symtab *p, int *poff )
@@ -1318,50 +1328,41 @@ oalloc(struct symtab *p, int *poff )
 	int al, off, tsz;
 	int noff;
 
-	/*
-	 * Only generate tempnodes if we are optimizing,
-	 * and only for integers, floats or pointers,
-	 * and not if the type on this level is volatile.
-	 */
-	if (xtemps && ((p->sclass == AUTO) || (p->sclass == REGISTER)) &&
-	    (p->stype < STRTY || ISPTR(p->stype)) &&
-	    !(cqual(p->stype, p->squal) & VOL) && cisreg(p->stype)) {
-		NODE *tn = tempnode(0, p->stype, p->sdf, p->sap);
-		p->soffset = regno(tn);
-		p->sflags |= STNODE;
-		nfree(tn);
-		return 0;
-	}
-
 	al = talign(p->stype, p->sap);
-	noff = off = *poff;
+	noff = *poff;
+	off = 0;
 	tsz = (int)tsize(p->stype, p->sdf, p->sap);
-#ifdef BACKAUTO
+
+#ifdef STACK_DOWN
 	if (p->sclass == AUTO) {
-		noff = off + tsz;
-		if (noff < 0)
-			cerror("stack overflow");
+		/* negative part of stack */
+		noff += tsz;
+		SETOFF(noff, al);
+		off = -noff;
+	} else if (p->sclass == PARAM) {
+		/* positive part of stack */
+		if (p->stype < INT || p->stype == BOOL)
+			tsz = SZINT, al = ALINT;
+		off = upoff(tsz, al, &noff);
+	} else
+		cerror("bad oalloc class %d", p->sclass);
+#else
+	if (p->sclass == AUTO) {
+		/* positive part of stack */
+		off = upoff(tsz, al, &noff);
+	} else if (p->sclass == PARAM) {
+		/* negative part of stack */
+		noff += tsz;
 		SETOFF(noff, al);
 		off = -noff;
 	} else
+		cerror("bad oalloc class %d", p->sclass);
 #endif
-	if (p->sclass == PARAM && (p->stype == CHAR || p->stype == UCHAR ||
-	    p->stype == SHORT || p->stype == USHORT || p->stype == BOOL)) {
-		off = upoff(SZINT, ALINT, &noff);
-#if TARGET_ENDIAN == TARGET_BE
-		off = noff - tsz;
-#endif
-	} else {
-		off = upoff(tsz, al, &noff);
-	}
 
-	if (p->sclass != REGISTER) {
-	/* in case we are allocating stack space for register arguments */
-		if (p->soffset == NOOFFSET)
-			p->soffset = off;
-		else if(off != p->soffset)
-			return(1);
-	}
+	if (p->soffset == NOOFFSET)
+		p->soffset = off;
+	else if(off != p->soffset)
+		cerror("oalloc: reallocated");
 
 	*poff = noff;
 	return(0);

@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.78 2021/09/12 10:48:07 gmcgarry Exp $	*/
+/*	$Id: builtins.c,v 1.79 2021/10/08 15:59:07 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -453,7 +453,7 @@ builtin_stdarg_start(const struct bitable *bt, P1ND *a)
 
 	/* do the real job */
 	p = buildtree(ADDROF, p, NULL); /* address of last arg */
-#ifdef BACKAUTO
+#ifdef STACK_DOWN
 	p = optim(buildtree(PLUS, p, bcon(sz))); /* add one to it (next arg) */
 #else
 	p = optim(buildtree(MINUS, p, bcon(sz))); /* add one to it (next arg) */
@@ -487,7 +487,7 @@ builtin_va_arg(const struct bitable *bt, P1ND *a)
 #endif
 	sz /= SZCHAR;
 	/* add one to ap */
-#ifdef BACKAUTO
+#ifdef STACK_DOWN
 	rv = buildtree(COMOP, rv , buildtree(PLUSEQ, a->n_left, bcon(sz)));
 #else
 	ecomp(buildtree(MINUSEQ, a->n_left, bcon(sz)));

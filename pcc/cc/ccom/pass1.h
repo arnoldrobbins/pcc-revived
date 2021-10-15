@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.319 2019/09/08 09:57:48 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.320 2021/10/13 17:07:03 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -434,6 +434,7 @@ void stmtfree(void);
 void blkfree(void);
 char *getexname(struct symtab *sp);
 void putjops(P1ND *p, void *arg);
+int tnodenr(struct symtab *);
 
 void p1walkf(P1ND *, void (*f)(P1ND *, void *), void *);
 void p1fwalk(P1ND *t, void (*f)(P1ND *, int, int *, int *), int down);
