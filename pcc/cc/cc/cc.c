@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.327 2021/09/04 10:38:37 gmcgarry Exp $	*/
+/*	$Id: cc.c,v 1.328 2021/10/15 15:33:09 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -154,6 +154,9 @@
 #endif
 #ifndef CC1
 #define CC1	"cc1"
+#endif
+#ifndef CC2
+#define CC2	"cc2"
 #endif
 #ifndef CXX0
 #define CXX0	"cxx0"
@@ -1270,6 +1273,16 @@ find_file(const char *file, struct strlist *path, int mode)
 	return xstrdup(file);
 }
 
+#ifdef HAVE_CC2
+#ifdef NEED_CC2
+#define	C2check	1
+#else
+#define	C2check	Oflag
+#endif
+#else
+#define	C2check	0
+#endif
+
 #ifdef TWOPASS
 static int
 compile_input(char *input, char *output)
@@ -1306,16 +1319,31 @@ static int
 compile_input(char *input, char *output)
 {
 	struct strlist args;
+	char *tfile;
 	int retval;
+
+	tfile = output;
+	if (C2check)
+		strlist_append(&temp_outputs, tfile = gettmp());
 
 	strlist_init(&args);
 	strlist_append_list(&args, &compiler_flags);
 	strlist_append(&args, input);
-	strlist_append(&args, output);
+	strlist_append(&args, tfile);
 	strlist_prepend(&args,
 	    find_file(cxxflag ? passxx0 : pass0, &progdirs, X_OK));
 	retval = strlist_exec(&args);
 	strlist_free(&args);
+	if (retval)
+		return retval;
+	if (C2check) {
+		strlist_init(&args);
+		strlist_append(&args, tfile);
+		strlist_append(&args, output);
+		strlist_prepend(&args, find_file(CC2, &progdirs, X_OK));
+		retval = strlist_exec(&args);
+		strlist_free(&args);
+	}
 	return retval;
 }
 #endif
