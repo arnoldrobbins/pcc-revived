@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.4 2019/03/28 21:15:58 ragge Exp $	*/
+/*	$Id: ccconfig.h,v 1.5 2021/10/15 15:33:09 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -52,6 +52,7 @@
 #error defines for arch missing
 #endif
 
+#if defined(mach_pdp11)
 #define PCC_EARLY_AS_ARGS		\
 	strlist_append(&args, "-V");	\
 	strlist_append(&args, "-u");
@@ -62,4 +63,9 @@
 #define PCC_SETUP_LD_ARGS				\
 	strlist_append(&early_linker_flags, "-X");
 #define STARTLABEL      "start"
+#endif /* mach_pdp11 */
 
+#if defined(mach_nova)
+#define	HAVE_CC2	/* compile cc2 as well */
+#define	NEED_CC2	/* always use cc2 */
+#endif /* if mach_nova */
