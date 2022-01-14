@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.9 2021/11/21 16:31:04 ragge Exp $	*/
+/*	$Id: table.c,v 1.10 2022/01/11 08:22:37 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -66,6 +66,12 @@ struct optab table[] = {
 	SAREG,	TCHAR,
 		NEEDS(NLEFT(AC0)),	RLEFT,
 		"	jsr __pcc_itoc\n",	},
+
+{ SCONV,	INAREG,
+	SAREG,	TINT|TUNSIGNED,
+	SAREG,	TUCHAR,
+		NEEDS(NREG(A,1)),	RLEFT,
+		"	lda A1,c377\n	and A1,AL\n",	},
 
 { SCONV,	INAREG,
 	SOREG,	TLONG|TULONG,
@@ -433,13 +439,13 @@ struct optab table[] = {
 	SCON,	TANY,
 	SANY,	TANY,
 		0,	0,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { UCALL,	FOREFF,
 	SCON,	TANY,
 	SANY,	TANY,
 		0,	0,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { CALL,		FOREFF,
 	SAREG,	TANY,
@@ -457,13 +463,13 @@ struct optab table[] = {
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(A),	RESC1,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { UCALL,	INAREG,
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(A),	RESC1,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { CALL,		INAREG,
 	SAREG,	TANY,
@@ -481,25 +487,25 @@ struct optab table[] = {
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(A),	RESC1,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { UCALL,	INAREG,
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(A),	RESC1,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { CALL,		INBREG,
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(B),	RESC1,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { UCALL,	INBREG,
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(B),	RESC1,
-		"	jsr CL\n", },
+		"	jsr @[.word CL]\n", },
 
 { CALL,		INBREG,
 	SAREG,	TANY,
