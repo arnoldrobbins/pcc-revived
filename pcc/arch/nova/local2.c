@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.20 2021/11/21 16:31:04 ragge Exp $	*/
+/*	$Id: local2.c,v 1.21 2022/01/11 08:22:37 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -460,7 +460,7 @@ upput(NODE *p, int size)
 		setlval(p, getlval(p) - 1);
 		break;
 	case ICON:
-		printf("[ .word " CONFMT " ]", getlval(p) & 0177777);
+		printf("[.word " CONFMT "]", getlval(p) & 0177777);
 		break;
 	default:
 		comperr("upput bad op %d size %d", p->n_op, size);
@@ -490,7 +490,7 @@ if (looping == 0) {
 	case ICON:
 		fputc('[', io);
 		if (p->n_type == INCREF(CHAR) || p->n_type == INCREF(UCHAR))
-			fprintf(io, ".byteptr ");
+			fprintf(io, ".bptr ");
 		else
 			fprintf(io, ".word ");
 		if (p->n_type == LONG || p->n_type == ULONG)

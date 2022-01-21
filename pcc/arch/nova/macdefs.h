@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.18 2021/11/21 16:31:04 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.19 2022/01/11 08:22:37 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -45,7 +45,7 @@
 #define SZLONG		32
 #define SZSHORT		16
 #define SZLONGLONG	64
-#define SZPOINT(t)	16	/* Actually 15 */
+#define SZPOINT(t)	16
 
 /*
  * Alignment constraints
