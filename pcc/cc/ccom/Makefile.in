@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.54 2022/01/11 08:22:37 ragge Exp $
+#	$Id: Makefile.in,v 1.55 2022/03/27 17:02:29 ragge Exp $
 #
 # Makefile.in for ccom
 #
@@ -211,12 +211,15 @@ $(CC1):	$(OBJS1)
 	$(CC) $(LDFLAGS) $(OBJS1) -o $@ $(LIBS)
 
 $(CC2): $(CC2MSRC)
-	@if [ -e $(CC2MSRC) ]; then			\
+	@if [ -s $(CC2MSRC) ]; then			\
 		echo $(CC) $(LDFLAGS) $(CFLAGS) $(CPPFLAGS) $(CC2MSRC) -o $@ ; \
 		$(CC) $(LDFLAGS) $(CFLAGS) $(CPPFLAGS) $(CC2MSRC) -o $@ ; \
 	else						\
 		touch $@ ;				\
 	fi
+
+$(CC2MSRC):
+	touch $@
 
 
 install: $(DEST)

@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.438 2021/10/13 17:07:03 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.439 2022/03/27 20:11:30 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2251,6 +2251,8 @@ doacall(struct symtab *sp, NODE *f, NODE *a)
 			fwalk(a, eprint, 0);
 	}
 #endif
+	if (ISARY(f->n_type))
+		goto build; /* something bad happened */
 
 	/* First let MD code do something */
 	calldec(f, a);
