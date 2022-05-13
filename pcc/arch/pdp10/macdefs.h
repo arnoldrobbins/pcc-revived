@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.37 2021/10/08 15:59:07 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.38 2022/03/30 14:11:59 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -240,3 +240,9 @@ typedef long long OFFSZ;
 #define ENCRA(x,y)      ((x) << (6+y*6))        /* encode regs in int */
 #define GCLASS(x)	(x < 16 ? CLASSA : CLASSB)
 int COLORMAP(int c, int *r);
+
+/* floating point definitions */
+/* XXX needs fixing for pdp10 */
+#define FDFLOAT
+#define DEFAULT_FPI_DEFS { &fpi_ffloat, &fpi_dfloat, &fpi_dfloat }
+

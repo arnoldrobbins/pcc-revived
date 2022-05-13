@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.64 2017/02/18 15:43:48 ragge Exp $	*/
+/*	$Id: order.c,v 1.65 2022/03/30 14:11:59 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -174,7 +174,8 @@ myormake(NODE *p)
 int *
 livecall(NODE *p)
 {
-	static int r[8], *s = r;
+	static int r[8];
+	int *s = r;
 
 	*s = -1;
 	if (p->n_op == UCALL || p->n_op == UFORTCALL || p->n_op == USTCALL ||
