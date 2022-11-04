@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.5 2016/01/30 17:26:19 ragge Exp $	*/
+/*	$Id: order.c,v 1.6 2022/10/29 09:58:15 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -176,5 +176,5 @@ livecall(NODE *p)
 int
 acceptable(struct optab *op)
 {
-	return 1;
+	return features(op->visit & 0xffff0000);
 }

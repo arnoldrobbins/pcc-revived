@@ -1,6 +1,6 @@
-/* $Id: crti.c,v 1.3 2022/10/29 08:19:54 gmcgarry Exp $ */
+/*      $Id: crtend.c,v 1.1 2022/10/29 08:19:54 gmcgarry Exp $	*/
 /*-
- * Copyright (c) 2008 Gregory McGarry <g.mcgarry@ieee.org>
+ * Copyright (c) 2022 Gregory McGarry <g.mcgarry@ieee.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,20 +17,14 @@
 
 #include "common.h"
 
-asm(	"	.section .init	\n"
-	"	.globl _init	\n"
-	"	.align 16	\n"
-	"_init:			\n"
-	"	push %ebp	\n"
-	"	mov %esp,%ebp	\n"
-	"	.previous	\n");
+asm(	"	.section .ctors,\"aw\",@progbits\n"
+	"	.long 0\n"
+	"	.previous\n"
+);
 
-asm(	"	.section .fini	\n"
-	"	.globl _fini	\n"
-	"	.align 16	\n"
-	"_fini:			\n"
-	"	push %ebp	\n"
-	"	mov %esp,%ebp	\n"
-	"	.previous	\n");
+asm(	"	.section .dtors,\"aw\",@progbits\n"
+	"	.long 0\n"
+	"	.previous\n"
+);
 
-IDENT("$Id: crti.c,v 1.3 2022/10/29 08:19:54 gmcgarry Exp $");
+IDENT("$Id: crtend.c,v 1.1 2022/10/29 08:19:54 gmcgarry Exp $");

@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.6 2021/08/08 23:50:10 gmcgarry Exp $	*/
+/*	$Id: ccconfig.h,v 1.7 2022/10/29 10:11:50 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -48,10 +48,11 @@
 #elif defined(mach_m16c)
 #define	CPPMDADD { "-D__m16c__", NULL, }
 #elif defined(mach_nova)
+#define	CPPMDADD { "-D__m68k__", NULL, }
+#elif defined(mach_m68k)
 #define	CPPMDADD { "-D__nova__", NULL, }
 #elif defined(mach_pdp7)
 #define	CPPMDADD { "-D__pdp7__", "-Dpdp7", NULL, }
 #else
 #error defines for arch missing
 #endif
-

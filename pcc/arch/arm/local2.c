@@ -1,4 +1,4 @@
-/*      $Id: local2.c,v 1.41 2021/09/04 10:38:37 gmcgarry Exp $    */
+/*      $Id: local2.c,v 1.42 2022/10/29 09:40:42 gmcgarry Exp $    */
 /*
  * Copyright (c) 2007 Gregory McGarry (g.mcgarry@ieee.org).
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -215,8 +215,10 @@ eoftn(struct interpass_prolog *ipp)
 		    rnames[SP], rnames[PC]);
 		printf("\tadd %s,%s,#%d\n", rnames[SP], rnames[SP], 16);
 	}
+#ifdef ELFABI
 	printf("\t.size %s,.-%s\n", exname(ipp->ipp_name),
 	    exname(ipp->ipp_name));
+#endif
 }
 
 

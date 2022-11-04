@@ -48,6 +48,7 @@ case "$target_os" in
 	    arm*) targmach=arm ;;
 	    i?86) targmach=i386 ;;
 	    powerpc*) targmach=powerpc endian=big ;;
+	    m68k*) targmach=m68k endian=big target_alias=m68k-linux-gnu ;;
 	    x86_64) targmach=amd64 ;;
 	    aarch64) targmach=aarch64 ;;
 	esac
@@ -139,6 +140,7 @@ case "$target_os" in
 	case "$target_cpu" in
 	    m16c) targmach=m16c ;;
 	    nova) targmach=nova ;;
+	    m68k*) targmach=m68k endian=big ;;
 	esac
 	;;
 esac
@@ -155,6 +157,7 @@ fi
 
 AC_CHECK_TOOLS([CC], [pcc gcc cc])
 AC_CHECK_TOOL([AR], [ar], [ar])
+AC_CHECK_TOOL([AS], [as], [as])
 AC_PROG_RANLIB
 
 AC_SUBST(targos)

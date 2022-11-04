@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.30 2021/08/08 23:50:10 gmcgarry Exp $	*/
+/*	$Id: ccconfig.h,v 1.31 2022/10/29 10:11:50 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -66,6 +66,8 @@
 #elif defined(mach_aarch64)
 #define CPPMDADD        { "-D__aarch64__", NULL, }
 #define MUSL_DYLIB      "/lib/ld-musl-aarch64.so.1"
+#elif defined(mach_m68k)
+#define CPPMDADD        { "-D__m68k__", NULL, }
 #else
 #error defines for arch missing
 #endif
