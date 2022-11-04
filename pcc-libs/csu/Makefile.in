@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.13 2016/03/13 09:55:41 ragge Exp $
+#	$Id: Makefile.in,v 1.14 2022/10/29 08:19:54 gmcgarry Exp $
 #
 # Makefile.in for pcc-libs/csu
 #
@@ -17,9 +17,10 @@ VERSION = @version@
 PCCLIBDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/lib
 
 CC = @CC@
+AS = @AS@
 CFLAGS = @CFLAGS@
 
-MFLAGS = CC="$(CC)" MACH="$(TARGMACH)" PCCLIBDIR="$(PCCLIBDIR)"
+MFLAGS = AS="$(AS)" CC="$(CC)" MACH="$(TARGMACH)" PCCLIBDIR="$(PCCLIBDIR)"
 
 all clean install:
 	if test -f $(srcdir)/$(TARGOS)/Makefile; then			\
@@ -28,4 +29,4 @@ all clean install:
 	fi
 
 distclean: clean
-	/bin/rm -f Makefile
+	$(RM) -f Makefile

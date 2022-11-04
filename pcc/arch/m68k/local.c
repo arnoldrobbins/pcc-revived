@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.17 2018/12/02 10:50:00 ragge Exp $	*/
+/*	$Id: local.c,v 1.18 2022/10/29 09:58:15 gmcgarry Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -114,7 +114,6 @@ getsoname(struct symtab *sp)
 	    ap->sarg(0) : sp->sname;
 	
 }
-
 
 static NODE *
 picstatic(NODE *p)
@@ -253,6 +252,12 @@ clocal(NODE *p)
 
 	case SCONV:
 		l = p->n_left;
+
+		if (p->n_type == l->n_type) {
+			nfree(p);
+			return l;
+		}
+
 		if (l->n_op == ICON && ISPTR(l->n_type)) {
 			/* Do immediate cast here */
 			/* Should be common code */
@@ -263,6 +268,21 @@ clocal(NODE *p)
 				cerror("clocal");
 			p = nfree(p);
 			p->n_sp = q;
+		}
+		break;
+
+	case PCONV: /* Remove what PCONVs we can. */
+		l = p->n_left;
+		if (l->n_op == SCONV)
+			break;
+
+		if (l->n_op == ICON || (ISPTR(p->n_type) && ISPTR(l->n_type))) {
+			l->n_type = p->n_type;
+			l->n_qual = p->n_qual;
+			l->n_df = p->n_df;
+			l->n_ap = p->n_ap;
+			nfree(p);
+			p = l;
 		}
 		break;
 

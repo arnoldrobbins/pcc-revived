@@ -1,6 +1,6 @@
-/* $Id: crti.c,v 1.3 2022/10/29 08:19:54 gmcgarry Exp $ */
+/* $Id: common.h,v 1.1 2022/10/29 08:19:54 gmcgarry Exp $ */
 /*-
- * Copyright (c) 2008 Gregory McGarry <g.mcgarry@ieee.org>
+ * Copyright (c) 2022 Gregory McGarry <g.mcgarry@ieee.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,22 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "common.h"
+#define IDENT(x) asm(".ident\t\"" x "\"")
 
-asm(	"	.section .init	\n"
-	"	.globl _init	\n"
-	"	.align 16	\n"
-	"_init:			\n"
-	"	push %ebp	\n"
-	"	mov %esp,%ebp	\n"
-	"	.previous	\n");
+#define NULL (void *)0
 
-asm(	"	.section .fini	\n"
-	"	.globl _fini	\n"
-	"	.align 16	\n"
-	"_fini:			\n"
-	"	push %ebp	\n"
-	"	mov %esp,%ebp	\n"
-	"	.previous	\n");
-
-IDENT("$Id: crti.c,v 1.3 2022/10/29 08:19:54 gmcgarry Exp $");
+extern void _init(void);
+extern void _fini(void);

@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.20 2011/11/13 22:30:18 gmcgarry Exp $	*/
+/*	$Id: table.c,v 1.21 2022/10/29 09:40:42 gmcgarry Exp $	*/
 /*-
  * Copyright (c) 2007 Gregory McGarry <g.mcgarry@ieee.org>
  *
@@ -1565,7 +1565,7 @@ struct optab table[] = {
 	SCON,	TANY,
 	SANY,	TANY,
 		0,	RNOP,
-		"	b LL\n", },
+		"	bal LL\n", },
 
 #if 0
 { GOTO, 	FOREFF,

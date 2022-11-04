@@ -1,0 +1,5 @@
+MACH_OBJS = divsi3.o mulsi3.o udivsi3.o umodsi3.o
+
+OBJS += $(addprefix $(srcdir)/arch/$(TARGMACH)/, $(MACH_OBJS))
+
+CFLAGS += -mcpu=m68000
