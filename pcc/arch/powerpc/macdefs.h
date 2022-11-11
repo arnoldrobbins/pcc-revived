@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.22 2021/10/08 15:59:07 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.23 2022/11/07 20:53:43 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -112,6 +112,9 @@ typedef long long OFFSZ;
 #define REGPREFIX	"%"	/* format for printing registers */
 #elif defined(MACHOABI)
 #define LABFMT	"L%d"		/* format for printing labels */
+#define REGPREFIX
+#elif defined(AOUTABI)
+#define LABFMT  ".L%d"           /* format for printing labels */
 #define REGPREFIX
 #else
 #error undefined ABI
@@ -230,9 +233,9 @@ typedef long long OFFSZ;
 #define	MAXREGS	64		/* XXX cannot have more than 64 */
 
 #define RSTATUS 				\
-	0,			/* R0 */	\
-	0,			/* R1 */	\
-	SAREG|TEMPREG,		/* R2 */	\
+	SAREG|TEMPREG,		/* R0 */	\
+	0,					/* R1 */	\
+	0,					/* R2 */	\
 	SAREG|TEMPREG,		/* R3 */	\
 	SAREG|TEMPREG,		/* R4 */	\
 	SAREG|TEMPREG,		/* R5 */	\
@@ -341,11 +344,12 @@ typedef long long OFFSZ;
 #define GOTREG	R31	/* global offset table (PIC) */
 
 #ifdef FPREG
-#define ARGINIT		(24*8)	/* # bits above fp where arguments start */
+#define ARGINIT		(8*8)	/* # bits above sp where arguments start */
 #define AUTOINIT	(8*8)	/* # bits above fp where automatics start */
-#define STACK_DOWN 		/* stack grows negatively for automatics */
+#define BACKAUTO 		/* stack grows negatively for automatics */
+#define BACKTEMP 		/* stack grows negatively for temporaries */
 #else
-#define ARGINIT		(24*8)	/* # bits above fp where arguments start */
+#define ARGINIT		(8*8)	/* # bits above fp where arguments start */
 #define AUTOINIT	(56*8)	/* # bits above fp where automatics start */
 #endif
 

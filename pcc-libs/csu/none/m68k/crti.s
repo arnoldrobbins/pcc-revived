@@ -3,10 +3,6 @@
 	.p2align 2
 _init:
 	link.w	%fp,#0
-	nop
-	nop
-	nop
-	nop
 	.previous
 
 	.section .fini

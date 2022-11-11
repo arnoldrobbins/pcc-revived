@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.110 2021/09/12 10:49:49 gmcgarry Exp $	*/
+/*	$Id: init.c,v 1.111 2022/11/05 02:21:31 gmcgarry Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -281,10 +281,17 @@ inval(CONSZ off, int fsz, NODE *p)
 		int i, nbits;
 
 		ufp = soft_toush(p->n_scon, t, &nbits);
+#if TARGET_ENDIAN == TARGET_BE
+		for (i = sztable[t] - 1; i >= 0; i -= SZINT) {
+			printf(PRTPREF "%s %u\n", astypnames[INT], 
+			    (i < nbits ? ufp[i/SZINT] : 0));
+		}
+#else
 		for (i = 0; i < sztable[t]; i += SZINT) {
 			printf(PRTPREF "%s %u\n", astypnames[INT], 
 			    (i < nbits ? ufp[i/SZINT] : 0));
 		}
+#endif
 	} else
 		cerror("inval: unhandled type %d", (int)t);
 }

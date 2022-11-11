@@ -1,4 +1,4 @@
-	| int __mulsi3(int a, int b)
+	| int __mulsi3(short a, short b)
 	.p2align 2
 	.globl __mulsi3
 __mulsi3:
