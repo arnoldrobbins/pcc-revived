@@ -1,4 +1,4 @@
-/*      $Id: local.c,v 1.1 2020/06/13 14:55:53 ragge Exp $    */
+/*      $Id: local.c,v 1.2 2022/11/05 02:21:30 gmcgarry Exp $    */
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -305,7 +305,7 @@ myp2tree(NODE *p)
 	sp->squal = (CON >> TSHIFT);
 
 	defloc(sp);
-	ninval(0, tsize(sp->stype, sp->sdf, sp->sap), p);
+	inval(0, tsize(sp->stype, sp->sdf, sp->sap), p);
 
 	p->n_op = NAME;
 	slval(p, 0);

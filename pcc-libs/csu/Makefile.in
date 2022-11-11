@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.14 2022/10/29 08:19:54 gmcgarry Exp $
+#	$Id: Makefile.in,v 1.15 2022/11/05 02:06:08 gmcgarry Exp $
 #
 # Makefile.in for pcc-libs/csu
 #
@@ -18,9 +18,9 @@ PCCLIBDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/lib
 
 CC = @CC@
 AS = @AS@
-CFLAGS = @CFLAGS@
+CFLAGS += @CFLAGS@
 
-MFLAGS = AS="$(AS)" CC="$(CC)" MACH="$(TARGMACH)" PCCLIBDIR="$(PCCLIBDIR)"
+MFLAGS = AS="$(AS)" CC="$(CC)" MACH="$(TARGMACH)" CFLAGS="$(CFLAGS)" PCCLIBDIR="$(PCCLIBDIR)"
 
 all clean install:
 	if test -f $(srcdir)/$(TARGOS)/Makefile; then			\

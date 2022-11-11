@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.9 2016/03/13 09:54:49 ragge Exp $
+#	$Id: Makefile.in,v 1.10 2022/11/05 02:06:09 gmcgarry Exp $
 #
 # Makefile.in for libpccsoftfloat.a
 #
@@ -17,7 +17,8 @@ TARGMACH = @targmach@
 VERSION = @version@
 PCCLIBDIR = $(libdir)/pcc/$(TARGET)/$(VERSION)/lib
 
-CPPFLAGS = @CPPFLAGS@ -DSOFTFLOAT_FOR_GCC -I$(srcdir) \
+CFLAGS += @CFLAGS@
+CPPFLAGS += @CPPFLAGS@ -DSOFTFLOAT_FOR_GCC -I$(srcdir) \
 	-I$(srcdir)/arch/$(TARGMACH) \
 	-isystem $(top_srcdir)/libpcc/include
 
