@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.162 2020/02/02 09:52:31 ragge Exp $	*/
+/*	$Id: scan.l,v 1.164 2022/11/15 13:03:33 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -257,7 +257,7 @@ struct keywords {
 	{ "_Static_assert", C_STATICASSERT, DEFKW },
 	{ "struct", STNAME, C_STRUCT },
 	{ "switch", C_SWITCH, DEFKW },
-	{ "_Thread_local", THLOCAL, C_CLASS },
+	{ "_Thread_local", /* THLOCAL */ 0, C_CLASS },
 	{ "typedef", TYPEDEF, C_CLASS },
 	{ "union", UNAME, C_STRUCT },
 	{ "unsigned", UNSIGNED, C_TYPE },
@@ -285,7 +285,7 @@ kwdecode(struct symtab *s)
 {
 	struct keywords *kw = &keywords[s->soffset];
 
-	if (inattr && kw->cword != C_SIZEOF)
+	if (inattr && kw->cword != C_SIZEOF && kw->cword != C_ALIGNOF)
 		return C_NAME;
 
 	switch (kw->wclass) {
@@ -295,8 +295,6 @@ kwdecode(struct symtab *s)
 		break;
 
 	case C_CLASS:
-		if (kw->cword == THLOCAL)
-			uerror("_Thread_local not supported");
 		yylval.type = kw->cword;
 		break;
 
