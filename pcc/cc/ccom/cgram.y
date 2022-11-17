@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.422 2019/09/08 09:30:51 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.423 2022/11/11 14:51:21 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -146,7 +146,7 @@
 %left '+' '-'
 %left '*' C_DIVOP
 %right C_UNOP
-%right C_INCOP C_SIZEOF
+%right C_INCOP C_SIZEOF C_ALIGNOF
 %left '[' '(' C_STROP
 %{
 # include "pass1.h"
