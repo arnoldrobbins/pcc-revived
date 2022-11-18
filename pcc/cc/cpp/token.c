@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.214 2021/09/12 12:06:30 gmcgarry Exp $	*/
+/*	$Id: token.c,v 1.216 2022/11/17 20:34:57 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -566,6 +566,8 @@ ucn(register usch *p, register usch *q)
 		error("universal character name out of range");
 #endif
 
+	if (cp == 0)
+		return q; /* ignore zeroes */
 	n = 0;
 	m = 0x7f;
 	p = bs;
@@ -1504,10 +1506,15 @@ again:		switch (ch) {
 			ifiles->lineno++;
 			while ((ch = qcchar()) == ' ' || ch == '\t')
 				;
-			if (ch == '#')
-				return;
-			if (ch == '%' && (ch = qcchar()) == ':')
-				return;
+			if ((ch == '#') ||
+			    (ch == '%' && (ch = qcchar()) == ':')) {
+				while ((ch = qcchar()) == ' ' || ch == '\t')
+					;
+				if (ISID0(ch)) {
+					unch(ch);
+					return;
+				}
+			}
 			goto again;
 		case '\'':
 			while ((ch = qcchar()) != '\'') {
