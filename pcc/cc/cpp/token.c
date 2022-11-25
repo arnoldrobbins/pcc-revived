@@ -1,4 +1,4 @@
-/*	$Id: token.c,v 1.216 2022/11/17 20:34:57 ragge Exp $	*/
+/*	$Id: token.c,v 1.218 2022/11/21 19:29:35 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2009 Anders Magnusson. All rights reserved.
@@ -652,7 +652,9 @@ bufid(int ch, register struct iobuf *ob)
 	return ob->buf+n;
 }
 
-usch idbuf[MAXIDSZ+1];
+static usch *idbuf;
+static int maxidsz;
+
 /*
  * readin chars and store in buf. Warn about too long names.
  */
@@ -663,9 +665,10 @@ readid(int ch)
 
 	do {
 		if (p == MAXIDSZ)
-			warning("identifier exceeds C99 5.2.4.1, truncating");
-		if (p < MAXIDSZ)
-			idbuf[p++] = ch;
+			warning("identifier exceeds C99 5.2.4.1");
+		if (p == maxidsz)
+			idbuf = xrealloc(idbuf, maxidsz += MAXIDSZ);
+		idbuf[p++] = ch;
 	} while (ISID(ch = qcchar()));
 	idbuf[p] = 0;
 	unch(ch);
@@ -1233,8 +1236,10 @@ static void
 chknl(int ignore)
 {
 	register void (*f)(const char *, ...);
-	register int t;
+	register int t, c;
 
+	c = Cflag;
+	Cflag = 0;
 	f = ignore ? warning : error;
 	if ((t = fastspc()) != '\n') {
 		if (t) {
@@ -1247,6 +1252,7 @@ chknl(int ignore)
 		} else
 			f("no newline at end of file");
 	}
+	Cflag = c;
 	unch(t);
 }
 

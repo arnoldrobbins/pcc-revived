@@ -1,4 +1,4 @@
-/*	$Id: pass2.h,v 1.144 2017/03/11 09:22:09 ragge Exp $	*/
+/*	$Id: pass2.h,v 1.145 2022/11/25 14:50:11 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -102,6 +102,7 @@ typedef unsigned int bittype; /* XXX - for basicblock */
 /* These are used in rstatus[] in conjunction with SxREG */
 #define	TEMPREG	01000
 #define	PERMREG	02000
+#define	PREMREG	06000
 
 /* tshape() return values */
 #define	SRNOPE	0		/* Cannot match any shape */

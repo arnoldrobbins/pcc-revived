@@ -13,6 +13,7 @@ INPUT( -lio )
 PROVIDE(__stack_top = _estack);
 PROVIDE(__bss_start = _sbss);
 PROVIDE(__bss_end = _ebss);
+PROVIDE(__bss_size = _ebss - _sbss);
 PROVIDE(__heap_start = _sheap);
 PROVIDE(__heap_end = _eheap);
 

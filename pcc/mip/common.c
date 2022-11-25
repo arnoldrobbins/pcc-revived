@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.125 2018/09/15 15:21:45 ragge Exp $	*/
+/*	$Id: common.c,v 1.127 2022/11/22 14:42:56 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -982,6 +982,16 @@ attr_dup(struct attr *ap)
 	ap = memcpy(permalloc(sz), ap, sz);
 	ap->next = NULL;
 	return ap;
+}
+
+void *
+xrealloc(void *p, int size)
+{
+	void *rv;
+
+	if ((rv = realloc(p, size)) == NULL)
+		cerror("out of memory!");
+	return rv;
 }
 
 void *
