@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.34 2019/09/07 11:59:03 ragge Exp $	*/
+/*	$Id: ccconfig.h,v 1.35 2022/11/24 21:10:44 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -77,6 +77,8 @@
 #elif defined(mach_powerpc)
 #define	CPPMDADD { "-D__ppc__", NULL, }
 #define STARTLABEL "_start"
+#elif defined(mach_riscv32)
+#define CPPMDADD { "-D__riscv__", "-D__riscv32__", NULL, }
 #elif defined(mach_vax)
 #define CPPMDADD { "-D__vax__", NULL, }
 #define	PCC_EARLY_SETUP { kflag = 1; }

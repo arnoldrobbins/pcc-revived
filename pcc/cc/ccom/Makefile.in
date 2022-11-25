@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.56 2022/10/29 10:07:40 gmcgarry Exp $
+#	$Id: Makefile.in,v 1.57 2022/11/24 21:11:32 ragge Exp $
 #
 # Makefile.in for ccom
 #
@@ -26,6 +26,7 @@ YFLAGS = @YFLAGS@
 TARGOS = @targos@
 TARGOSVER = @targosver@
 TARGMACH = @targmach@
+TARGMACHDIR = @targmachdir@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 libexecdir = @libexecdir@
@@ -42,7 +43,7 @@ CC2MSRC=$(top_srcdir)/cc2/cc2.$(TARGMACH).c
 CF0=@CF0@
 CF1=@CF1@
 
-MDIR=$(top_srcdir)/arch/$(TARGMACH)
+MDIR=$(top_srcdir)/arch/$(TARGMACHDIR)
 MIPDIR=$(top_srcdir)/mip
 COMMONDIR=$(top_srcdir)/common
 

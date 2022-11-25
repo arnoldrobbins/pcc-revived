@@ -1,4 +1,4 @@
-/*	$Id: symtabs.c,v 1.40 2019/04/08 13:30:17 ragge Exp $	*/
+/*	$Id: symtabs.c,v 1.41 2022/11/22 14:42:24 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -484,7 +484,7 @@ savch(int ch)
 {
 	if (csbufp == cssz) {
 		cssz += STCHNK;
-		csbuf = realloc(csbuf, cssz);
+		csbuf = xrealloc(csbuf, cssz);
 	}
 	csbuf[csbufp++] = ch;
 }

@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.114 2018/10/21 17:42:14 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.116 2022/11/22 14:42:56 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -347,6 +347,7 @@ char *tmpstrdup(char *str);
 void markset(struct mark *m);
 void markfree(struct mark *m);
 void *xmalloc(int size);
+void *xrealloc(void *p, int size);
 void *xcalloc(int a, int b);
 void *xstrdup(char *s);
 
