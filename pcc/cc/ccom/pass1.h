@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.320 2021/10/13 17:07:03 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.321 2022/11/29 10:17:18 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -736,10 +736,10 @@ void dwarf_end(void);
  */
 #if defined(__PCC__) || defined(__GNUC__)
 #define	FUNALLO(x)	__builtin_alloca(x)
-#define	FUNFREE(x)
+#define	FUNFREE(x)	((void)0)
 #elif defined(HAVE_ALLOCA)
 #define FUNALLO(x)      alloca(x)
-#define FUNFREE(x)
+#define FUNFREE(x)	((void)0)
 #else
 #define FUNALLO(x)	malloc(x)
 #define FUNFREE(x)	free(x)
