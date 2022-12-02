@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.327 2021/08/09 03:08:39 gmcgarry Exp $	*/
+/*	$Id: cpp.c,v 1.328 2022/12/01 19:04:34 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -1755,8 +1755,9 @@ kfind(struct symtab *sp)
 	register struct iobuf *ib, *ob, *outb, *ab;
 	const usch *argary[MAXARGS+1];
 	int c, n = 0;
-	int l;
+	int l, oldused;
 
+	oldused = nbufused;
 	blkidp = 1;
 	outb = NULL;
 	DPRINT(("%d:enter kfind(%s)\n",0,sp->namep));
@@ -1837,7 +1838,7 @@ again:		if ((ab = readargs(NULL, sp, argary)) == 0)
 
 	for (ifiles->lineno += n; n; n--)
 		putob(outb, '\n');
-	if (nbufused != 1)
+	if (nbufused - oldused != 1)
 		error("lost buffer");
 	return outb;
 }

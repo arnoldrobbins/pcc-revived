@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.57 2022/11/24 21:11:32 ragge Exp $
+#	$Id: Makefile.in,v 1.59 2022/12/01 19:00:31 ragge Exp $
 #
 # Makefile.in for ccom
 #
@@ -51,7 +51,7 @@ DEST=@CCNAMES@
 MANPAGE=$(BINPREFIX)ccom
 MKEXT=mkext$(EXEEXT)
 
-all: $(DEST) $(CC2)
+all: $(DEST)
 
 OBJS=	builtins.o cgram.o code.o common.o compat.o dwarf.o external.o	\
 	gcc_compat.o init.o inline.o local.o local2.o main.o \
@@ -212,20 +212,12 @@ $(CC1):	$(OBJS1)
 	$(CC) $(LDFLAGS) $(OBJS1) -o $@ $(LIBS)
 
 $(CC2): $(CC2MSRC)
-	@if [ -s $(CC2MSRC) ]; then			\
-		echo $(CC) $(LDFLAGS) $(CFLAGS) $(CPPFLAGS) $(CC2MSRC) -o $@ ; \
-		$(CC) $(LDFLAGS) $(CFLAGS) $(CPPFLAGS) $(CC2MSRC) -o $@ ; \
-	else						\
-		echo "int main() { return 1; }" > $@ ;	\
-	fi
-
-$(CC2MSRC):
-	echo "int main() { return 1; }" > $@
+	$(CC) $(LDFLAGS) $(CFLAGS) $(CPPFLAGS) $(CC2MSRC) $(LIBS) -o $@
 
 install: $(DEST)
 	test -z "$(DESTDIR)$(libexecdir)" || mkdir -p "$(DESTDIR)$(libexecdir)"
 	$(INSTALL_PROGRAM) $(DEST) $(DESTDIR)$(libexecdir)
-	$(INSTALL_PROGRAM) $(CC2) $(DESTDIR)$(libexecdir)
+	-test -f $(CC2) && $(INSTALL_PROGRAM) $(CC2) $(DESTDIR)$(libexecdir)
 	test -z "$(DESTDIR)$(mandir)/man1" || mkdir -p "$(DESTDIR)$(mandir)/man1"
 	$(INSTALL_DATA) $(srcdir)/ccom.1 $(DESTDIR)$(mandir)/man1/$(MANPAGE).1
 
