@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.2 2016/09/26 16:45:42 ragge Exp $	 */
+/*	$Id: local2.c,v 1.3 2022/12/04 17:02:54 ragge Exp $	 */
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -95,7 +95,7 @@ prologue(struct interpass_prolog * ipp)
 
 	ftype = ipp->ipp_type;
 	printf("\t.align 2\n");
-	if (ipp->ipp_vis)
+	if (ipp->ipp_flags & IF_VISIBLE)
 		printf("\t.globl %s\n", ipp->ipp_name);
 	printf("\t.ent %s\n", ipp->ipp_name);
 	printf("%s:\n", ipp->ipp_name);

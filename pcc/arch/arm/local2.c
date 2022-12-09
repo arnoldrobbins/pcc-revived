@@ -1,4 +1,4 @@
-/*      $Id: local2.c,v 1.42 2022/10/29 09:40:42 gmcgarry Exp $    */
+/*      $Id: local2.c,v 1.43 2022/12/04 17:02:54 ragge Exp $    */
 /*
  * Copyright (c) 2007 Gregory McGarry (g.mcgarry@ieee.org).
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -167,7 +167,7 @@ prologue(struct interpass_prolog *ipp)
 			ipp->ipp_ip.type,
 			ipp->ipp_ip.lineno,
 			ipp->ipp_name,
-			ipp->ipp_vis,
+			ipp->ipp_flags,
 			ipp->ipp_type,
 			ipp->ipp_autos,
 			ipp->ip_tmpnum,

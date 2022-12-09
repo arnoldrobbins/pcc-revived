@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.17 2012/03/22 18:51:40 plunky Exp $	*/
+/*	$Id: main.c,v 1.18 2022/12/05 19:41:09 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -44,8 +44,8 @@ void mkdope(void);
 int ndebug;
 int b2debug, c2debug, e2debug, f2debug, g2debug, o2debug;
 int r2debug, s2debug, t2debug, u2debug, x2debug;
-int kflag;
-int xdeljumps, xtemps, xssa, xdce;
+int kflag, wdebug;
+int xdeljumps, xtemps, xssa, xdce, xscp;
 
 int mflag, tflag;
 
