@@ -1,4 +1,28 @@
-/*	$Id: code.c,v 1.2 2022/11/24 21:09:08 ragge Exp $	*/
+/*	$Id: code.c,v 1.4 2022/12/07 11:57:20 ragge Exp $	*/
+/*
+ * Copyright (c) 2022, Tim Kelly/Dialectronics.com (gtkelly@).
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -11,8 +35,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -325,9 +347,6 @@ param_struct(struct symtab *sym, int *argofsp)
 void
 bfcode(struct symtab **sp, int cnt)
 {
-#ifdef USE_GOTNR
-	extern int gotnr;
-#endif
 
 	struct symtab *sp2;
 	union arglist *usym;
@@ -340,38 +359,29 @@ bfcode(struct symtab **sp, int cnt)
 	 * Detect if this function has ellipses and save those
 	 * argument registers onto stack.
 	 */
-	
-	usym = cftnsp->sdf->dfun;
-	for (; usym->type != TELLIPSIS; usym++) {
-		t = usym->type;
-		if (t == TNULL)
-			break;
-		if (ISSOU(BTYPE(t)))
-			usym++;
-		for (i = 0; t > BTMASK; t = DECREF(t)) 
-			if (ISARY(t) || ISFTN(t))
-				i++;
-		if (i)
-			usym++;
+	if (cftnsp->sdf && cftnsp->sdf->dfun) {
+		usym = cftnsp->sdf->dfun;
+		for (; usym->type != TELLIPSIS; usym++) {
+			t = usym->type;
+			if (t == TNULL)
+				break;
+			if (ISSOU(BTYPE(t)))
+				usym++;
+			for (i = 0; t > BTMASK; t = DECREF(t)) 
+				if (ISARY(t) || ISFTN(t))
+					i++;
+			if (i)
+				usym++;
+		}
+		if (usym->type == TELLIPSIS)
+			saveallargs = 1;
 	}
-	if (usym->type == TELLIPSIS)
-				saveallargs = 1;
 	
 	if (cftnsp->stype == STRTY+FTN || cftnsp->stype == UNIONTY+FTN) {
 		param_retstruct();
 		++argofs;
 	}
 
-#ifdef USE_GOTNR
-	if (kflag) {
-		/* put GOT register into temporary */
-		q = block(REG, NIL, NIL, INT, 0, 0);
-		regno(q) = GOTREG;
-		p = tempnode(0, INT, 0, 0);
-		gotnr = regno(p);
-		ecomp(buildtree(ASSIGN, p, q));
-	}
-#endif
 	/* recalculate the arg offset and create TEMP moves */
 	for (i = 0; i < cnt; i++) {
 
@@ -384,7 +394,7 @@ bfcode(struct symtab **sp, int cnt)
 			break;
 
 		if (argofs >= NARGREGS) {
-				//cerror("too many arguments, do something intelligent");
+			//cerror("too many arguments, do something intelligent");
 				putintemp(sp[i]);
 		} else if (stype == STRTY || stype == UNIONTY) {
 				param_struct(sp[i], &argofs);

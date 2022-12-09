@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.193 2020/05/13 19:32:22 ragge Exp $	*/
+/*	$Id: local2.c,v 1.194 2022/12/04 17:02:54 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -102,7 +102,7 @@ prologue(struct interpass_prolog *ipp)
 	ftype = ipp->ipp_type;
 
 #ifdef LANG_F77
-	if (ipp->ipp_vis)
+	if (ipp->ipp_flags & IF_VISIBLE)
 		printf("	.globl %s\n", ipp->ipp_name);
 	printf("	.align 4\n");
 	printf("%s:\n", ipp->ipp_name);

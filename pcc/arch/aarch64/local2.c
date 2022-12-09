@@ -1,4 +1,4 @@
-/*      $Id: local2.c,v 1.2 2021/09/04 10:38:37 gmcgarry Exp $    */
+/*      $Id: local2.c,v 1.3 2022/12/04 17:02:54 ragge Exp $    */
 
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
@@ -151,7 +151,7 @@ prologue(struct interpass_prolog *ipp)
 			ipp->ipp_ip.type,
 			ipp->ipp_ip.lineno,
 			ipp->ipp_name,
-			ipp->ipp_vis,
+			ipp->ipp_flags,
 			ipp->ipp_type,
 			ipp->ipp_autos,
 			ipp->ip_tmpnum,

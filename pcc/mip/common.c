@@ -1,4 +1,4 @@
-/*	$Id: common.c,v 1.127 2022/11/22 14:42:56 ragge Exp $	*/
+/*	$Id: common.c,v 1.128 2022/12/05 20:04:17 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -304,7 +304,7 @@ warner(int type, ...)
 {
 	va_list ap;
 	char *t;
-#ifndef PASS2
+#if !defined(PASS2) && !defined(LANG_F77)
 	extern int issyshdr;
 
 	if (issyshdr && type == Wtruncate)

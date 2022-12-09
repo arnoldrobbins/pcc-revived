@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.21 2022/01/11 08:22:37 ragge Exp $	*/
+/*	$Id: local2.c,v 1.22 2022/12/04 17:02:54 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -48,7 +48,7 @@ prologue(struct interpass_prolog *ipp)
 {
 
 #ifdef os_none
-	if (ipp->ipp_vis)
+	if (ipp->ipp_flags & IF_VISIBLE)
 		printf("	.ENT %s\n", ipp->ipp_name);
 	printf("	.ZREL\n");
 	printf("%s:	.%s\n", ipp->ipp_name, ipp->ipp_name);
@@ -59,7 +59,7 @@ prologue(struct interpass_prolog *ipp)
 	printf("	jsr @prolog\n");	/* jump to prolog */
 #else
 	printf("#BEGFTN\n");
-	if (ipp->ipp_vis)
+	if (ipp->ipp_flags & IF_VISIBLE)
 		printf("	.globl %s\n", ipp->ipp_name);
 	printf("%s:\n", ipp->ipp_name);
 	printf("	sta 3,@spref\n");	/* put ret pc on stack */

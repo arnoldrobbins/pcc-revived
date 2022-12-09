@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.31 2022/11/07 20:53:43 ragge Exp $	*/
+/*	$Id: local2.c,v 1.32 2022/12/04 17:02:55 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -116,7 +116,7 @@ int i, addto = 0;
 			ipp->ipp_ip.type,
 			ipp->ipp_ip.lineno,
 			ipp->ipp_name,
-			ipp->ipp_vis,
+			ipp->ipp_flags & IF_VISIBLE,
 			ipp->ipp_type,
 			ipp->ipp_autos,
 			ipp->ip_tmpnum,

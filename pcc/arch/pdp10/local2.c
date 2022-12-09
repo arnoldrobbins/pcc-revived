@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.108 2017/02/18 15:43:48 ragge Exp $	*/
+/*	$Id: local2.c,v 1.109 2022/12/04 17:02:54 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -50,7 +50,7 @@ prologue(struct interpass_prolog *ipp)
 {
 	int i, j;
 
-	if (ipp->ipp_vis)
+	if (ipp->ipp_flags & IF_VISIBLE)
 		printf("	.globl %s\n", ipp->ipp_name);
 	printf("%s:\n", ipp->ipp_name);
 	addto = p2maxautooff;

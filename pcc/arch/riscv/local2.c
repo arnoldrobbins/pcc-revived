@@ -1,4 +1,28 @@
-/*	$Id: local2.c,v 1.2 2022/11/24 21:09:08 ragge Exp $	*/
+/*	$Id: local2.c,v 1.5 2022/12/07 11:57:20 ragge Exp $	*/
+/*
+ * Copyright (c) 2022, Tim Kelly/Dialectronics.com (gtkelly@). 
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */ 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -11,8 +35,6 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission
  *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -119,6 +141,8 @@ static void fpconv(NODE *p);
 static void twollcomp(NODE *p);
 static void shiftop(NODE *p);
 
+int msettings;
+
 static int p2calls;
 static int p2temps;		/* TEMPs which aren't autos yet */
 static int p2maxstacksize;
@@ -143,11 +167,11 @@ prologue(struct interpass_prolog *ipp)
 
 #ifdef PCC_DEBUG
 	if (x2debug)
-		printf("prologue: type=%d, lineno=%d, name=%s, vis=%d, ipptype=%d, autos=%d, tmpnum=%d, lblnum=%d\n",
+		printf("prologue: type=%d, lineno=%d, name=%s, flags=%x, ipptype=%d, autos=%d, tmpnum=%d, lblnum=%d\n",
 			ipp->ipp_ip.type,
 			ipp->ipp_ip.lineno,
 			ipp->ipp_name,
-			ipp->ipp_vis,
+			ipp->ipp_flags,
 			ipp->ipp_type,
 			ipp->ipp_autos,
 			ipp->ip_tmpnum,
@@ -283,11 +307,27 @@ int i, sz, idx = 0, addto = p2maxautooff;
 
 }
 
+static char *acomp[] = {
+    "beq", "bne", "ble", "blt", "bge", "bgt", "bleu", "bltu", "bgeu", "bgtu",
+};
+static char *acompz[] = {
+    "beqz", "bnez", "blez", "bltz", "bgez", "bgtz",
+    "bleuX", "bltuX", "bgeuX", "bgtuX", /* These should never be emitted */
+};
+static char *fcomp[] = { "feq", "feq", "fgt", "fge", "flt", "fle" };
 
 void
 zzzcode(NODE *p, int c)
 {
 	switch (c) {
+
+	case 'A': /* AREG comparisons 2-reg */
+		printf("%s", acomp[p->n_op-EQ]);
+		break;
+
+	case 'B': /* AREG comparisons against zero */
+		printf("%s", acompz[p->n_op-EQ]);
+		break;
 
 	case 'C': /* floating-point conversions */
 		fpconv(p);
@@ -300,7 +340,15 @@ zzzcode(NODE *p, int c)
 	case 'E': /* generate and error */
 		comperr("zzzcode received ZE macro");
 		break;
-	
+
+	case 'F': /* floating-point comparision */
+		printf("	%s.%c ", fcomp[p->n_op-EQ],
+		    p->n_left->n_type == DOUBLE ? 'd' : 's');
+		expand(p, 0, "A1, AL, AR\n");
+		printf("	%s ", p->n_op == EQ ? "bnez" : "beqz");
+		expand(p, 0, "A1, LC\n");
+		break;
+
 	case 'O': /* 64-bit left and right shift operators */
 		shiftop(p);
 		break;
