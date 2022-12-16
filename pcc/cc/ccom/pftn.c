@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.439 2022/03/27 20:11:30 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.440 2022/12/09 14:49:01 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2622,7 +2622,7 @@ fixtype(NODE *p, int class)
 int
 uclass(int class)
 {
-	if (class == SNULL)
+	if (class == SNULL && !fun_inline)
 		return(EXTERN);
 	else if (class == STATIC)
 		return(USTATIC);

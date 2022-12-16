@@ -1,4 +1,4 @@
-/*	$Id: ccconfig.h,v 1.18 2014/12/24 08:43:28 plunky Exp $	*/
+/*	$Id: ccconfig.h,v 1.19 2022/12/09 14:51:07 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2007 David O'Brien <obrien@FreeBSD.org>
@@ -48,6 +48,12 @@
 	  "-D__LP64__=1", "-D_LP64=1", NULL, }
 #else
 #error defines for arch missing
+#endif
+
+/* FreeBSD do not have any assembler anymore, so use clang for that */
+#if __FreeBSD__ >= 12
+#define PCC_EARLY_AS_ARGS strlist_append(&args, "-xassembler"); strlist_append(&args, "-c");
+#define ASSEMBLER "clang"
 #endif
 
 #ifdef LANG_F77

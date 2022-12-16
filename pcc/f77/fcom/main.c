@@ -1,4 +1,4 @@
-/*	$Id: main.c,v 1.18 2022/12/05 19:41:09 ragge Exp $	*/
+/*	$Id: main.c,v 1.20 2022/12/15 20:52:04 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -32,7 +32,7 @@
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
  * POSSIBILITY OF SUCH DAMAGE.
  */
-char xxxvers[] = "\nFORTRAN 77 PASS 1, VERSION 1.16,  3 NOVEMBER 1978\n";
+char xxxvers[] = "FORTRAN 77 PASS 1, VERSION 1.16,  3 NOVEMBER 1978\n";
 
 #include <unistd.h>
 
@@ -83,7 +83,7 @@ main(int argc, char **argv)
 
 #define DONE(c)	{ retcode = c; goto finis; }
 
-	while ((ch = getopt(argc, argv, "qw:UuOdpC1I:Z:X:")) != -1)
+	while ((ch = getopt(argc, argv, "qw:UuOdpC1I:Z:X:x:v")) != -1)
 		switch (ch) {
 		case 'q':
 			quietflag = YES;
@@ -104,12 +104,15 @@ main(int argc, char **argv)
 			undeftype = YES;
 			break;
 
-		case 'O':
-			optimflag = YES;
-#ifdef notyet
-			xdeljumps = 1;
-			xtemps = 1;
-#endif
+		case 'v':
+			printf("%s", xxxvers);
+			break;
+
+		case 'x':
+			if (strcmp(optarg, "deljumps") == 0)
+				xdeljumps = 1;
+			if (strcmp(optarg, "temps") == 0)
+				xtemps = 1;
 			break;
 
 		case 'd':
@@ -239,7 +242,6 @@ main(int argc, char **argv)
 	doext();
 	preven(ALIDOUBLE);
 	prtail();
-	puteof();
 	DONE(0);
 
 

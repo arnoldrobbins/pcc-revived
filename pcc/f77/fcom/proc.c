@@ -1,4 +1,4 @@
-/*	$Id: proc.c,v 1.15 2021/10/08 15:59:07 ragge Exp $	*/
+/*	$Id: proc.c,v 1.16 2022/12/15 20:19:16 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -83,7 +83,6 @@ endproc()
 	epicode();
 	procode();
 	dobss();
-	prdbginfo();
 
 	putbracket();
 
@@ -309,8 +308,6 @@ struct bigblock *argvec;
 	for(p = entries ; p ; p = p->entrypoint.nextp)
 		prolog(&p->entrypoint, argvec);
 
-	putrbrack(procno);
-
 	prendproc();
 }
 
@@ -430,7 +427,7 @@ for(p = hashtab ; p<lasthash ; ++p)
 			bssleng = roundup(bssleng, align);
 			preven(align);
 			}
-		prlocvar( memname(STGBSS, q->b_name.vardesc.varno), iarrl = iarrlen(q) );
+		prvar( memname(STGBSS, q->b_name.vardesc.varno), iarrl = iarrlen(q), 0 );
 		bssleng += iarrl;
 		}
 	else if(q->vclass==CLPROC && q->b_name.vprocclass==PEXTERNAL && q->vstg!=STGARG)
@@ -450,7 +447,7 @@ for(i = 0 ; i < nequiv ; ++i)
 		{
 		bssleng = roundup(bssleng, ALIDOUBLE);
 		preven(ALIDOUBLE);
-		prlocvar( memname(STGEQUIV, i), leng);
+		prvar( memname(STGEQUIV, i), leng, 0);
 		bssleng += leng;
 		}
 }
@@ -463,7 +460,7 @@ doext()
 struct extsym *p;
 
 for(p = extsymtab ; p<nextext ; ++p)
-	prext( varstr(XL, p->extname), p->maxleng, p->extinit);
+	prvar( varstr(XL, p->extname), p->maxleng, 1);
 }
 
 
