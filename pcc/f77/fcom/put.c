@@ -1,4 +1,4 @@
-/*	$Id: put.c,v 1.17 2008/05/11 15:28:03 ragge Exp $	*/
+/*	$Id: put.c,v 1.18 2022/12/15 20:19:16 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -272,28 +272,4 @@ putconst(struct bigblock *p)
 
 	frexpr(p);
 	return( q );
-}
-
-/*
- * put out a character string constant.  begin every one on
- * a long integer boundary, and pad with nulls
- */
-void
-putstr(char *s, ftnint n)
-{
-	int b[FSZSHORT];
-	int i;
-
-	i = 0;
-	while(--n >= 0) {
-		b[i++] = *s++;
-		if(i == FSZSHORT) {
-			prchars(b);
-			i = 0;
-		}
-	}
-
-	while(i < FSZSHORT)
-		b[i++] = '\0';
-	prchars(b);
 }

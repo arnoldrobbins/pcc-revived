@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.16 2008/12/24 17:40:41 sgk Exp $	*/
+/*	$Id: init.c,v 1.17 2022/12/15 20:19:16 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -50,7 +50,6 @@ struct labelblock *thislabel	= NULL;
 flag nowarnflag	= NO;
 flag ftn66flag	= NO;
 flag profileflag	= NO;
-flag optimflag	= NO;
 flag quietflag	= NO;
 flag shiftcase	= YES;
 flag undeftype	= NO;

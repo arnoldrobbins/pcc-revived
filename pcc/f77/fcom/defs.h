@@ -1,4 +1,4 @@
-/*	$Id: defs.h,v 1.23 2011/12/12 09:18:25 plunky Exp $	*/
+/*	$Id: defs.h,v 1.24 2022/12/15 20:19:16 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -70,7 +70,6 @@ extern struct labelblock *thislabel;
 extern int mflag, tflag;
 
 extern flag profileflag;
-extern flag optimflag;
 extern flag quietflag;
 extern flag nowarnflag;
 extern flag ftn66flag;
@@ -491,7 +490,7 @@ void entrypt(int, int, ftnint, struct extsym *, chainp);
 void settype(struct bigblock *, int, int), putlabel(int);
 void putbranch(struct bigblock *p), goret(int), putrbrack(int);
 void prolog(struct entrypoint *, struct bigblock *), prendproc(void);
-void prlocvar(char *, ftnint), prext(char *, ftnint, int);
+void prvar(char *, ftnint, int);
 void vardcl(struct bigblock *v), frchain(chainp *p); 
 void frtemp(struct bigblock *p), incomm(struct extsym *, struct bigblock *);
 void setintr(struct bigblock * v), setext(struct bigblock * v);
