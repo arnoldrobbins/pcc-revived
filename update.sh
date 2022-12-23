@@ -2,7 +2,8 @@
 
 for i in pcc pcc-libs
 do
-	(cd $i ; cvs update)
+	rm -fr $i
+	cvs -d :pserver:anonymous@pcc.ludd.ltu.se:/cvsroot co $i
 done
 
 git status
