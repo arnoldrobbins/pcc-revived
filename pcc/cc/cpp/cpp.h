@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.121 2020/02/16 11:19:36 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.122 2023/01/12 21:13:33 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -163,6 +163,7 @@ struct includ {
 	int idx;
 	void *incs;
 	const usch *fn;
+	usch pbb[10];
 #if LIBVMF
 	struct vseg *vseg;
 #endif
