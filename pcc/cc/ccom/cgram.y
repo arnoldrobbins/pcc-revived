@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.423 2022/11/11 14:51:21 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.424 2023/06/04 08:21:23 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -507,11 +507,7 @@ abstract_declarator:
 			$$->n_left = $3;
 		}
 		|  '(' abstract_declarator ')' { $$ = $2; }
-		|  '[' maybe_r ']' attr_var {
-			$$ = block(LB, bdty(NAME, NULL), bcon(NOOFFSET),
-			    INT, 0, gcc_attr_wrapper($4));
-		}
-		|  '[' e ']' attr_var {
+		|  '[' ecq ']' attr_var {
 			$$ = block(LB, bdty(NAME, NULL), $2,
 			    INT, 0, gcc_attr_wrapper($4));
 		}
