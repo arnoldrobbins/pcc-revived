@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.328 2021/10/15 15:33:09 ragge Exp $	*/
+/*	$Id: cc.c,v 1.329 2023/07/05 19:32:43 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -2046,7 +2046,7 @@ setup_as_flags(void)
 }
 
 struct flgcheck ldflgcheck[] = {
-#ifndef MSLINKER
+#if !defined(MSLINKER) && !defined(os_sunos)
 	{ &vflag, 1, "-v" },
 #endif
 #ifdef os_darwin
