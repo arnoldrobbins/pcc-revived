@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.9 2021/10/08 15:59:07 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.10 2023/07/03 10:55:54 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -784,7 +784,7 @@ builtin_check(struct symtab *sp, NODE *a)
  * Put all builtin functions into the global symbol table.
  */
 void
-builtin_init()
+builtin_init(void)
 {
 	const struct bitable *bt;
 	NODE *p = block(TYPE, 0, 0, 0, 0, 0);
