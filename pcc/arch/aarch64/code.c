@@ -1,4 +1,4 @@
-/*      $Id: code.c,v 1.1 2020/06/13 14:55:53 ragge Exp $    */
+/*      $Id: code.c,v 1.4 2023/07/20 14:08:38 ragge Exp $    */
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -32,6 +32,12 @@
 #define talloc p1alloc
 #define tcopy p1tcopy
 #define nfree p1nfree
+#undef n_type
+#define n_type ptype
+#undef n_qual
+#define n_qual pqual
+#undef n_df
+#define n_df pdf
 #endif
 
 static int rvnr;
@@ -47,11 +53,16 @@ setseg(int seg, char *name)
 		case DATA:
 		case LDATA: name = ".data"; break;
 		case UDATA: break;
+#ifdef MACHOABI
+		case RDATA: name = ".const_data"; break;
+		case STRNG: name = ".cstring"; break;
+#else
+		case RDATA: name = ".section .rodata"; break;
+		case STRNG: name = ".section .rodata"; break;
+#endif
 		case PICLDATA: name = ".section .data.rel.local,\"aw\",@progbits";break;
 		case PICDATA: name = ".section .data.rel.rw,\"aw\",@progbits"; break;
 		case PICRDATA: name = ".section .data.rel.ro,\"aw\",@progbits"; break;
-		case STRNG:
-		case RDATA: name = ".section .rodata"; break;
 		case TLSDATA: name = ".section .tdata,\"awT\",@progbits"; break;
 		case TLSUDATA: name = ".section .tbss,\"awT\",@nobits"; break;
 		case CTORS: name = ".section\t.ctors,\"aw\",@progbits"; break;
@@ -309,7 +320,6 @@ param_struct(struct symtab *sym, int *argofsp)
 void
 bfcode(struct symtab **sp, int cnt)
 {
-	union arglist *usym;
 	int saveallargs = 0;
 	int i, argofs = 0;
 
@@ -317,14 +327,8 @@ bfcode(struct symtab **sp, int cnt)
 	 * Detect if this function has ellipses and save all
 	 * argument registers onto stack.
 	 */
-	usym = cftnsp->sdf->dfun;
-	while (usym && usym->type != TNULL) {
-		if (usym->type == TELLIPSIS) {
-			saveallargs = 1;
-			break;
-		}
-		++usym;
-	}
+	if (cftnsp->sdf->dlst)
+		saveallargs = pr_hasell(cftnsp->sdf->dlst);
 
 	/* if returning a structure, move the hidden argument into a TEMP */
 	if (cftnsp->stype == STRTY+FTN || cftnsp->stype == UNIONTY+FTN) {

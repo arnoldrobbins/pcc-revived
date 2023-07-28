@@ -1,4 +1,4 @@
-/*	$Id: optim.c,v 1.66 2019/04/22 06:41:18 ragge Exp $	*/
+/*	$Id: optim.c,v 1.68 2023/07/23 08:55:09 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -38,6 +38,13 @@
 #define	NODE P1ND
 #define	nfree p1nfree
 #define	tfree p1tfree
+#undef n_type
+#define n_type ptype
+#undef n_qual
+#define n_qual pqual
+#undef n_df
+#define n_df pdf
+
 
 # define SWAP(p,q) {sp=p; p=q; q=sp;}
 # define RCON(p) (p->n_right->n_op==ICON)
@@ -165,7 +172,7 @@ again:	o = p->n_op;
 		if (LCON(p) && RCON(p) && conval(p->n_left, o, p->n_right))
 			goto zapright;
 
-		sz = tsize(p->n_type, p->n_df, p->n_ap);
+		sz = tsize(p->n_type, p->n_df, p->pss);
 
 		if (LO(p) == RS && RCON(p->n_left) && RCON(p) &&
 		    (RV(p) + RV(p->n_left)) < sz) {
@@ -208,7 +215,7 @@ again:	o = p->n_op;
 		if (LCON(p) && RCON(p) && conval(p->n_left, o, p->n_right))
 			goto zapright;
 
-		sz = tsize(p->n_type, p->n_df, p->n_ap);
+		sz = tsize(p->n_type, p->n_df, p->pss);
 
 		if (LO(p) == LS && RCON(p->n_left) && RCON(p)) {
 			/* two left-shift  by constants */
@@ -284,8 +291,7 @@ again:	o = p->n_op;
 			q = p->n_left->n_left;
 			if (q->n_left->n_type == PTR+STRTY &&
 			    q->n_right->n_type == PTR+STRTY &&
-			    strmemb(q->n_left->n_ap) ==
-			    strmemb(q->n_right->n_ap)) {
+			    suemeq(q->n_left->n_td->ss, q->n_right->n_td->ss)) {
 				p = zapleft(p);
 				p = zapleft(p);
 				break;
@@ -337,7 +343,7 @@ again:	o = p->n_op;
 			zapright:
 			nfree(p->n_right);
 			q = makety(p->n_left, p->n_type, p->n_qual,
-			    p->n_df, p->n_ap);
+			    p->n_df, p->pss);
 			nfree(p);
 			p = clocal(q);
 			break;
@@ -377,7 +383,7 @@ again:	o = p->n_op;
 			p->n_op = RS;
 			RV(p) = i;
 			q = p->n_right;
-			if(tsize(q->n_type, q->n_df, q->n_ap) > SZINT)
+			if(tsize(q->n_type, q->n_df, q->pss) > SZINT)
 				p->n_right = makety(q, INT, 0, 0, 0);
 
 			break;

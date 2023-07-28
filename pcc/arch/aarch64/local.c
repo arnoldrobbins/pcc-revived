@@ -1,4 +1,4 @@
-/*      $Id: local.c,v 1.2 2022/11/05 02:21:30 gmcgarry Exp $    */
+/*      $Id: local.c,v 1.3 2023/07/19 06:54:12 ragge Exp $    */
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -35,6 +35,12 @@
 #define talloc p1alloc
 #define tcopy p1tcopy
 #define nfree p1nfree
+#undef n_type
+#define n_type ptype
+#undef n_qual
+#define n_qual pqual
+#undef n_df
+#define n_df pdf
 #endif
 
 extern void defalign(int);
