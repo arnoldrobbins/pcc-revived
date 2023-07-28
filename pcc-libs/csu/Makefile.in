@@ -1,4 +1,4 @@
-#	$Id: Makefile.in,v 1.15 2022/11/05 02:06:08 gmcgarry Exp $
+#	$Id: Makefile.in,v 1.16 2023/07/27 17:03:32 ragge Exp $
 #
 # Makefile.in for pcc-libs/csu
 #
@@ -29,4 +29,4 @@ all clean install:
 	fi
 
 distclean: clean
-	$(RM) -f Makefile
+	/bin/rm -f Makefile

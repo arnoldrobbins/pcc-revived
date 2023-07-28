@@ -1,4 +1,4 @@
-/*	$Id: cc.c,v 1.330 2023/07/08 10:31:42 ragge Exp $	*/
+/*	$Id: cc.c,v 1.334 2023/07/23 09:54:46 ragge Exp $	*/
 
 /*-
  * Copyright (c) 2011 Joerg Sonnenberger <joerg@NetBSD.org>.
@@ -341,8 +341,8 @@ int	bigendian = 1;
 int	bigendian = 0;
 #endif
 
-#ifdef mach_amd64
-int amd64_i386;
+#ifdef TARGET_GLOBALS
+TARGET_GLOBALS
 #endif
 
 #define	match(a,b)	(strcmp(a,b) == 0)
@@ -703,18 +703,6 @@ main(int argc, char *argv[])
 				strlist_append(&compiler_flags, argp);
 				break;
 			}
-#ifdef mach_amd64
-			if (strncmp(argp, "-mcmodel=", 9) == 0) {
-				strlist_append(&compiler_flags, argp);
-				break;
-			}
-			/* need to call i386 ccom for this */
-			if (strcmp(argp, "-melf_i386") == 0) {
-				pass0 = LIBEXECDIR "/ccom_i386";
-				amd64_i386 = 1;
-				break;
-			}
-#endif
 #if defined(mach_arm) || defined(mach_mips) || defined(mach_mips64)
 			if (match(argp, "-mbig-endian")) {
 				bigendian = 1;
@@ -1433,10 +1421,15 @@ run_linker(void)
 	struct strlist linker_flags;
 	int retval;
 
+#ifdef PCC_EARLY_LD_ARGS
+	PCC_EARLY_LD_ARGS
+#endif
+
 	if (outfile) {
 		strlist_prepend(&early_linker_flags, outfile);
 		strlist_prepend(&early_linker_flags, "-o");
 	}
+
 	strlist_init(&linker_flags);
 	strlist_append_list(&linker_flags, &early_linker_flags);
 	strlist_append_list(&linker_flags, &middle_linker_flags);
@@ -1997,13 +1990,11 @@ setup_ccom_flags(void)
 	cksetflags(ccomflgcheck, &compiler_flags, 'a');
 }
 
-#if defined(USE_YASM) || defined(os_win32) || defined(os_darwin) || \
-	(defined(os_sunos) && defined(mach_sparc64))
-static int one = 1;
-#endif
+int one = 1;
 
 struct flgcheck asflgcheck[] = {
 #if defined(USE_YASM)
+	{ &one, 1, "-w" },
 	{ &one, 1, "-p" },
 	{ &one, 1, "gnu" },
 	{ &one, 1, "-f" },
@@ -2012,7 +2003,11 @@ struct flgcheck asflgcheck[] = {
 #elif defined(os_darwin)
 	{ &one, 1, "macho" },
 #else
+#if defined(mach_amd64)
+	{ &one, 1, "elf64" },
+#else
 	{ &one, 1, "elf" },
+#endif
 #endif
 #endif
 #if defined(os_sunos) && defined(mach_sparc64)
@@ -2027,20 +2022,12 @@ struct flgcheck asflgcheck[] = {
 #if defined(os_openbsd) && defined(mach_mips64)
 	{ &kflag, 1, "-KPIC" },
 #else
+#if !defined(USE_YASM)
 	{ &kflag, 1, "-k" },
 #endif
-#ifdef os_darwin
-	{ &one, 1, "-arch" },
-#if mach_amd64
-	{ &amd64_i386, 1, "i386" },
-	{ &amd64_i386, 0, "x86_64" },
-#else
-	{ &one, 1, "i386" },
 #endif
-#else
-#ifdef mach_amd64
-	{ &amd64_i386, 1, "--32" },
-#endif
+#ifdef TARGET_ASFLAGS
+	TARGET_ASFLAGS
 #endif
 	{ 0 }
 };

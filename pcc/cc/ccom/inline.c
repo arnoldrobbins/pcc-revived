@@ -1,4 +1,4 @@
-/*	$Id: inline.c,v 1.66 2016/09/26 16:45:43 ragge Exp $	*/
+/*	$Id: inline.c,v 1.68 2023/07/23 08:55:09 ragge Exp $	*/
 /*
  * Copyright (c) 2003, 2008 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -43,7 +43,8 @@ struct ntds {
 	int temp;
 	TWORD type;
 	union dimfun *df;
-	struct attr *attr;
+	struct ssdesc *ss;
+//	struct attr *attr;
 };
 
 /*
@@ -440,14 +441,14 @@ mnode(struct ntds *nt, P1ND *p)
 
 	if (p->n_op == CM) {
 		q = p->n_right;
-		q = tempnode(num, nt->type, nt->df, nt->attr);
+		q = tempnode(num, nt->type, nt->df, nt->ss);
 		nt--;
 		p->n_right = buildtree(ASSIGN, q, p->n_right);
 		p->n_left = mnode(nt, p->n_left);
 		p->n_op = COMOP;
 	} else {
 		p = pconvert(p);
-		q = tempnode(num, nt->type, nt->df, nt->attr);
+		q = tempnode(num, nt->type, nt->df, nt->ss);
 		p = buildtree(ASSIGN, q, p);
 	}
 	return p;
@@ -607,7 +608,7 @@ inlinetree(struct symtab *sp, P1ND *f, P1ND *ap)
 	rp = block(GOTO, bcon(l1), NULL, INT, 0, 0);
 	if (is->retval)
 		p = tempnode(is->retval + toff, DECREF(sp->stype),
-		    sp->sdf, sp->sap);
+		    sp->sdf, sp->sss);
 	else
 		p = xbcon(0, NULL, DECREF(sp->stype));
 	rp = buildtree(COMOP, rp, p);
@@ -624,9 +625,7 @@ inlinetree(struct symtab *sp, P1ND *f, P1ND *ap)
 void
 inline_args(struct symtab **sp, int nargs)
 {
-	union arglist *al;
 	struct istat *cf;
-	TWORD t;
 	int i;
 
 	SDEBUG(("inline_args\n"));
@@ -637,19 +636,10 @@ inline_args(struct symtab **sp, int nargs)
 	 * - function args are volatile, checked if no temp node is asg'd.
 	 */
 	/* XXX - this is ugly, invent something better */
-	if (cf->sp->sdf->dfun == NULL)
-		return; /* no prototype */
-	for (al = cf->sp->sdf->dfun; al->type != TNULL; al++) {
-		t = al->type;
-		if (t == TELLIPSIS)
-			return; /* cannot inline */
-		if (ISSOU(BTYPE(t)))
-			al++;
-		for (; t > BTMASK; t = DECREF(t))
-			if (ISARY(t) || ISFTN(t))
-				al++;
-	}
-
+	if (cf->sp->sdf->dlst == 0)
+		return; /* no prototype, won't inline */
+	if (pr_hasell(cf->sp->sdf->dlst))
+		return; /* cannot inline */
 	if (nargs) {
 		for (i = 0; i < nargs; i++)
 			if ((sp[i]->sflags & STNODE) == 0)
@@ -659,7 +649,7 @@ inline_args(struct symtab **sp, int nargs)
 			cf->nt[i].temp = sp[i]->soffset;
 			cf->nt[i].type = sp[i]->stype;
 			cf->nt[i].df = sp[i]->sdf;
-			cf->nt[i].attr = sp[i]->sap;
+			cf->nt[i].ss = sp[i]->sss;
 		}
 	}
 	cf->nargs = nargs;

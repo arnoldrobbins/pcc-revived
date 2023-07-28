@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.20 2016/03/05 15:31:25 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.21 2023/07/15 04:06:39 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -130,6 +130,8 @@ union dimfun {
 	int	ddim;		/* Dimension of an array */
 	union arglist *dfun;	/* Prototype index */
 };
+#define	dlst dfun	/* XXX workaround for ccom changes */
+int pr_hasell(union arglist *df);
 
 /*
  * Argument list member info when storing prototypes.

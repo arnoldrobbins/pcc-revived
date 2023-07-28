@@ -1,4 +1,4 @@
-/*	$Id: amd64.h,v 1.1 2012/12/28 12:38:15 ragge Exp $	*/
+/*	$Id: amd64.h,v 1.3 2023/07/23 09:39:38 ragge Exp $	*/
 
 /*
  * Copyright (c) 2012 Anders Magnusson (ragge@ludd.luth.se).
@@ -38,7 +38,22 @@
 #define PCC_EARLY_ARG_CHECK	{					\
 	if (match(argp, "-m32")) {					\
 		argp = "-m" AMD64_32_EMUL;				\
+		strlist_append(&middle_linker_flags, argp);		\
+		continue;						\
 	} else if (match(argp, "-m64")) {				\
 		argp = "-m" AMD64_64_EMUL;				\
+		strlist_append(&middle_linker_flags, argp);		\
+		continue;						\
+	} else if (strncmp(argp, "-mcmodel", 9) == 0) {			\
+		strlist_append(&compiler_flags, argp);			\
+		continue;						\
+	} else if (match(argp, "-melf_i386")) {				\
+		pass0 = LIBEXECDIR "/ccom_i386";			\
+		amd64_i386 = 1;						\
+		continue;						\
 	}								\
 }
+
+#define	TARGET_GLOBALS	int amd64_i386;
+
+#define	TARGET_ASFLAGS	{ &amd64_i386, 1, "--32" },

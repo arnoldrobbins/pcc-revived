@@ -1,4 +1,4 @@
-/*	$Id: complex.c,v 1.1 2023/07/03 10:29:59 ragge Exp $	*/
+/*	$Id: complex.c,v 1.5 2023/07/26 06:46:44 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -25,6 +25,14 @@
  */
 
 #include "pass1.h"
+
+#undef n_type
+#define n_type ptype
+#undef n_qual
+#define n_qual pqual
+#undef n_df
+#define n_df pdf
+
 
 #ifndef NO_COMPLEX
 
@@ -71,19 +79,21 @@ complinit(void)
 		p->n_type = FTN|STRTY;
 		p->n_ap = cxsp[i]->sap;
 		p->n_df = cxsp[i]->sdf;
+		p->pss = cxsp[i]->sss;
 		defid2(p, EXTERN, 0);
 		cxmul[i]->sdf = permalloc(sizeof(union dimfun));
 		dimfuncnt++;
-		cxmul[i]->sdf->dfun = NULL;
+		cxmul[i]->sdf->dlst = 0;
 		cxndiv[i] = addname(cxndiv[i]);
 		p->n_sp = cxdiv[i] = lookup(cxndiv[i], 0);
 		p->n_type = FTN|STRTY;
 		p->n_ap = cxsp[i]->sap;
 		p->n_df = cxsp[i]->sdf;
+		p->pss = cxsp[i]->sss;
 		defid2(p, EXTERN, 0);
 		cxdiv[i]->sdf = permalloc(sizeof(union dimfun));
 		dimfuncnt++;
-		cxdiv[i]->sdf->dfun = NULL;
+		cxdiv[i]->sdf->dlst = 0;
 	}
 	p1nfree(p);
 	ddebug = d_debug;
@@ -94,7 +104,7 @@ maxtt(P1ND *p)
 {
 	TWORD t;
 
-	t = ANYCX(p) ? strmemb(p->n_ap)->stype : p->n_type;
+	t = ANYCX(p) ? strmemb(p->n_td->ss)->stype : p->n_type;
 	t = BTYPE(t);
 	if (t == VOID)
 		t = CHAR; /* pointers */
@@ -162,10 +172,10 @@ mkcmplx(P1ND *p, TWORD dt)
 		p = comop(p, buildtree(ASSIGN, structref(p1tcopy(q), DOT, imag), i));
 		p = comop(p, q);
 	} else {
-		if (strmemb(p->n_ap)->stype != dt) {
+		if (strmemb(p->n_td->ss)->stype != dt) {
 			q = cxstore(dt);
 			p = buildtree(ADDROF, p, NULL);
-			t = tempnode(0, p->n_type, p->n_df, p->n_ap);
+			t = tempnode(0, p->n_type, p->n_df, p->pss);
 			p = buildtree(ASSIGN, p1tcopy(t), p);
 			p = comop(p, buildtree(ASSIGN,
 			    structref(p1tcopy(q), DOT, real),
@@ -184,8 +194,8 @@ cxasg(P1ND *l, P1ND *r)
 {
 	TWORD tl, tr;
 
-	tl = strattr(l->n_ap) ? strmemb(l->n_ap)->stype : 0;
-	tr = strattr(r->n_ap) ? strmemb(r->n_ap)->stype : 0;
+	tl = strattr(l->n_td) ? strmemb(l->n_td->ss)->stype : 0;
+	tr = strattr(r->n_td) ? strmemb(r->n_td->ss)->stype : 0;
 
 	if (ANYCX(l) && ANYCX(r) && tl != tr) {
 		/* different types in structs */
@@ -224,12 +234,12 @@ cxop(int op, P1ND *l, P1ND *r)
 
 	/* put a pointer to left and right elements in a TEMP */
 	l = buildtree(ADDROF, l, NULL);
-	ltemp = tempnode(0, l->n_type, l->n_df, l->n_ap);
+	ltemp = tempnode(0, l->n_type, l->n_df, l->pss);
 	l = buildtree(ASSIGN, p1tcopy(ltemp), l);
 
 	if (op != UMINUS) {
 		r = buildtree(ADDROF, r, NULL);
-		rtemp = tempnode(0, r->n_type, r->n_df, r->n_ap);
+		rtemp = tempnode(0, r->n_type, r->n_df, r->pss);
 		r = buildtree(ASSIGN, p1tcopy(rtemp), r);
 
 		p = comop(l, r);
@@ -430,7 +440,7 @@ cxconj(P1ND *p)
 	P1ND *q, *r;
 
 	/* XXX side effects? */
-	q = cxstore(strmemb(p->n_ap)->stype);
+	q = cxstore(strmemb(p->n_td->ss)->stype);
 	r = buildtree(ASSIGN, structref(p1tcopy(q), DOT, real),
 	    structref(p1tcopy(p), DOT, real));
 	r = comop(r, buildtree(ASSIGN, structref(p1tcopy(q), DOT, imag),
@@ -472,7 +482,7 @@ P1ND *
 cxret(P1ND *p, P1ND *q)
 {
 	if (ANYCX(q)) { /* Return complex type */
-		p = mkcmplx(p, strmemb(q->n_ap)->stype);
+		p = mkcmplx(p, strmemb(q->n_td->ss)->stype);
 	} else if (q->n_type < STRTY || ISITY(q->n_type)) { /* real or imag */
 		p = structref(p, DOT, ISITY(q->n_type) ? imag : real);
 		if (p->n_type != q->n_type)
@@ -492,7 +502,7 @@ cxcast(P1ND *p1, P1ND *p2)
 		if (p1->n_type != p2->n_type)
 			p2 = mkcmplx(p2, p1->n_type);
 	} else if (ANYCX(p1)) {
-		p2 = mkcmplx(p2, strmemb(p1->n_ap)->stype);
+		p2 = mkcmplx(p2, strmemb(p1->n_td->ss)->stype);
 	} else /* if (ANYCX(p2)) */ {
 		p2 = cast(structref(p2, DOT, real), p1->n_type, 0);
 	}
@@ -501,20 +511,21 @@ cxcast(P1ND *p1, P1ND *p2)
 }
 
 void
-cxargfixup(P1ND *a, TWORD dt, struct attr *ap)
+//cxargfixup(P1ND *a, TWORD dt, struct attr *ap)
+cxargfixup(P1ND *a, struct tdef *td)
 {
 	P1ND *p;
 	TWORD t;
 
 	p = p1alloc();
 	*p = *a;
-	if (dt == STRTY) {
+	if (td->type == STRTY) {
 		/* dest complex */
-		t = strmemb(ap)->stype;
+		t = strmemb(td->ss)->stype;
 		p = mkcmplx(p, t);
 	} else {
 		/* src complex, not dest */
-		p = structref(p, DOT, ISFTY(dt) ? real : imag);
+		p = structref(p, DOT, ISFTY(td->type) ? real : imag);
 	}
 	*a = *p;
 	p1nfree(p);

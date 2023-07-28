@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.27 2016/01/06 16:11:24 ragge Exp $	*/
+/*	$Id: code.c,v 1.28 2023/07/14 15:40:39 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -358,7 +358,6 @@ param_float(struct symtab *sym, int *regp, int dotemps)
 void
 bfcode(struct symtab **sp, int cnt)
 {
-	union arglist *usym;
 	int lastreg = A0 + nargregs - 1;
 	int saveallargs = 0;
 	int i, reg;
@@ -367,14 +366,8 @@ bfcode(struct symtab **sp, int cnt)
 	 * Detect if this function has ellipses and save all
 	 * argument register onto stack.
 	 */
-	usym = cftnsp->sdf->dfun;
-	while (usym && usym->type != TNULL) {
-		if (usym->type == TELLIPSIS) {
-			saveallargs = 1;
-			break;
-		}
-		++usym;
-	}
+	if (cftnsp->sdf->dlst)
+		saveallargs = pr_hasell(cftnsp->sdf->dlst);
 
 	reg = A0;
 

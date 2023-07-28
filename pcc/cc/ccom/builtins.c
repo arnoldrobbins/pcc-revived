@@ -1,4 +1,4 @@
-/*	$Id: builtins.c,v 1.80 2023/07/03 10:55:54 ragge Exp $	*/
+/*	$Id: builtins.c,v 1.83 2023/07/23 08:55:09 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -27,6 +27,10 @@
 # include "pass1.h"
 
 #define	ccopy p1tcopy
+#undef n_type
+#define	n_type ptype
+#undef n_df
+#define n_df pdf
 
 #ifndef MIN
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -114,21 +118,21 @@ builtin_abs(const struct bitable *bt, P1ND *a)
 			slval(a, -glval(a));
 		p = a;
 	} else {
-		t = tempnode(0, a->n_type, a->n_df, a->n_ap);
+		t = tempnode(0, a->n_type, a->n_df, a->pss);
 		tmp1 = regno(t);
 		p = buildtree(ASSIGN, t, a);
 
-		t = tempnode(tmp1, a->n_type, a->n_df, a->n_ap);
-		shift = (int)tsize(a->n_type, a->n_df, a->n_ap) - 1;
+		t = tempnode(tmp1, a->n_type, a->n_df, a->pss);
+		shift = (int)tsize(a->n_type, a->n_df, a->pss) - 1;
 		q = buildtree(RS, t, bcon(shift));
 
-		t2 = tempnode(0, a->n_type, a->n_df, a->n_ap);
+		t2 = tempnode(0, a->n_type, a->n_df, a->pss);
 		tmp2 = regno(t2);
 		q = buildtree(ASSIGN, t2, q);
 
-		t = tempnode(tmp1, a->n_type, a->n_df, a->n_ap);
-		t2 = tempnode(tmp2, a->n_type, a->n_df, a->n_ap);
-		t3 = tempnode(tmp2, a->n_type, a->n_df, a->n_ap);
+		t = tempnode(tmp1, a->n_type, a->n_df, a->pss);
+		t2 = tempnode(tmp2, a->n_type, a->n_df, a->pss);
+		t3 = tempnode(tmp2, a->n_type, a->n_df, a->pss);
 		r = buildtree(MINUS, buildtree(ER, t, t2), t3);
 
 		p = buildtree(COMOP, p, buildtree(COMOP, q, r));
@@ -447,7 +451,7 @@ builtin_stdarg_start(const struct bitable *bt, P1ND *a)
 	/* must first deal with argument size; use int size */
 	p = a->n_right;
 	if (p->n_type < INT) {
-		sz = (int)(SZINT/tsize(p->n_type, p->n_df, p->n_ap));
+		sz = (int)(SZINT/tsize(p->n_type, p->n_df, p->pss));
 	} else
 		sz = 1;
 
@@ -476,12 +480,12 @@ builtin_va_arg(const struct bitable *bt, P1ND *a)
 
 	/* create a copy to a temp node of current ap */
 	p = ccopy(a->n_left);
-	q = tempnode(0, p->n_type, p->n_df, p->n_ap);
+	q = tempnode(0, p->n_type, p->n_df, p->pss);
 	nodnum = regno(q);
 	rv = buildtree(ASSIGN, q, p);
 
 	r = a->n_right;
-	sz = (int)tsize(r->n_type, r->n_df, r->n_ap);
+	sz = (int)tsize(r->n_type, r->n_df, r->pss);
 #ifdef MYVAARGSZ
 	SETOFF(sz, MYVAARGSZ);
 #endif
@@ -495,7 +499,7 @@ builtin_va_arg(const struct bitable *bt, P1ND *a)
 
 	p1nfree(a->n_right);
 	p1nfree(a);
-	r = tempnode(nodnum, INCREF(r->n_type), r->n_df, r->n_ap);
+	r = tempnode(nodnum, INCREF(r->n_type), r->n_df, r->pss);
 	return buildtree(COMOP, rv, buildtree(UMUL, r, NULL));
 
 }
@@ -535,7 +539,7 @@ binhelp(P1ND *a, TWORD rt, char *n)
 		f->n_sp->stype = INCREF(rt)+(FTN-PTR);
 		f->n_sp->sdf = permalloc(sizeof(union dimfun));
 		dimfuncnt++;
-		f->n_sp->sdf->dfun = NULL;
+		f->n_sp->sdf->dlst = 0;
 	}
 	f->n_type = f->n_sp->stype;
 	f = clocal(f);
