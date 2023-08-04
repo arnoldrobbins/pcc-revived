@@ -1,5 +1,5 @@
 %{
-/*	$Id: scan.l,v 1.164 2022/11/15 13:03:33 ragge Exp $	*/
+/*	$Id: scan.l,v 1.165 2023/07/29 13:07:07 ragge Exp $	*/
 
 /*
  * Copyright (c) 2002 Anders Magnusson. All rights reserved.
@@ -231,6 +231,7 @@ struct keywords {
 	{ "continue", C_CONTINUE, DEFKW },
 	{ "_Complex", COMPLEX, C_TYPE },
 	{ "const", CON, C_QUALIFIER },
+	{ "constexpr", CCONST, C_CLASS },
 	{ "default", C_DEFAULT, DEFKW },
 	{ "do", C_DO, DEFKW },
 	{ "double", DOUBLE, C_TYPE },

@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.113 2023/07/23 08:55:09 ragge Exp $	*/
+/*	$Id: init.c,v 1.114 2023/07/29 13:07:07 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -1310,6 +1310,11 @@ simpleinit(struct symtab *sp, NODE *p)
 #endif
 			r = buildtree(ASSIGN, q, p);
 		ecomp(r);
+		break;
+
+	case CCONST:
+		sp->soffset = icons(p);
+		p1nfree(nt);
 		break;
 
 	default:
