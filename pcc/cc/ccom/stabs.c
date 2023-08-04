@@ -1,4 +1,4 @@
-/*	$Id: stabs.c,v 1.37 2023/07/23 08:55:09 ragge Exp $	*/
+/*	$Id: stabs.c,v 1.38 2023/07/29 09:34:43 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004 Anders Magnusson (ragge@ludd.luth.se).
@@ -342,7 +342,7 @@ stabs_newsym(struct symtab *s)
 		return; /* functions are handled separate */
 
 	if (s->sclass == STNAME || s->sclass == UNAME || s->sclass == MOS ||
-	    s->sclass == ENAME || s->sclass == MOU || s->sclass == MOE ||
+	    s->sclass == ENAME || s->sclass == MOU || s->sclass == CCONST ||
 	    s->sclass == TYPEDEF || (s->sclass & FIELD) || ISSOU(s->stype))
 		return; /* XXX - fix structs */
 

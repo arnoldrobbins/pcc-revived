@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.397 2023/07/27 20:04:28 ragge Exp $	*/
+/*	$Id: trees.c,v 1.398 2023/07/29 09:34:44 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -747,7 +747,7 @@ nametree(struct symtab *sp)
 		p->n_df = NULL;
 		defid(p, SNULL);
 	}
-	if (sp->sclass == MOE) {
+	if (sp->sclass == CCONST) {
 		p->n_op = ICON;
 		slval(p, sp->soffset);
 		p->n_df = NULL;
