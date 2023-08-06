@@ -1,4 +1,4 @@
-/*      $Id: params.c,v 1.6 2023/07/23 08:55:09 ragge Exp $     */
+/*      $Id: params.c,v 1.7 2023/08/06 07:51:42 ragge Exp $     */
 /*
  * Copyright (c) 2023 Anders Magnusson (ragge@ludd.ltu.se).
  * All rights reserved.
@@ -154,9 +154,9 @@ fun_leave(void)
 
 	if (cs->rv.flags & RV_RETREG) {
 		/* scalar/float return in registers */
-		p = block(REG, 0, 0, cn->n_type, cn->n_df, cn->pss);
+		p = block(REG, 0, 0, cs->rv.rtp, 0, 0);
 		regno(p) = cs->rv.reg[0];
-		ecomp(buildtree(ASSIGN, p, p1tcopy(cn)));
+		ecomp(buildtree(ASSIGN, p, cast(p1tcopy(cn), cs->rv.rtp, 0)));
 	} else if (cs->rv.flags & RV_STREG) {
 		/* struct return in regs,  struct ptr in cn */
 		sz = (int)tsize(cs->rv.type, cs->rv.df, cs->rv.ss);

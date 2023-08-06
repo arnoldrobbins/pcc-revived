@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.106 2023/07/23 09:00:13 ragge Exp $	*/
+/*	$Id: code.c,v 1.107 2023/08/06 07:51:42 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -196,11 +196,12 @@ mycallspec(struct callspec *cs)
 		}
 		break;
 
-	case CHAR: case UCHAR: case SHORT: case USHORT:
+	case BOOL: case CHAR: case UCHAR:
+	case SHORT: case USHORT:
 	case INT: case UNSIGNED: case LONG: case ULONG:
 		cs->rv.flags |= RV_RETREG;
 		cs->rv.reg[0] = EAX;
-		cs->rv.rtp = cs->rv.type;
+		cs->rv.rtp = INT;
 		break;
 
 	case LONGLONG: case ULONGLONG:
