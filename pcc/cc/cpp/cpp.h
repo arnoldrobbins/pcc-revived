@@ -1,4 +1,4 @@
-/*	$Id: cpp.h,v 1.122 2023/01/12 21:13:33 ragge Exp $	*/
+/*	$Id: cpp.h,v 1.123 2023/08/05 15:06:07 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -99,7 +99,6 @@ extern usch pbbeg[], *pbinp, *pbend;
 
 /* Used in macro expansion */
 #define	L2MAX	64			/* max index into blocker pages */
-#define	MKB(l,h)	(l+((h)<<8))
 
 /* quick checks for some characters */
 #define C_SPEC	0001		/* for fastscan() parsing */

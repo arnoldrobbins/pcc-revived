@@ -1,4 +1,4 @@
-/*	$Id: init.c,v 1.114 2023/07/29 13:07:07 ragge Exp $	*/
+/*	$Id: init.c,v 1.115 2023/08/06 07:50:40 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2007 Anders Magnusson (ragge@ludd.ltu.se).
@@ -785,6 +785,7 @@ insbf(OFFSZ off, int fsz, int val)
 	sym.stype = typ;
 	sym.squal = 0;
 	sym.sdf = 0;
+	sym.sss = 0;
 	sym.sap = NULL;
 	sym.soffset = (int)off;
 	sym.sclass = (char)(typ == INT ? FIELD | fsz : MOU);
