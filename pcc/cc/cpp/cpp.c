@@ -1,4 +1,4 @@
-/*	$Id: cpp.c,v 1.329 2023/08/05 15:06:07 ragge Exp $	*/
+/*	$Id: cpp.c,v 1.330 2023/08/07 07:53:01 ragge Exp $	*/
 
 /*
  * Copyright (c) 2004,2010 Anders Magnusson (ragge@ludd.luth.se).
@@ -952,7 +952,7 @@ include_next(void)
 	fn = addname(&ob->buf[1]);
 	bufree(ob);
 	if (fsrch(fn, ifiles->idx, ifiles->incs) == 0)
-		error("cannot find '%s'", &ob->buf[1]);
+		error("cannot find '%s'", fn);
 
 	prtline(1);
 }

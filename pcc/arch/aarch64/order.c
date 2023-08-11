@@ -1,4 +1,4 @@
-/*      $Id: order.c,v 1.1 2020/06/13 14:55:53 ragge Exp $    */
+/*      $Id: order.c,v 1.2 2023/08/11 13:02:32 ragge Exp $    */
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -160,6 +160,7 @@ setuni(NODE *p, int cookie)
 	return 0;
 }
 
+#if 0
 /*
  * Special handling of some instruction register allocation.
  *
@@ -283,6 +284,7 @@ nspecial(struct optab *q)
 #endif
 	return 0; /* XXX gcc */
 }
+#endif
 
 /*
  * Set evaluation order of a binary node ('+','-', '*', '/', etc) if it

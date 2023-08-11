@@ -1,4 +1,4 @@
-/*      $Id: code.c,v 1.32 2023/07/14 15:37:27 ragge Exp $    */
+/*      $Id: code.c,v 1.33 2023/08/11 15:14:09 ragge Exp $    */
 /*
  * Copyright (c) 2007 Gregory McGarry (g.mcgarry@ieee.org).
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -44,6 +44,13 @@
 #define talloc p1alloc
 #define tcopy p1tcopy
 #define nfree p1nfree
+#define	sap sss
+#undef n_df
+#define n_df pdf
+#undef n_type
+#define n_type ptype
+#undef n_ap
+#define n_ap pss
 #endif
 
 static int rvnr;

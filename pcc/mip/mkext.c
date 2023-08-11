@@ -1,4 +1,4 @@
-/*	$Id: mkext.c,v 1.55 2022/11/25 14:50:11 ragge Exp $	*/
+/*	$Id: mkext.c,v 1.56 2023/08/11 09:03:51 ragge Exp $	*/
 
 /*
  * Generate defines for the needed hardops.
@@ -138,12 +138,15 @@ getrcl(struct optab *q)
 	while ((w = hasneed(w, cNREG))) {
 		if ((i += w[2]) >= r)
 			return c[(int)w[1]];
-		w += 2;
+		w += 3;
 	}
 	return 0;
 }
 
 #else
+/*
+ * Return the return value class (as bitmask).
+ */
 static int
 getrcl(struct optab *q)
 {
@@ -287,18 +290,25 @@ printf("reg %d rstatus 0x%x %s\n", i, rstatus[i],
 			}
 			break;
 		}
+#ifdef NEWNEED
 		/* check that reclaim is not the wrong class */
 		if ((q->rewrite & (RESC1|RESC2|RESC3)) && 
-#ifdef NEWNEED
 		    hasneed(q->needs, cNREW) == 0) {
-#else
-		    !(q->needs & REWRITE)) {
-#endif
 			if ((q->visit & getrcl(q)) == 0) {
 				compl(q, "wrong RESCx class");
 				rval++;
 			}
 		}
+#else
+		/* check that reclaim is not the wrong class */
+		if ((q->rewrite & (RESC1|RESC2|RESC3)) && 
+		    !(q->needs & REWRITE)) {
+			if ((q->visit & getrcl(q)) == 0) {
+				compl(q, "wrong RESCx class");
+				rval++;
+			}
+		}
+#endif
 		if (q->rewrite & (RESC1|RESC2|RESC3) && q->visit & FOREFF)
 			compl(q, "FOREFF may cause reclaim of wrong class");
 	}

@@ -1,4 +1,4 @@
-/*      $Id: code.c,v 1.4 2023/07/20 14:08:38 ragge Exp $    */
+/*      $Id: code.c,v 1.5 2023/08/11 13:02:32 ragge Exp $    */
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -38,6 +38,8 @@
 #define n_qual pqual
 #undef n_df
 #define n_df pdf
+#define	sap sss
+#define	n_ap pss
 #endif
 
 static int rvnr;

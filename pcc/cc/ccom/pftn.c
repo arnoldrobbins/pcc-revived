@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.449 2023/07/29 13:07:07 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.451 2023/08/10 12:40:33 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -990,6 +990,11 @@ soumemb(NODE *n, char *name, int class)
 	if (rpole == NULL)
 		cerror("soumemb");
  
+#ifdef PCC_DEBUG
+        if (ddebug) {
+		printf("soumemb %s\n", name);
+	}
+#endif
 	/* check if tag name exists */
 	lsp = NULL;
 	for (sp = rpole->rb; sp != NULL; lsp = sp, sp = sp->snext)
@@ -1014,6 +1019,7 @@ soumemb(NODE *n, char *name, int class)
 		sp->sclass = (char)class;
 		falloc(sp, class&FLDSIZ, NIL);
 		al = talign(sp->stype, sp->sss);
+		tsz = sp->sclass&FLDSIZ;
 	} else if (rpole->rsou == STNAME || rpole->rsou == UNAME) {
 		sp->sclass = rpole->rsou == STNAME ? MOS : MOU;
 
@@ -1036,7 +1042,6 @@ soumemb(NODE *n, char *name, int class)
 	} else {
 		rpole->maxsz = rpole->curpos;
 	}
-if (ddebug)printf("soumemb: name %s tsz %d al %d sympos %d curpos %d totsz %d\n", name, tsz, al, sp->soffset, rpole->curpos, rpole->maxsz);
 	if (al > rpole->ss->al)
 		rpole->ss->al = al;
 

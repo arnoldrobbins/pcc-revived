@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.194 2022/12/04 17:02:54 ragge Exp $	*/
+/*	$Id: local2.c,v 1.195 2023/08/10 07:26:48 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -116,6 +116,21 @@ prologue(struct interpass_prolog *ipp)
 	addto = (addto + 15) & ~15;	/* stack alignment */
 #endif
 	prtprolog(ipp, addto);
+	if (kflag) {
+#if defined(MACHOABI)
+		printf("	call L%s$pb\n", ipp->ipp_name);
+		printf("L%s$pb:\n", ipp->ipp_name);
+		printf("	popl %%ebx\n");
+#else
+		int l;
+		printf("	call " LABFMT "\n", l = getlab());
+		printf(LABFMT ":\n", l);
+		printf("	popl %%ebx\n");
+		printf("	addl $_GLOBAL_OFFSET_TABLE_+[.-" LABFMT 
+		    "], %%ebx\n", l);
+#endif
+
+	}
 }
 
 void
