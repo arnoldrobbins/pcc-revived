@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.9 2022/10/29 09:58:15 gmcgarry Exp $	*/
+/*	$Id: code.c,v 1.10 2023/08/11 16:02:02 ragge Exp $	*/
 /*
  * Copyright (c) 2014 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -34,6 +34,13 @@
 #define NODE P1ND
 #define talloc p1alloc
 #define tfree p1tfree
+#define	sap sss
+#undef n_df
+#define	n_df pdf
+#undef n_type
+#define	n_type ptype
+#undef n_ap
+#define	n_ap pss
 #endif
 
 extern int gotnr;

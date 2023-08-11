@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.42 2021/10/08 15:59:06 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.43 2023/08/11 09:05:58 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -293,6 +293,8 @@ P1ND *amd64_builtin_va_copy(const struct bitable *, P1ND *a);
 
 /* target specific attributes */
 #define ATTR_MI_TARGET  ATTR_AMD64_CMPLRET, ATTR_AMD64_XORLBL
+
+#define NEWNEED
 
 /* m flags */
 #define	MCSMALL		00200

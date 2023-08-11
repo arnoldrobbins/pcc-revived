@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.19 2017/12/03 17:34:15 ragge Exp $	*/
+/*	$Id: order.c,v 1.20 2023/08/11 09:05:58 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -232,92 +232,6 @@ int
 setuni(NODE *p, int cookie)
 {
 	return 0;
-}
-
-/*
- * Special handling of some instruction register allocation.
- */
-struct rspecial *
-nspecial(struct optab *q)
-{
-	switch (q->op) {
-	case SCONV:
-		if ((q->ltype & TINT) &&
-		    q->rtype == (TLONGLONG|TULONGLONG|TLONG|TULONG)) {
-			static struct rspecial s[] = { 
-				{ NLEFT, RAX }, { NRES, RAX }, { 0 } };
-			return s;
-		}
-		break;
-
-	case DIV:
-		{
-			static struct rspecial s[] = {
-				{ NEVER, RAX }, { NEVER, RDX },
-				{ NLEFT, RAX }, { NRES, RAX },
-				{ NORIGHT, RDX }, { NORIGHT, RAX }, { 0 } };
-			return s;
-		}
-		break;
-
-	case MOD:
-		if (q->ltype & TUCHAR) {
-			static struct rspecial s[] = {
-				{ NEVER, RAX },
-				{ NLEFT, RAX }, { NRES, RAX },
-				{ NORIGHT, RAX }, { 0 } };
-			return s;
-		} else {
-			static struct rspecial s[] = {
-				{ NEVER, RAX }, { NEVER, RDX },
-				{ NLEFT, RAX }, { NRES, RDX },
-				{ NORIGHT, RDX }, { NORIGHT, RAX }, { 0 } };
-			return s;
-		}
-		break;
-
-	case STARG:
-		{
-			static struct rspecial s[] = {
-				{ NEVER, RDI }, 
-				{ NLEFT, RSI },
-				{ NEVER, RCX }, { 0 } };
-			return s;
-		}
-
-	case STASG:
-		{
-			static struct rspecial s[] = {
-				{ NEVER, RDI }, 
-				{ NRIGHT, RSI }, { NOLEFT, RSI },
-				{ NOLEFT, RCX }, { NORIGHT, RCX },
-				{ NEVER, RCX }, { 0 } };
-			return s;
-		}
-
-	case MUL:
-		if (q->lshape == SAREG) {
-			static struct rspecial s[] = {
-				{ NEVER, RAX },
-				{ NLEFT, RAX }, { NRES, RAX }, { 0 } };
-			return s;
-		}
-		break;
-
-	case LS:
-	case RS:
-		{
-			static struct rspecial s[] = {
-				{ NRIGHT, RCX }, { NOLEFT, RCX }, { 0 } };
-			return s;
-		}
-		break;
-
-	default:
-		break;
-	}
-	comperr("nspecial entry %d", q - table);
-	return 0; /* XXX gcc */
 }
 
 /*

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.2 2021/09/04 10:38:37 gmcgarry Exp $	*/
+/*	$Id: macdefs.h,v 1.3 2023/08/11 13:02:32 ragge Exp $	*/
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -209,6 +209,7 @@ NODE *arm_builtin_va_copy(const struct bitable *bt, NODE *a);
 
 #define COM     "\t// "
 #define NARGREGS	4
+#define	NEWNEED
 
 /* floating point definitions */
 #define USE_IEEEFP_32

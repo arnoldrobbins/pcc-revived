@@ -1,4 +1,4 @@
-/*      $Id: local.c,v 1.3 2023/07/19 06:54:12 ragge Exp $    */
+/*      $Id: local.c,v 1.4 2023/08/11 13:02:32 ragge Exp $    */
  /*
  * Copyright (c) 2020 Puresoftware Ltd.
  *
@@ -41,6 +41,7 @@
 #define n_qual pqual
 #undef n_df
 #define n_df pdf
+#define	n_ap pss
 #endif
 
 extern void defalign(int);
@@ -53,6 +54,9 @@ getsoname(struct symtab *sp)
 	    ap->sarg(0) : sp->sname;
 }
 
+#ifndef LANG_CXX
+#define	sap sss
+#endif
 
 /*
  * clocal() is called to do local transformations on
