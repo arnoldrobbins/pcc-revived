@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.28 2018/04/03 14:49:46 ragge Exp $	*/
+/*	$Id: code.c,v 1.29 2023/08/12 11:15:49 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -42,6 +42,12 @@
 #define	tfree p1tfree
 #define	talloc p1alloc
 #define	ccopy p1tcopy
+#define	sap sss
+#undef	n_df
+#define	n_df pdf
+#undef	n_ap
+#define	n_ap pss
+#define	n_type ptype
 #endif
 
 /*

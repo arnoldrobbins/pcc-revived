@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.117 2022/12/04 17:01:37 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.118 2023/08/13 19:31:37 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -264,6 +264,7 @@ struct interpass_prolog {
 #define	ipp_vis		ipp_flags
 #define	IF_VISIBLE	001
 #define	IF_NEEDFP	002
+#define	IF_NOTLEAF	004
 	TWORD ipp_type;		/* Function type */
 	int ipp_autos;		/* Size on stack needed */
 	int ip_tmpnum;		/* # allocated temp nodes so far */

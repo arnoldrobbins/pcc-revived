@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.1 2016/07/06 07:49:48 ragge Exp $	*/
+/*	$Id: order.c,v 1.2 2023/08/12 08:46:29 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -122,112 +122,6 @@ int
 setuni(NODE * p, int cookie)
 {
 	return 0;
-}
-
-/*
- * Special handling of some instruction register allocation.
- * - left is the register that left node wants.
- * - right is the register that right node wants.
- * - res is in which register the result will end up.
- * - mask is registers that will be clobbered.
- */
-struct rspecial *
-nspecial(struct optab * q)
-{
-	switch (q->op) {
-
-	case SCONV:
-		if (q->lshape == SBREG && q->rshape == SCREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, A0A1 },
-				{ NRES, F0 },
-				{ 0 }
-			};
-			return s;
-		} else if (q->lshape == SCREG && q->rshape == SBREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, F0 },
-				{ NRES, A0A1 },
-				{ 0 }
-			};
-			return s;
-		} else if (q->lshape == SAREG && q->rshape == SCREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, A0 },
-				{ NRES, F0 },
-				{ 0 }
-			};
-			return s;
-		}
-		break;
-
-	case MOD:
-	case DIV:
-		if (q->lshape == SBREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, A0A1 },
-				{ NRIGHT, A2A3 },
-				{ NRES, V0V1 },
-				{ 0 },
-			};
-			return s;
-		} else if (q->lshape == SAREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, A0 },
-				{ NRIGHT, A1 },
-				{ NRES, V0 },
-				{ 0 },
-			};
-			return s;
-		}
-
-	case RS:
-	case LS:
-		if (q->lshape == SBREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, A0A1 },
-				{ NRIGHT, A2 },
-				{ NRES, V0V1 },
-				{ 0 },
-			};
-			return s;
-		} else if (q->lshape == SAREG) {
-			static struct rspecial s[] = {
-				{ NLEFT, A0 },
-				{ NRIGHT, A1 },
-				{ NRES, V0 },
-				{ 0 },
-			};
-			return s;
-		}
-		break;
-
-	case STARG:
-                {
-                        static struct rspecial s[] = {
-                                { NEVER, A0 },
-                                { NLEFT, A1 },
-                                { NEVER, A2 },
-                                { 0 }
-			};
-                        return s;
-                }
-
-        case STASG:
-                {
-                        static struct rspecial s[] = {
-                                { NEVER, A0 },
-                                { NRIGHT, A1 },
-                                { NEVER, A2 },
-                                { 0 }
-			};
-                        return s;
-                }
-	}
-
-	comperr("nspecial entry %d: %s", q - table, q->cstring);
-
-	return 0;		/* XXX gcc */
 }
 
 /*

@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.451 2023/08/10 12:40:33 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.453 2023/08/13 14:05:40 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2422,6 +2422,25 @@ strmemb(struct ssdesc *ss)
 		cerror("strmemb");
 	return ss->sp;
 }
+
+void
+incref(struct tdef *d, struct tdef *s)
+{
+	d->type = INCREF(s->type);
+	d->qual = INCREF(s->qual);
+	d->df = s->df;
+	d->ss = s->ss;
+}
+
+struct tdef *
+mkqtyp(TWORD t)
+{
+	static struct tdef td[1];
+
+	td->type = t;
+	return td;
+}
+struct tdef tdint[] = { { INT, 0, 0, 0 } };
 
 /*
  * Allocations:

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.19 2021/10/08 15:59:07 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.20 2023/08/12 10:53:06 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 David Crawshaw <david@zentus.com>
@@ -36,8 +36,8 @@
  * in the case of a spill. The stack size must be 16-bit aligned.
  */
 #define V9RESERVE 176
-#define V9STEP(x) ALIGN(x, 0xf)
-#define ALIGN(x, y) ((x & y) ? (x + y) & ~y : x)
+#define V9STEP(x) SALIGN(x, 0xf)
+#define SALIGN(x, y) ((x & y) ? (x + y) & ~y : x)
 
 
 #define makecc(val,i)	lastcon = (lastcon<<8)|((val<<24)>>24);
@@ -102,6 +102,7 @@ typedef long long OFFSZ;
 
 #undef	FIELDOPS
 #define TARGET_ENDIAN TARGET_BE
+#define NEWNEED
 
 #define BYTEOFF(x) 	((x)&03)
 
@@ -263,3 +264,11 @@ typedef long long OFFSZ;
 #define ENCRD(x)	(x)
 
 int COLORMAP(int c, int *r);
+
+/* floating point definitions */
+#define USE_IEEEFP_32
+#define FLT_PREFIX      IEEEFP_32
+#define USE_IEEEFP_64
+#define DBL_PREFIX      IEEEFP_64
+#define DEFAULT_FPI_DEFS { &fpi_binary32, &fpi_binary64, &fpi_binary64 }
+

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.27 2021/10/08 15:59:06 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.28 2023/08/12 08:20:00 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -356,6 +356,8 @@ P1ND *mips_builtin_va_arg(const struct bitable *, P1ND *a);
 P1ND *mips_builtin_va_end(const struct bitable *, P1ND *a);
 P1ND *mips_builtin_va_copy(const struct bitable *, P1ND *a);
 #undef P1ND
+
+#define	NEWNEED
 
 /* floating point definitions */
 #define USE_IEEEFP_32

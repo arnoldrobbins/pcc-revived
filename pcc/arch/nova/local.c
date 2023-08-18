@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.21 2022/01/11 08:22:37 ragge Exp $	*/
+/*	$Id: local.c,v 1.23 2023/08/12 13:20:22 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -34,6 +34,14 @@
 #define	p1nfree nfree
 #define	p1fwalk fwalk
 #define	p1tcopy ccopy
+#else
+#define	n_type ptype
+#define	n_qual pqual
+#undef	n_ap
+#define	n_ap pss
+#undef	n_df
+#define	n_df pdf
+#define	sap sss
 #endif
 
 /*	this file contains code which is dependent on the target machine */
@@ -197,13 +205,14 @@ cisreg(TWORD t)
  * indirections must be fullword.
  */
 P1ND *
-offcon(OFFSZ off, TWORD t, union dimfun *d, struct attr *ap)
+offcon(OFFSZ off, struct tdef *td)
 {
 	register P1ND *p;
+	TWORD t = td->type;
 
 	if (xdebug)
 		printf("offcon: OFFSZ %ld type %x dim %p siz %ld\n",
-		    off, t, d, tsize(t, d, ap));
+		    off, t, td->df, tsize(t, td->df, td->ss));
 
 	p = bcon(off/SZINT);
 	if (t == INCREF(CHAR) || t == INCREF(UCHAR) || t == INCREF(VOID))

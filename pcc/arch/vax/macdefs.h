@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.24 2021/10/08 15:59:07 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.25 2023/08/12 11:15:49 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -263,3 +263,10 @@ P1ND *builtin_ffs(const struct bitable *, P1ND *a);
 P1ND *builtin_ffsl(const struct bitable *, P1ND *a);
 P1ND *builtin_ffsll(const struct bitable *, P1ND *a);
 #undef P1ND
+
+#define	NEWNEED
+
+/* floating point definitions */
+#define FDFLOAT
+#define DEFAULT_FPI_DEFS { &fpi_ffloat, &fpi_dfloat, &fpi_dfloat }
+

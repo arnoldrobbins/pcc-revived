@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.8 2017/02/16 18:55:31 ragge Exp $	*/
+/*	$Id: local.c,v 1.9 2023/08/12 10:19:54 ragge Exp $	*/
 /*
  * Copyright (c) 2017 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -35,6 +35,13 @@
 #define	p1nfree nfree
 #define	p1fwalk fwalk
 #define	p1tcopy tcopy
+#else
+#define	n_type ptype
+#undef	n_ap
+#define	n_ap pss
+#undef	n_df
+#define	n_df pdf
+#define	sap sss
 #endif
 
 /*	this file contains code which is dependent on the target machine */

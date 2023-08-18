@@ -1,4 +1,4 @@
-/*	$Id: optim.c,v 1.68 2023/07/23 08:55:09 ragge Exp $	*/
+/*	$Id: optim.c,v 1.69 2023/08/13 14:05:40 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -342,8 +342,7 @@ again:	o = p->n_op;
 		else if( LCON(p) && RCON(p) && conval( p->n_left, o, p->n_right ) ){
 			zapright:
 			nfree(p->n_right);
-			q = makety(p->n_left, p->n_type, p->n_qual,
-			    p->n_df, p->pss);
+			q = makety(p->n_left, p->n_td);
 			nfree(p);
 			p = clocal(q);
 			break;
@@ -384,7 +383,7 @@ again:	o = p->n_op;
 			RV(p) = i;
 			q = p->n_right;
 			if(tsize(q->n_type, q->n_df, q->pss) > SZINT)
-				p->n_right = makety(q, INT, 0, 0, 0);
+				p->n_right = makety(q, tdint);
 
 			break;
 		}
