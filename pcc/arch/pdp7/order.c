@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.6 2017/02/16 18:55:31 ragge Exp $	*/
+/*	$Id: order.c,v 1.7 2023/08/12 10:19:54 ragge Exp $	*/
 /*
  * Copyright (c) 2017 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -125,27 +125,6 @@ setasg(NODE *p, int cookie)
 int
 setuni(NODE *p, int cookie)
 {
-	return 0;
-}
-
-/*
- * Special handling of some instruction register allocation.
- */
-struct rspecial *
-nspecial(struct optab *q)
-{
-	switch (q->op) {
-	case ASSIGN:
-		if (q->lshape == STARREG && q->rshape == SNAME) {
-			static struct rspecial s[] = {
-				{ NEVER, AC }, { NRES, AC }, { 0 }
-			};
-			return s;
-		}
-		break;
-	default:
-		comperr("nspecial entry %d", q - table);
-	}
 	return 0;
 }
 

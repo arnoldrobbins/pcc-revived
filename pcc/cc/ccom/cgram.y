@@ -1,4 +1,4 @@
-/*	$Id: cgram.y,v 1.429 2023/07/29 09:34:43 ragge Exp $	*/
+/*	$Id: cgram.y,v 1.430 2023/08/13 14:05:40 ragge Exp $	*/
 
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1506,7 +1506,7 @@ addcase(P1ND *p)
 
 	if (DEUNSIGN(swpole->type) != DEUNSIGN(p->n_type)) {
 		val = glval(p);
-		p = makety(p, swpole->type, 0, 0, 0);
+		p = makety(p, mkqtyp(swpole->type));
 		if (p->n_op != ICON)
 			cerror("could not cast case value to type of switch "
 			       "expression");

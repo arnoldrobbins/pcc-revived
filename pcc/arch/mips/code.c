@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.28 2023/07/14 15:40:39 ragge Exp $	*/
+/*	$Id: code.c,v 1.29 2023/08/12 08:20:00 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -42,6 +42,11 @@
 #define nfree p1nfree
 #define ccopy p1tcopy
 #define tfree p1tfree
+#define	sap sss
+#define	n_ap pss
+#define	n_type ptype
+#undef n_df
+#define n_df pdf
 #endif
 
 /*

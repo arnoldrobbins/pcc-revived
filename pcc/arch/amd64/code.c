@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.99 2023/07/23 09:41:57 ragge Exp $	*/
+/*	$Id: code.c,v 1.100 2023/08/16 18:40:19 ragge Exp $	*/
 /*
  * Copyright (c) 2008 Michael Shalayeff
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
@@ -1061,7 +1061,11 @@ argput(NODE *p)
 		}
 
 		p = nfree(p);	/* remove STARG */
+#ifdef LANG_CXX
 		p = makety(p, PTR|ty, 0, 0, 0);
+#else
+		p = makety(p, mkqtyp(PTR|ty));
+#endif
 		ql = tempnode(0, PTR|ty, 0, 0);
 		rn = regno(ql);
 		p = buildtree(ASSIGN, ql, p);
@@ -1186,8 +1190,6 @@ NODE *
 funcode(NODE *p)
 {
 	NODE *l, *r;
-	TWORD t;
-	int i;
 
 	nsse = ngpr = nrsp = 0;
 	/* Check if hidden arg needed */

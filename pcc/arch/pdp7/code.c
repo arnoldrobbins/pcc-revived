@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.7 2017/02/16 18:55:31 ragge Exp $	*/
+/*	$Id: code.c,v 1.8 2023/08/12 10:19:54 ragge Exp $	*/
 /*
  * Copyright (c) 2017 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -34,6 +34,11 @@
 #else
 #define	NODE P1ND
 #define	talloc p1alloc
+#define	n_type ptype
+#undef	n_df
+#define	n_df pdf
+#undef	n_ap
+#define	n_ap pss
 #endif
 
 /*

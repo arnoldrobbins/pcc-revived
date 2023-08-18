@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.15 2021/10/13 17:07:36 ragge Exp $	*/
+/*	$Id: code.c,v 1.16 2023/08/12 08:54:51 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -36,6 +36,13 @@
 #define p1fwalk fwalk
 #define p1tcopy ccopy
 #define p1listf listf
+#else
+#define	sap sss
+#define	n_type ptype
+#undef	n_ap
+#define	n_ap pss
+#undef	n_df
+#define	n_df pdf
 #endif
 
 /*

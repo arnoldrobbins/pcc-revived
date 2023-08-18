@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.11 2018/04/11 07:27:35 ragge Exp $	*/
+/*	$Id: order.c,v 1.12 2023/08/12 11:15:49 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -597,37 +597,6 @@ argsize( p ) register NODE *p; {
 		}
 	}
 #endif
-
-/*
- * Special handling of some instruction register allocation.
- */
-struct rspecial *
-nspecial(struct optab *q)
-{
-	switch (q->op) {
-	case STARG:
-	case STASG:
-		{
-		static struct rspecial s[] = {
-		    { NEVER, R0, }, { NEVER, R1, }, { NEVER, R2, },
-		    { NEVER, R3, }, { NEVER, R4, }, { NEVER, R5 }, { 0 } };
-		return s;
-		}
-	case MOD:
-	case MUL:
-	case DIV:
-		{
-		static struct rspecial s[] = {
-		    { NEVER, R0, }, { NEVER, R1, }, { NEVER, R2, },
-		    { NEVER, R3, }, { NEVER, R4, }, { NEVER, R5 },
-		    { NRES, XR0 }, { 0 }, };
-		return s;
-		}
-	default:
-		comperr("nspecial");
-		return NULL;
-	}
-}
 
 /*
  * Set evaluation order of a binary node if it differs from default.

@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.39 2018/12/02 10:56:58 ragge Exp $	*/
+/*	$Id: local.c,v 1.40 2023/08/12 08:20:00 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -39,6 +39,12 @@
 #define nfree p1nfree
 #define fwalk p1fwalk
 #define talloc p1alloc
+#define	n_type ptype
+#undef n_df
+#define	n_df pdf
+#define	n_ap pss
+#define	n_qual pqual
+#define	sap sss
 #endif
 
 #define IALLOC(sz) (isinlining ? permalloc(sz) : tmpalloc(sz))

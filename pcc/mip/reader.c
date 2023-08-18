@@ -1,4 +1,4 @@
-/*	$Id: reader.c,v 1.308 2022/12/04 17:01:37 ragge Exp $	*/
+/*	$Id: reader.c,v 1.309 2023/08/13 19:31:37 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -335,6 +335,8 @@ latechecks(NODE *p, void *arg)
 	if (p->n_op == CALL && p->n_left->n_op == ICON && 
 	    strcmp(p->n_left->n_name, "alloca") == 0)
 		*flags |= IF_NEEDFP; /* alloca may modify FP */
+	if (callop(p->n_op))
+		*flags |= IF_NOTLEAF;
 }
 
 #ifdef PASS2

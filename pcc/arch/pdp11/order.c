@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.13 2019/04/25 17:40:33 ragge Exp $	*/
+/*	$Id: order.c,v 1.14 2023/08/12 09:50:48 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -173,100 +173,6 @@ int
 setuni(NODE *p, int cookie)
 {
 	return(0);
-}
-
-/*
- * Special handling of some instruction register allocation.
- */
-struct rspecial *
-nspecial(struct optab *q)
-{
-	switch (q->op) {
-	case MUL:
-		if (q->visit == INAREG) {
-			static struct rspecial s[] = {
-			    { NLEFT, R1 }, { NRES, R1 }, { 0 } };
-			return s;
-		} else if (q->visit == INBREG) {
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NEVER, R1 },{ NRES, R01 }, { 0 } };
-			return s;
-		}
-		break;
-
-	case DIV:
-		if (q->visit == INAREG && q->ltype == TUNSIGNED) {
-			static struct rspecial s[] = {
-			   { NLEFT, R0 }, { NRIGHT, R1 }, { NRES, R0 }, { 0 } };
-			return s;
-		} else if (q->visit == INAREG) {
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NEVER, R1 }, { NLEFT, R1 },
-			    { NRES, R0 }, { NORIGHT, R0 }, { NORIGHT, R1 },
-			    { 0 } };
-			return s;
-		} else if (q->visit == INBREG) {
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NEVER, R1 },{ NRES, R01 }, { 0 } };
-			return s;
-		}
-		break;
-
-	case MOD:
-		if (q->visit == INAREG && q->ltype == TUNSIGNED) {
-			static struct rspecial s[] = {
-			   { NLEFT, R0 }, { NRIGHT, R1 }, { NRES, R0 }, { 0 } };
-			return s;
-		} else if (q->visit == INAREG) {
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NEVER, R1 }, { NLEFT, R1 },
-			    { NRES, R1 }, { NORIGHT, R0 }, { NORIGHT, R1 },
-			    { 0 } };
-			return s;
-		} else if (q->visit == INBREG) {
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NEVER, R1 },{ NRES, R01 }, { 0 } };
-			return s;
-		}
-		break;
-
-	case RS:
-		{
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NEVER, R1 }, { NLEFT, R1 },
-			    { NRES, R1 }, { NORIGHT, R0 }, { NORIGHT, R1 },
-			    { 0 } };
-			return s;
-		}
-		break;
-	case SCONV:
-		if (q->lshape == SAREG) {
-			static struct rspecial s[] = {
-			    { NLEFT, R1 }, { NRES, R01 }, { 0 } };
-			return s;
-		}
-		break;
-	case STASG: {
-			/* R0 == ESI, R1 == EDI, R2 == ECX */
-			static struct rspecial s[] = {
-			    { NEVER, R1 }, { NEVER, R0 }, { NRIGHT, R0 },
-			    { NOLEFT, R0 }, { NOLEFT, R2 }, { NORIGHT, R2 },
-			    { NEVER, R2 },
-			};
-			return s;
-		}
-		break;
-	case STARG: {
-			static struct rspecial s[] = {
-			    { NEVER, R0 }, { NLEFT, R1 }, 
-			    { NEVER, R2 }, { 0 }
-			};
-			return s;
-		}
-		break;
-	} 
-	comperr("nspecial entry %d", q - table);
-	return 0; /* XXX gcc */
 }
 
 /*
