@@ -1,4 +1,4 @@
-/*	$Id: order.c,v 1.3 2022/12/07 11:57:20 ragge Exp $	*/
+/*	$Id: order.c,v 1.4 2023/08/22 17:38:50 ragge Exp $	*/
 /*
  * Copyright (c) 2022, Tim Kelly/Dialectronics.com (gtkelly@). 
  * All rights reserved.
@@ -178,97 +178,6 @@ int
 setuni(NODE *p, int cookie)
 {
 	return 0;
-}
-
-/*
- * Special handling of some instruction register allocation.
- */
-struct rspecial *
-nspecial(struct optab *q)
-{
-
-	if (x2debug)
-		printf("nspecial: op=%d, visit=0x%x: %s", q->op, q->visit, q->cstring);
-		
-	switch (q->op) {
-		case PLUS:
-		case MINUS:
-		case MUL:
-		case DIV:
-		case MOD:
-		/*
-			if (q->lshape == SBREG && 
-				(q->ltype & (TDOUBLE|TLDOUBLE|TLONGLONG|TULONGLONG))) {
-				static struct rspecial s[] = {
-					{ NLEFT, R3R4 },
-					{ NRIGHT, R5R6 },
-					{ NRES, R3R4 },
-					{ 0 }
-				};
-				return s;
-			} else if (q->lshape == SAREG && q->ltype & TFLOAT) {
-				static struct rspecial s[] = {
-					{ NLEFT, R3 },
-					{ NRIGHT, R4 },
-					{ NRES, R3 },
-					{ 0 }
-				};
-				return s;
-			} else
-			*/
-			if (q->lshape == SAREG) {
-				static struct rspecial s[] = {
-					{ NOLEFT, TP },
-					{ 0 } };
-				return s;
-			}
-	
-			cerror("nspecial mul");
-			break;
-		
-		case ASSIGN:
-			if (q->lshape & SNAME) {
-				static struct rspecial s[] = {
-					{ NEVER, TP },
-					{ 0 } };
-				return s;
-			} else if (q->rshape & SNAME) {
-				static struct rspecial s[] = {
-					{ NOLEFT, TP },
-					{ 0 } };
-				return s;
-			} else if (q->lshape & SOREG) {
-				static struct rspecial s[] = {
-					{ NOLEFT, TP },
-					{ 0 } };
-				return s;
-			} else if (q->rshape & SOREG) {
-				static struct rspecial s[] = {
-					{ NORIGHT, TP },
-					{ 0 } };
-				return s;
-		}		
-	
-		/* fallthough */
-
-		case UMUL:
-		case AND:
-		case OR:
-		case ER:
-			{
-				static struct rspecial s[] = {
-					{ NOLEFT, TP },
-					{ 0 } };
-				return s;
-			}
-
-		
-	default:
-		break;
-	}
-
-	comperr("nspecial entry %d", q - table);
-	return 0; /* XXX gcc */
 }
 
 /*

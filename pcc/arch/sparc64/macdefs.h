@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.20 2023/08/12 10:53:06 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.21 2023/08/20 15:30:31 ragge Exp $	*/
 
 /*
  * Copyright (c) 2008 David Crawshaw <david@zentus.com>
@@ -102,7 +102,6 @@ typedef long long OFFSZ;
 
 #undef	FIELDOPS
 #define TARGET_ENDIAN TARGET_BE
-#define NEWNEED
 
 #define BYTEOFF(x) 	((x)&03)
 

@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.19 2022/01/11 08:22:37 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.20 2023/08/20 15:30:30 ragge Exp $	*/
 /*
  * Copyright (c) 2006 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -94,7 +94,6 @@
 #define	AUTOINIT	16	/* first var one word above offset */
 #define	ARGINIT		16	/* start args one word below fp */
 #define FINDMOPS		/* can in/decrement memory directly. */
-#define NEWNEED			/* new-style needs definitions */
 
 /*
  * Use large-enough types.
