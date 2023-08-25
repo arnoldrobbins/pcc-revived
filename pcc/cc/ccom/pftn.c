@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.453 2023/08/13 14:05:40 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.454 2023/08/23 14:11:15 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2036,10 +2036,6 @@ NODE *
 doacall(struct symtab *sp, NODE *f, NODE *a)
 {
 	NODE *w;
-	struct ap {
-		struct ap *next;
-		NODE *node;
-	} *apary = NULL;
 
 #ifdef PCC_DEBUG
 	if (ddebug) {
@@ -2075,9 +2071,7 @@ doacall(struct symtab *sp, NODE *f, NODE *a)
 	/* Do prototype checking for function call */
 	pr_callchk(sp, f, a);
 
-build:	if (apary)
-		FUNFREE(apary);
-	if (sp != NULL && (sp->sflags & SINLINE) && (w = inlinetree(sp, f, a)))
+build:	if (sp != NULL && (sp->sflags & SINLINE) && (w = inlinetree(sp, f, a)))
 		return w;
 	return buildtree(a == NIL ? UCALL : CALL, f, a);
 }

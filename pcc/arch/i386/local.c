@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.215 2023/08/13 14:05:40 ragge Exp $	*/
+/*	$Id: local.c,v 1.216 2023/08/20 17:22:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -526,9 +526,7 @@ clocal(P1ND *p)
 
 	case USTCALL:
 #if defined(os_openbsd)
-		ap = strattr(p->n_left->n_ap);
-		if (ap->amsize == SZCHAR || ap->amsize == SZSHORT ||
-		    ap->amsize == SZINT || ap->amsize == SZLONGLONG)
+		if (strattr(p->n_left->n_td)->sz > SZLONGLONG)
 #else
 		if (attr_find(p->n_left->n_ap, ATTR_COMPLEX) &&
 #ifdef LANG_CXX

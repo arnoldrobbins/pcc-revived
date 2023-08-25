@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.108 2023/08/10 07:26:48 ragge Exp $	*/
+/*	$Id: code.c,v 1.109 2023/08/20 17:22:13 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -175,6 +175,15 @@ mycallspec(struct callspec *cs)
 	switch (t) {
 	case STRTY: case UNIONTY: /* struct return */
 		sz = (int)tsize(t, cs->rv.df, cs->rv.ss);
+#if defined(os_openbsd)
+		if (sz <= SZLONGLONG) {
+			/* openbsd returns small structs in regs */
+			cs->rv.flags |= RV_STREG;
+			cs->rv.reg[0] = EAX;
+			cs->rv.reg[1] = EDX;
+			cs->rv.rtp = UNSIGNED;
+		} else
+#endif
 		if (sz == SZLONGLONG && attr_find(cs->rv.ap, ATTR_COMPLEX)) {
 			/* return in eax/edx */
 			cs->rv.flags |= RV_STREG;
@@ -449,9 +458,7 @@ funcode(NODE *p)
 		r->n_type = l->n_type;
 	}
 #ifdef os_openbsd
-	if (stcall && (ap = strattr(p->n_left->n_ap)) &&
-	    ap->amsize != SZCHAR && ap->amsize != SZSHORT &&
-	    ap->amsize != SZINT && ap->amsize != SZLONGLONG)
+	if (stcall && strattr(p->n_left->n_td)->sz > SZLONGLONG) 
 #else
 	if (stcall &&
 	    (attr_find(p->n_left->n_ap, ATTR_COMPLEX) == 0 ||
