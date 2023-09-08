@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.151 2019/05/01 06:35:26 ragge Exp $	*/
+/*	$Id: table.c,v 1.152 2023/09/07 19:02:20 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1453,14 +1453,17 @@ struct optab table[] = {
 		0,	RDEST,
 		"	flds AR\n", },
 
-/* Do not generate memcpy if return from funcall */
-#if 0
-{ STASG,	INAREG|FOREFF,
-	SOREG|SNAME|SAREG,	TPTRTO|TSTRUCT,
-	SFUNCALL,	TPTRTO|TSTRUCT,
-		0,	RRIGHT,
-		"", },
-#endif
+{ STASG,	FOREFF,
+	SNAME,	TANY,
+	SHSTR,	TPTRTO|TANY,
+		NEEDS(NREG(A,1)),	RDEST,
+		"ZR", },
+
+{ STASG,	FOREFF,
+	SOREG,	TANY,
+	SHSTR,	TPTRTO|TANY,
+		NEEDS(NREG(A,2)),	RDEST,
+		"ZV", },
 
 { STASG,	INAREG|FOREFF,
 	SOREG|SNAME,	TANY,

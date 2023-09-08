@@ -1,4 +1,4 @@
-/*	$Id: pftn.c,v 1.454 2023/08/23 14:11:15 ragge Exp $	*/
+/*	$Id: pftn.c,v 1.455 2023/09/06 18:20:36 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -2421,7 +2421,7 @@ void
 incref(struct tdef *d, struct tdef *s)
 {
 	d->type = INCREF(s->type);
-	d->qual = INCREF(s->qual);
+	d->qual = INCQAL(s->qual);
 	d->df = s->df;
 	d->ss = s->ss;
 }
