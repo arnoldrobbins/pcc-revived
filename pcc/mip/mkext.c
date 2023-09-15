@@ -1,4 +1,4 @@
-/*	$Id: mkext.c,v 1.58 2023/08/29 08:48:08 ragge Exp $	*/
+/*	$Id: mkext.c,v 1.59 2023/09/09 08:04:36 ragge Exp $	*/
 
 /*
  * Generate defines for the needed hardops.
@@ -262,6 +262,9 @@ printf("reg %d rstatus 0x%x %s\n", i, rstatus[i],
 				compl(q, "ASSIGN/STASG reclaim must be RDEST");
 				rval++;
 			}
+			break;
+		case STCLR:
+			fprintf(fh, "#define HAS_STCLR\n");
 			break;
 		}
 		/* check that reclaim is not the wrong class */

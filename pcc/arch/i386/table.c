@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.152 2023/09/07 19:02:20 ragge Exp $	*/
+/*	$Id: table.c,v 1.153 2023/09/13 17:55:28 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1453,6 +1453,7 @@ struct optab table[] = {
 		0,	RDEST,
 		"	flds AR\n", },
 
+#if 0
 { STASG,	FOREFF,
 	SNAME,	TANY,
 	SHSTR,	TPTRTO|TANY,
@@ -1464,6 +1465,7 @@ struct optab table[] = {
 	SHSTR,	TPTRTO|TANY,
 		NEEDS(NREG(A,2)),	RDEST,
 		"ZV", },
+#endif
 
 { STASG,	INAREG|FOREFF,
 	SOREG|SNAME,	TANY,
