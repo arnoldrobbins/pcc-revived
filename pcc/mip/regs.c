@@ -1,4 +1,4 @@
-/*	$Id: regs.c,v 1.260 2023/08/20 15:30:31 ragge Exp $	*/
+/*	$Id: regs.c,v 1.261 2023/09/13 18:02:17 ragge Exp $	*/
 /*
  * Copyright (c) 2005 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -1080,7 +1080,9 @@ insnwalk(NODE *p)
 		if (optype(o) != LTYPE && hasneed2(q->needs, cNSL, CLASS(r)) == 0)
 			addedge_r(p->n_left, r);
 
-		if (optype(o) == BITYPE && hasneed2(q->needs, cNSR, CLASS(r)) == 0)
+		if (optype(o) == BITYPE &&
+		    p->n_op != CALL && p->n_op != STCALL &&
+		    hasneed2(q->needs, cNSR, CLASS(r)) == 0)
 			addedge_r(p->n_right, r);
 
 		for (j = i + 1; j < n; j++) {

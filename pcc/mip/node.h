@@ -1,4 +1,4 @@
-/*	$Id: node.h,v 1.43 2015/11/17 19:19:40 ragge Exp $	*/
+/*	$Id: node.h,v 1.44 2023/09/09 08:04:36 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -219,6 +219,7 @@ typedef struct node {
 #define XASM	53
 #define	GOTO	54
 #define	RETURN	55
+#define	STCLR	56
 #define	FUNARG	57
 #define	ADDROF	58
 
