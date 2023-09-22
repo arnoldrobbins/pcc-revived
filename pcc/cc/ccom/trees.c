@@ -1,4 +1,4 @@
-/*	$Id: trees.c,v 1.401 2023/09/07 08:52:39 ragge Exp $	*/
+/*	$Id: trees.c,v 1.403 2023/09/19 14:51:56 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -600,7 +600,9 @@ runtime:
 
 		case CALL:
 			p->n_right = r = strargs(p->n_right);
+#ifndef NEWPARAMS
 			p = funcode(p);
+#endif
 			/* FALLTHROUGH */
 		case UCALL:
 			if (!ISPTR(l->n_type))
@@ -611,6 +613,9 @@ runtime:
 			p->n_type = DECREF(p->n_type);
 			p->n_df = l->n_df+1; /* add one for prototypes */
 			p->pss = l->pss;
+#ifdef NEWPARAMS
+			p = fun_call(p);
+#endif
 			if (p->n_type == STRTY || p->n_type == UNIONTY) {
 				/* function returning structure */
 				/*  make function really return ptr to str., with * */
@@ -2981,6 +2986,7 @@ delvoid(P1ND *p, void *arg)
 		
 }
 
+#ifndef NEWPARAMS
 /*
  * Change calls inside calls to separate statement.
  */
@@ -3006,6 +3012,7 @@ deldcall(P1ND *p, int split)
 		p->n_left = deldcall(p->n_left, split);
 	return p;
 }
+#endif
 
 #ifndef WORD_ADDRESSED
 
@@ -3177,7 +3184,9 @@ ecode(P1ND *p)
 	p = rmpconv(p);
 #endif
 	p = optim(p);
+#ifndef NEWPARAMS
 	p = deldcall(p, 0);
+#endif
 	p1walkf(p, delvoid, 0);
 #ifdef PCC_DEBUG
 	if (xdebug) {

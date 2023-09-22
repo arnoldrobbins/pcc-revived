@@ -1,4 +1,4 @@
-/*	$Id: manifest.h,v 1.118 2023/08/13 19:31:37 ragge Exp $	*/
+/*	$Id: manifest.h,v 1.119 2023/09/17 20:02:11 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -314,6 +314,7 @@ void send_passt(int type, ...);
 enum {
 	ATTR_NONE,
 	ATTR_FP_SWAPPED,
+	ATTR_STKADJ,
 #ifdef GCC_COMPAT
 	GCC_ATYP_STDCALL,
 	GCC_ATYP_CDECL,

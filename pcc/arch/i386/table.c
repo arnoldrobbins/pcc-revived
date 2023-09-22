@@ -1,4 +1,4 @@
-/*	$Id: table.c,v 1.153 2023/09/13 17:55:28 ragge Exp $	*/
+/*	$Id: table.c,v 1.155 2023/09/19 17:06:57 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -605,34 +605,10 @@ struct optab table[] = {
 		0,	0,
 		"	call CL\nZC", },
 
-{ CALL,		FOREFF,
-	SCON,	TANY,
-	SANY,	TANY,
-		0,	0,
-		"	call CL\nZC", },
-
-{ UCALL,	FOREFF,
-	SCON,	TANY,
-	SAREG,	TWORD|TPOINT,
-		0,	0,
-		"	call CL\nZC", },
-
-{ CALL,	INAREG,
+{ UCALL,	INAREG|FOREFF,
 	SCON,	TANY,
 	SAREG,	TSHORT|TUSHORT|TWORD|TPOINT,
 		NEEDS(NREG(A, 1), NSL(A)),	RESC1,	/* should be 0 */
-		"	call CL\nZC", },
-
-{ UCALL,	INAREG,
-	SCON,	TANY,
-	SAREG,	TSHORT|TUSHORT|TWORD|TPOINT,
-		NEEDS(NREG(A, 1), NSL(A)),	RESC1,	/* should be 0 */
-		"	call CL\nZC", },
-
-{ CALL,	INBREG,
-	SCON,	TANY,
-	SBREG,	TCHAR|TUCHAR,
-		NEEDS(NREG(B, 1)),	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
 { UCALL,	INBREG,
@@ -641,22 +617,10 @@ struct optab table[] = {
 		NEEDS(NREG(B, 1)),	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
-{ CALL,		INCREG,
-	SCON,	TANY,
-	SCREG,	TANY,
-		NEEDS(NREG(C, 1), NSL(C)),	RESC1,	/* should be 0 */
-		"	call CL\nZC", },
-
 { UCALL,	INCREG,
 	SCON,	TANY,
 	SCREG,	TANY,
 		NEEDS(NREG(C, 1), NSL(C)),	RESC1,	/* should be 0 */
-		"	call CL\nZC", },
-
-{ CALL,	INDREG,
-	SCON,	TANY,
-	SDREG,	TANY,
-		NEEDS(NREG(D, 1), NSL(D)),	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
 { UCALL,	INDREG,
@@ -665,22 +629,10 @@ struct optab table[] = {
 		NEEDS(NREG(D, 1), NSL(D)),	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
-{ CALL,		FOREFF,
-	SAREG,	TANY,
-	SANY,	TANY,
-		0,	0,
-		"	call *AL\nZC", },
-
 { UCALL,	FOREFF,
 	SAREG,	TANY,
 	SANY,	TANY,
 		0,	0,
-		"	call *AL\nZC", },
-
-{ CALL,		INAREG,
-	SAREG,	TANY,
-	SANY,	TANY,
-		XSL(A),	RESC1,	/* should be 0 */
 		"	call *AL\nZC", },
 
 { UCALL,	INAREG,
@@ -689,22 +641,10 @@ struct optab table[] = {
 		XSL(A),	RESC1,	/* should be 0 */
 		"	call *AL\nZC", },
 
-{ CALL,		INBREG,
-	SAREG,	TANY,
-	SANY,	TANY,
-		XSL(B),	RESC1,	/* should be 0 */
-		"	call *AL\nZC", },
-
 { UCALL,	INBREG,
 	SAREG,	TANY,
 	SANY,	TANY,
 		XSL(B),	RESC1,	/* should be 0 */
-		"	call *AL\nZC", },
-
-{ CALL,		INCREG,
-	SAREG,	TANY,
-	SANY,	TANY,
-		XSL(C),	RESC1,	/* should be 0 */
 		"	call *AL\nZC", },
 
 { UCALL,	INCREG,
@@ -713,31 +653,25 @@ struct optab table[] = {
 		XSL(C),	RESC1,	/* should be 0 */
 		"	call *AL\nZC", },
 
-{ CALL,		INDREG,
-	SAREG,	TANY,
-	SANY,	TANY,
-		XSL(D),	RESC1,	/* should be 0 */
-		"	call *AL\nZC", },
-
 { UCALL,	INDREG,
 	SAREG,	TANY,
 	SANY,	TANY,
 		XSL(D),	RESC1,	/* should be 0 */
 		"	call *AL\nZC", },
 
-{ STCALL,	FOREFF,
+{ USTCALL,	FOREFF,
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(A),	0,
 		"	call CL\nZC", },
 
-{ STCALL,	INAREG,
+{ USTCALL,	INAREG,
 	SCON,	TANY,
 	SANY,	TANY,
 		XSL(A),	RESC1,	/* should be 0 */
 		"	call CL\nZC", },
 
-{ STCALL,	INAREG,
+{ USTCALL,	INAREG,
 	SNAME|SAREG,	TANY,
 	SANY,	TANY,
 		XSL(A),	RESC1,	/* should be 0 */

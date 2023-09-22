@@ -1,4 +1,4 @@
-/*	$Id: local.c,v 1.216 2023/08/20 17:22:13 ragge Exp $	*/
+/*	$Id: local.c,v 1.219 2023/09/19 17:06:57 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -37,11 +37,10 @@
 #define	p1tcopy tcopy
 #define	sss sap
 #define	pss n_ap
+int gotreg;
 #else
 #undef n_type
 #define n_type ptype
-#undef n_qual
-#define n_qual pqual
 #undef n_df
 #define n_df pdf
 #endif
@@ -154,7 +153,6 @@ import(P1ND *p)
 }
 #endif
 
-int gotnr; /* tempnum for GOT register */
 int argstacksize;
 
 /*
@@ -172,7 +170,7 @@ char *name;
 	P1ND *q, *r;
 	struct symtab *sp;
 
-	q = tempnode(gotnr, PTR|VOID, 0, 0);
+	q = tempnode(gotreg, PTR|VOID, 0, 0);
 
 #ifdef GCC_COMPAT
 	struct attr *ap;
@@ -226,7 +224,7 @@ char *name;
 
 	sp->stype = p->n_sp->stype;
 
-	q = tempnode(gotnr, PTR+VOID, 0, 0);
+	q = tempnode(gotreg, PTR+VOID, 0, 0);
 	r = xbcon(0, sp, INT);
 	q = buildtree(PLUS, q, r);
 
@@ -257,7 +255,7 @@ picstatic(P1ND *p)
 	P1ND *q, *r;
 	struct symtab *sp;
 
-	q = tempnode(gotnr, PTR|VOID, 0, 0);
+	q = tempnode(gotreg, PTR|VOID, 0, 0);
 	if (p->n_sp->slevel > 0) {
 		char buf[32];
 		if ((p->n_sp->sflags & SMASK) == SSTRING)
@@ -296,7 +294,7 @@ picstatic(P1ND *p)
 	}
 	sp->sclass = STATIC;
 	sp->stype = p->n_sp->stype;
-	q = tempnode(gotnr, PTR+VOID, 0, 0);
+	q = tempnode(gotreg, PTR+VOID, 0, 0);
 	r = xbcon(0, sp, INT);
 	q = buildtree(PLUS, q, r);
 	q = block(UMUL, q, 0, p->n_type, p->n_df, p->pss);
@@ -330,7 +328,7 @@ tlspic(P1ND *p)
 	 */
 
 	/* calc address of var@TLSGD */
-	q = tempnode(gotnr, PTR|VOID, 0, 0);
+	q = tempnode(gotreg, PTR|VOID, 0, 0);
 	name = getsoname(p->n_sp);
 	sp = picsymtab("", name, "@TLSGD");
 	r = xbcon(0, sp, INT);
@@ -515,71 +513,6 @@ clocal(P1ND *p)
 		p1nfree(l);
 		break;
 
-	case UCALL:
-		if (kflag == 0)
-			break;
-		l = block(REG, NIL, NIL, INT, 0, 0);
-		l->n_rval = EBX;
-		p->n_right = buildtree(ASSIGN, l, tempnode(gotnr, INT, 0, 0));
-		p->n_op -= (UCALL-CALL);
-		break;
-
-	case USTCALL:
-#if defined(os_openbsd)
-		if (strattr(p->n_left->n_td)->sz > SZLONGLONG)
-#else
-		if (attr_find(p->n_left->n_ap, ATTR_COMPLEX) &&
-#ifdef LANG_CXX
-		    (ap = strattr(p->n_left->n_ap)) &&
-		    ap->amsize == SZLONGLONG)
-#else
-		    strattr(p->n_left->n_td)->sz== SZLONGLONG)
-#endif
-#endif
-		{
-			/* float complex */
-			/* fake one arg to make pass2 happy */
-			p->n_right = block(FUNARG, bcon(0), NIL, INT, 0, 0);
-			p->n_op -= (UCALL-CALL);
-			break;
-		}
-
-		/* Add hidden arg0 */
-		r = block(REG, NIL, NIL, INCREF(VOID), 0, 0);
-		regno(r) = EBP;
-#ifdef GCC_COMPAT
-		if ((ap = attr_find(p->n_ap, GCC_ATYP_REGPARM)) != NULL &&
-		    ap->iarg(0) > 0) {
-			l = block(REG, NIL, NIL, INCREF(VOID), 0, 0);
-			regno(l) = EAX;
-			p->n_right = buildtree(ASSIGN, l, r);
-		} else
-#endif
-			p->n_right = block(FUNARG, r, NIL, INCREF(VOID), 0, 0);
-		p->n_op -= (UCALL-CALL);
-
-		if (kflag == 0)
-			break;
-		l = block(REG, NIL, NIL, INT, 0, 0);
-		regno(l) = EBX;
-		r = buildtree(ASSIGN, l, tempnode(gotnr, INT, 0, 0));
-		p->n_right = block(CM, r, p->n_right, INT, 0, 0);
-		break;
-	
-	/* FALLTHROUGH */
-#if defined(MACHOABI)
-	case CALL:
-	case STCALL:
-		if (p->n_type == VOID)
-			break;
-
-		r = tempnode(0, p->n_type, p->n_df, p->pss);
-		l = p1tcopy(r);
-		p = buildtree(COMOP, buildtree(ASSIGN, r, p), l);
-#endif
-			
-		break;
-
 #ifdef notyet
 	/* XXX breaks sometimes */
 	case CBRANCH:
@@ -706,17 +639,6 @@ clocal(P1ND *p)
 		p = makety(p, mkqtyp(o));
 #endif
 		break;
-
-#if 0
-	case FORCE:
-		/* put return value in return reg */
-		p->n_op = ASSIGN;
-		p->n_right = p->n_left;
-		p->n_left = block(REG, NIL, NIL, p->n_type, 0, 0);
-		p->n_left->n_rval = p->n_left->n_type == BOOL ? 
-		    RETREG(CHAR) : RETREG(p->n_type);
-		break;
-#endif
 
 #ifndef NOBREGS
 	case LS:

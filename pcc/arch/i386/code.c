@@ -1,4 +1,4 @@
-/*	$Id: code.c,v 1.109 2023/08/20 17:22:13 ragge Exp $	*/
+/*	$Id: code.c,v 1.111 2023/09/17 20:02:11 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -39,8 +39,6 @@
 #define	talloc p1alloc
 #undef n_type
 #define n_type ptype
-#undef n_qual
-#define n_qual pqual
 #undef n_df
 #define n_df pdf
 #endif
@@ -159,9 +157,9 @@ mycallspec(struct callspec *cs)
 
 #ifdef GCC_COMPAT
 	regpregs = reparegs;
-	if ((ap = attr_find(cftnsp->sap, GCC_ATYP_REGPARM)))
+	if ((ap = attr_find(cs->rv.ap, GCC_ATYP_REGPARM)))
 		regparmarg = ap->iarg(0);
-	if ((ap = attr_find(cftnsp->sap, GCC_ATYP_FASTCALL)))
+	if ((ap = attr_find(cs->rv.ap, GCC_ATYP_FASTCALL)))
 		regparmarg = 2, regpregs = fastregs;
 	if (regparmarg > 3)
 		regparmarg = 3;
@@ -259,6 +257,7 @@ mycallspec(struct callspec *cs)
 		argpopsize = parmoff - parmoff2;
 #endif
 	}
+	cs->stkadj = (parmoff-ARGINIT)/SZCHAR;
 }
 #endif
 
@@ -271,10 +270,6 @@ int structrettemp;
 void
 efcode(void)
 {
-	extern int gotnr;
-
-	gotnr = 0;	/* new number for next fun */
-
 #ifdef LANG_CXX
 	cerror("need return code");
 #endif
@@ -294,19 +289,20 @@ efcode(void)
 void
 bfcode(struct symtab **sp, int cnt)
 {
-	extern int gotnr;
+#ifndef LANG_CXX
 	NODE *p;
 
 	/* Take care of PIC stuff first */
         if (kflag) {
 		NODE *q;
 		p = tempnode(0, INT, 0, 0);
-		gotnr = regno(p);
+		gotreg = regno(p);
 		q = block(REG, 0, 0, INT, 0, 0);
 		regno(q) = EBX;
 		p = buildtree(ASSIGN, p, q);
                 ecomp(p);
         }
+#endif
 }
 
 #if defined(MACHOABI)
@@ -368,151 +364,6 @@ bjobcode(void)
 	__asm("fldcw (%0)" : : "r"(&fcw));
 #endif
 #endif
-}
-
-/*
- * Convert FUNARG to assign in case of regparm.
- */
-static int regcvt, rparg, fcall;
-static void
-addreg(NODE *p)
-{
-	TWORD t;
-	NODE *q;
-	int sz, r;
-
-	sz = (int)tsize(p->n_type, p->n_df, p->pss)/SZCHAR;
-	sz = (sz + 3) >> 2;	/* sz in regs */
-	if ((regcvt+sz) > rparg) {
-		regcvt = rparg;
-		return;
-	}
-	if (sz > 2)
-		uerror("cannot put struct in 3 regs (yet)");
-
-	if (sz == 2)
-		r = regcvt == 0 ? EAXEDX : EDXECX;
-	else if (fcall)
-		r = regcvt == 0 ? ECX : EDX;
-	else
-		r = regcvt == 0 ? EAX : regcvt == 1 ? EDX : ECX;
-
-	if (p->n_op == FUNARG) {
-		/* at most 2 regs */
-		if (p->n_type < INT) {
-			p->n_left = ccast(p->n_left, INT, 0, 0, 0);
-			p->n_type = INT;
-		}
-
-		p->n_op = ASSIGN;
-		p->n_right = p->n_left;
-	} else if (p->n_op == STARG) {
-		/* convert to ptr, put in reg */
-		q = p->n_left;
-		t = sz == 2 ? LONGLONG : INT;
-		q = cast(q, INCREF(t), 0);
-		q = buildtree(UMUL, q, NIL);
-		p->n_op = ASSIGN;
-		p->n_type = t;
-		p->n_right = q;
-	} else
-		cerror("addreg");
-	p->n_left = block(REG, 0, 0, p->n_type, 0, 0);
-	regno(p->n_left) = r;
-	regcvt += sz;
-}
-
-/*
- * Called with a function call with arguments as argument.
- * This is done early in buildtree() and only done once.
- * Returns p.
- */
-NODE *
-funcode(NODE *p)
-{
-	extern int gotnr;
-	struct attr *ap;
-	NODE *r, *l;
-	TWORD t = DECREF(DECREF(p->n_left->n_type));
-	int stcall;
-
-	stcall = ISSOU(t);
-	/*
-	 * We may have to prepend:
-	 * - Hidden arg0 for struct return (in reg or on stack).
-	 * - ebx in case of PIC code.
-	 */
-
-	/* Fix function call arguments. On x86, just add funarg */
-	for (r = p->n_right; r->n_op == CM; r = r->n_left) {
-		if (r->n_right->n_op != STARG)
-			r->n_right = block(FUNARG, r->n_right, NIL,
-			    r->n_right->n_type, r->n_right->n_df,
-			    r->n_right->pss);
-	}
-	if (r->n_op != STARG) {
-		l = talloc();
-		*l = *r;
-		r->n_op = FUNARG;
-		r->n_left = l;
-		r->n_type = l->n_type;
-	}
-#ifdef os_openbsd
-	if (stcall && strattr(p->n_left->n_td)->sz > SZLONGLONG) 
-#else
-	if (stcall &&
-	    (attr_find(p->n_left->n_ap, ATTR_COMPLEX) == 0 ||
-#ifdef LANG_CXX
-	     ((ap = strattr(p->n_left->n_ap)) && ap->amsize > SZLONGLONG)))
-#else
-	    (p->n_left->n_td->ss && p->n_left->n_td->ss->sz > SZLONGLONG)))
-#endif
-#endif
-	{
-		/* Prepend a placeholder for struct address. */
-		/* Use EBP, can never show up under normal circumstances */
-		l = talloc();
-		*l = *r;
-		r->n_op = CM;
-		r->n_right = l;
-		r->n_type = INT;
-		l = block(REG, 0, 0, INCREF(VOID), 0, 0);
-		regno(l) = EBP;
-		l = block(FUNARG, l, 0, INCREF(VOID), 0, 0);
-		r->n_left = l;
-	}
-
-#ifdef GCC_COMPAT
-	fcall = 0;
-	if ((ap = attr_find(p->n_left->n_ap, GCC_ATYP_REGPARM)))
-		rparg = ap->iarg(0);
-	else if ((ap = attr_find(p->n_left->n_ap, GCC_ATYP_FASTCALL)))
-		fcall = rparg = 2;
-	else
-#endif
-		rparg = 0;
-
-	regcvt = 0;
-	if (rparg)
-		p1listf(p->n_right, addreg);
-
-	if (kflag == 0)
-		return p;
-
-#if defined(ELFABI)
-	/* Create an ASSIGN node for ebx */
-	l = block(REG, NIL, NIL, INT, 0, 0);
-	l->n_rval = EBX;
-	l = buildtree(ASSIGN, l, tempnode(gotnr, INT, 0, 0));
-	if (p->n_right->n_op != CM) {
-		p->n_right = block(CM, l, p->n_right, INT, 0, 0);
-	} else {
-		for (r = p->n_right; r->n_left->n_op == CM; r = r->n_left)
-			;
-		r->n_left = block(CM, l, r->n_left, INT, 0, 0);
-	}
-#endif
-	return p;
 }
 
 /* fix up type of field p */
@@ -593,3 +444,10 @@ builtin_cfa(const struct bitable *bt, NODE *a)
 	return bcon(0);
 }
 
+#ifdef LANG_CXX
+NODE *
+funcode(NODE *p)
+{
+	return p;
+}
+#endif
