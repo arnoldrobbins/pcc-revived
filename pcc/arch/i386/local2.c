@@ -1,4 +1,4 @@
-/*	$Id: local2.c,v 1.196 2023/09/07 19:02:20 ragge Exp $	*/
+/*	$Id: local2.c,v 1.200 2023/09/19 17:06:57 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -386,23 +386,6 @@ ulltofp(NODE *p)
 	printf(LABFMT ":\n", jmplab);
 }
 
-static int
-argsiz(NODE *p)
-{
-	TWORD t = p->n_type;
-
-	if (t < LONGLONG || t == FLOAT || t > BTMASK)
-		return 4;
-	if (t == LONGLONG || t == ULONGLONG || t == DOUBLE)
-		return 8;
-	if (t == LDOUBLE)
-		return 12;
-	if (t == STRTY || t == UNIONTY)
-		return attr_find(p->n_ap, ATTR_P2STRUCT)->iarg(0) & ~3;
-	comperr("argsiz");
-	return 0;
-}
-
 static void
 fcast(NODE *p)
 {
@@ -468,11 +451,11 @@ zzzcode(NODE *p, int c)
 		if (attr_find(p->n_left->n_ap, GCC_ATYP_STDCALL))
 			break;
 #endif
-		pr = p->n_qual;
+		pr = 0;
+		if ((ap = attr_find(p->n_ap, ATTR_STKADJ)))
+			pr = ap->iarg(0);
 		if (attr_find(p->n_ap, ATTR_I386_FPPOP))
 			printf("	fstp	%%st(0)\n");
-		if (p->n_op == UCALL)
-			return; /* XXX remove ZC from UCALL */
 		if (pr)
 			printf("	addl $%d, %s\n", pr, rnames[ESP]);
 #if defined(os_openbsd)
@@ -913,18 +896,9 @@ cbgen(int o, int lab)
 static void
 fixcalls(NODE *p, void *arg)
 {
-	struct attr *ap;
 
 	/* Prepare for struct return by allocating bounce space on stack */
 	switch (p->n_op) {
-	case STCALL:
-	case USTCALL:
-		ap = attr_find(p->n_ap, ATTR_P2STRUCT);
-		if (ap->iarg(0)+p2autooff > stkpos)
-			stkpos = ap->iarg(0)+p2autooff;
-		if (8+p2autooff > stkpos)
-			stkpos = ap->iarg(0)+p2autooff;
-		break;
 	case LS:
 	case RS:
 		if (p->n_type != LONGLONG && p->n_type != ULONGLONG)
@@ -1308,45 +1282,10 @@ gclass(TWORD t)
 }
 
 /*
- * Calculate argument sizes.
  */
 void
 lastcall(NODE *p)
 {
-	NODE *op = p;
-	int nr = 0, size = 0;
-
-	p->n_qual = 0;
-	if (p->n_op != CALL && p->n_op != FORTCALL && p->n_op != STCALL)
-		return;
-	for (p = p->n_right; p->n_op == CM; p = p->n_left) { 
-		if (p->n_right->n_op != ASSIGN)
-			size += argsiz(p->n_right);
-		else
-			nr = 1;
-	}
-	if (p->n_op != ASSIGN)
-		size += argsiz(p);
-	else
-		nr++;
-	if (op->n_op == STCALL) {
-		if (kflag)
-			nr--;
-		if (nr == 0)
-			size -= 4; /* XXX OpenBSD? */
-	}
-
-#if defined(MACHOABI)
-	int newsize = (size + 15) & ~15;	/* stack alignment */
-	int align = newsize-size;
-
-	if (align != 0)
-		printf("	subl $%d,%%esp\n", align);
-
-	size=newsize;
-#endif
-	
-	op->n_qual = size; /* XXX */
 }
 
 /*
