@@ -1,4 +1,4 @@
-/*	$Id: macdefs.h,v 1.103 2023/08/20 15:30:30 ragge Exp $	*/
+/*	$Id: macdefs.h,v 1.104 2023/10/12 10:36:53 ragge Exp $	*/
 /*
  * Copyright (c) 2003 Anders Magnusson (ragge@ludd.luth.se).
  * All rights reserved.
@@ -458,6 +458,7 @@ extern int msettings;
 #define	ATTR_MI_TARGET	ATTR_I386_FCMPLRET, ATTR_I386_FPPOP
 
 #define	NEWPARAMS
+#define	NEWSHAPES
 
 /* floating point definitions */
 #define	USE_IEEEFP_32

@@ -1,4 +1,4 @@
-/*	$Id: pass2.h,v 1.146 2023/08/20 15:30:31 ragge Exp $	*/
+/*	$Id: pass2.h,v 1.147 2023/10/12 10:34:12 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -74,6 +74,24 @@ typedef unsigned int bittype; /* XXX - for basicblock */
 #define OPLTYPE	010024		/* leaf type nodes (e.g, NAME, ICON, etc.) */
 
 /* shapes */
+#ifdef NEWSHAPES
+struct shape {
+	int op;
+	CONSZ left;
+	CONSZ right;
+};
+extern struct shape *shlst[];
+struct shape **o2nsh(int osh);
+int n2osh(struct shape **);
+extern struct shape shareg, shbreg, shcreg, shdreg, shereg, shfreg, shgreg;
+extern struct shape shoreg, shname, shicon, shone, shzero;
+#define	SHTY	struct shape **
+#else
+#define	o2nsh(osh)	osh
+#define	n2osh(sh)	sh
+#define	SHTY	int
+#endif
+
 #define SANY	01		/* same as FOREFF */
 #define SAREG	02		/* same as INAREG */
 #define SBREG	04		/* same as INBREG */
@@ -176,9 +194,9 @@ extern	int fregs;
 extern	struct optab {
 	int	op;
 	int	visit;
-	int	lshape;
+	SHTY	lshape;
 	int	ltype;
-	int	rshape;
+	SHTY	rshape;
 	int	rtype;
 	char 	*needs;
 	int	rewrite;
@@ -497,6 +515,7 @@ extern struct p2env p2env;
  * C compiler second pass extra defines.
  */
 #define PHI (MAXOP + 1)		/* Used in SSA trees */
+#define SPECON (MAXOP + 2)
 
 enum {
 	ATTR_P2_FIRST = ATTR_MI_MAX + 1,
