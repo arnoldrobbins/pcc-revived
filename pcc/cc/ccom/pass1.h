@@ -1,4 +1,4 @@
-/*	$Id: pass1.h,v 1.332 2023/10/18 16:27:29 ragge Exp $	*/
+/*	$Id: pass1.h,v 1.333 2023/10/20 14:08:08 ragge Exp $	*/
 /*
  * Copyright(C) Caldera International Inc. 2001-2002. All rights reserved.
  *
@@ -822,7 +822,8 @@ struct rdef {
 		struct attr *ap; /* set by common code */
 	};
 	int rtp[2];		/* set by target code */
-	union { int reg[2]; int off[2]; };
+	int reg[2];		/* set by target code */
+	int off[2];		/* set by target code */
 };
 #define	AV_REG		001
 #define	AV_REG2		002
